@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 輔大資管 FAQ 問答系統開發計畫書
 
-## Getting Started
+## 1. 專案概述
 
-First, run the development server:
+**專案名稱：** 輔大資管 FAQ 問答系統
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+**開發目標：** 建立一個基於 AI 搜尋的問答系統，提供輔仁大學資管系學生查詢學業相關問題的便捷平台。
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**技術架構：**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **前端**：Next.js + TypeScript
+- **後端 API**：Next.js API Routes
+- **身份驗證**：Firebase Auth
+- **AI 生成回應**：Groq API
+- **FAQ 向量檢索**：Pinecone
+- **資料庫（用於存放 FAQ 原始數據）**：Firebase Firestore / MongoDB
+- **部署平台**：Vercel / Firebase Hosting / Railway
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 2. 核心功能
 
-## Learn More
+### (1) FAQ 問答系統
+- 使用者可輸入問題，系統自動檢索最相關的 FAQ 並提供回應。
+- 若 FAQ 中沒有精確匹配的內容，則使用 Groq API 生成答案。
 
-To learn more about Next.js, take a look at the following resources:
+### (2) 使用者身份驗證
+- 透過 Firebase Auth 支援 Google 登入。
+- 可擴充不同權限，如「一般使用者」與「管理員」。
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### (3) FAQ 內容管理
+- 管理員可新增、修改、刪除 FAQ。
+- FAQ 內容會轉換成向量並存入 Pinecone 以便快速檢索。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### (4) 檢索增強生成（RAG）
+- **第一步**：使用者輸入問題後，Pinecone 搜尋最相關的 FAQ。
+- **第二步**：將檢索到的 FAQ 傳給 Groq API，讓 AI 生成更自然的回答。
+- **第三步**：根據相似度閾值決定是否直接顯示 FAQ 回應，或是讓 AI 生成答案。
 
-## Deploy on Vercel
+### (5) 快取與效能優化
+- 使用 Next.js ISR（增量靜態生成）提升 FAQ 讀取效能。
+- 設定 Pinecone 查詢快取，減少 API 請求次數。
+- 限制 AI 生成回答長度，避免高 API 成本。
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 3. 可能的挑戰與解決方案
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### (1) FAQ 向量化處理
+- **挑戰**：如何選擇適合的 embedding 模型，確保 FAQ 向量化後能精準匹配。
+- **解決方案**：使用 OpenAI `text-embedding-ada-002` 轉換 FAQ，測試不同的相似度閾值來最佳化檢索。
+
+### (2) AI 生成回答的可信度
+- **挑戰**：Groq API 可能會產生錯誤或不準確的回答。
+- **解決方案**：
+    - **提示詞設計**：限制 AI 只能基於檢索結果回答。
+    - **信心分數篩選**：當 FAQ 匹配度低時，提示使用者選擇更準確的問題。
+
+### (3) 使用者權限管理
+- **挑戰**：是否需要區分不同等級的使用者？
+- **解決方案**：
+    - 設定 Firebase Auth `userRole` 欄位來管理權限。
+    - API 路由中驗證 `idToken`，確保只有管理員可修改 FAQ。
+
+### (4) 效能與成本控制
+- **挑戰**：Groq API 和 Pinecone 查詢可能會影響回應速度與成本。
+- **解決方案**：
+    - 針對常見問題使用 ISR 預生成答案。
+    - 設定 API 速率限制，避免短時間內過多請求。
+
+### (5) FAQ 查詢精準度
+- **挑戰**：FAQ 數據量對查詢準確度的影響。
+- **解決方案**：
+    - **最低需求：500 筆 FAQ**，才能達到約 70% 的精準度。
+    - **最佳範圍：1000 - 2000 筆 FAQ**，可提升準確度至 85% 以上。
+    - 為每條 FAQ 增加「**同義詞版本**」，讓 AI 更容易匹配不同的提問方式。
+    - 調整 **相似度閾值（0.75 - 0.85）**，平衡查詢準確度與匹配範圍。
+
+## 4. 開發時程規劃
+
+| 週數 | 任務 |
+| --- | --- |
+| 1 | 確定技術架構、設計數據結構 |
+| 2 | Firebase Auth 設置與登入功能開發 |
+| 3 | FAQ 管理系統開發（CRUD、向量化處理） |
+| 4 | Pinecone 整合與 FAQ 檢索功能開發 |
+| 5 | Groq API 生成回答功能開發與優化 |
+| 6 | 效能調校、快取機制、API 保護機制 |
+| 7 | 測試與上線部署 |
+
+## 5. 預期成果
+
+- 建立一個可供輔大資管系學生查詢學術 FAQ 的 AI 問答系統。
+- 提供高效能 FAQ 搜尋與 AI 回答。
+- 支援 Firebase Auth 登入，確保安全性。
+- 優化 API 請求，降低成本並提升查詢速度。
+
+---
+
+**備註**：本計畫可根據開發過程中的需求調整，並擴充個人化推薦功能，如根據學生的查詢記錄提供更精準的 FAQ 建議。
