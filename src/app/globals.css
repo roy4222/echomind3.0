@@ -5,3 +5,29 @@
 body {
   @apply bg-gray-50 dark:bg-gray-900;
 }
+
+@layer utilities {
+  .bg-dot-pattern {
+    background-image: radial-gradient(circle at 1px 1px, rgb(226 232 240 / 0.3) 1px, transparent 0);
+    background-size: 24px 24px;
+  }
+
+  .bg-dot-pattern-dark {
+    background-image: radial-gradient(circle at 1px 1px, rgb(51 65 85 / 0.3) 1px, transparent 0);
+    background-size: 24px 24px;
+  }
+}
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}

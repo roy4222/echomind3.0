@@ -1,11 +1,12 @@
 'use client';
 
-import { FC, useEffect, useState } from 'react';
-import { Menu, Settings, Moon, Sun } from 'lucide-react';
+import { FC, useState } from 'react';
+import { Moon, Sun, Menu } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import Link from 'next/link';
-import { LoginIcon } from '../icons/LoginIcon'
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { LoginIcon } from '../icons/LoginIcon';
+import { SidebarToggleIcon } from '../icons/SidebarToggleIcon';
 
 // Logo 組件
 const Logo: FC<{ className?: string }> = ({ className }) => (
@@ -36,92 +37,61 @@ const Logo: FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-// 定義 Header 元件的 Props 介面
 interface HeaderProps {
-  toggleSidebar: () => void;
   isSidebarOpen: boolean;
+  onToggleSidebar: () => void;
 }
 
-// Header 元件 - 網站的頂部導航欄
-const Header: FC<HeaderProps> = ({ toggleSidebar, isSidebarOpen }) => {
-  // 使用 next-themes 提供的主題功能
+const Header: FC<HeaderProps> = ({ isSidebarOpen, onToggleSidebar }) => {
   const { theme, setTheme } = useTheme();
-  // 用於處理 hydration 問題的狀態
-  const [mounted, setMounted] = useState(false);
+  const [isActive, setIsActive] = useState(false);
 
-  // 在元件掛載後設置 mounted 為 true
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const handleClick = () => {
+    onToggleSidebar();
+    setIsActive(!isActive);
+  };
 
-  // 在客戶端渲染前顯示的預設 header
-  if (!mounted) {
-    return (
-      <header className="fixed top-0 z-50 w-full border-b border-gray-200 bg-white/75 dark:border-gray-700 dark:bg-gray-900/75 backdrop-blur">
-        <div className="flex h-20 items-center justify-between px-6">
-          <div className="flex items-center gap-6">
-            <button className="p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
-              <Menu className="h-6 w-6 text-gray-600 dark:text-gray-300" />
-            </button>
-            <Link 
-              href="/" 
-              className="flex items-center gap-3 text-2xl font-semibold text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-            >
-              <Logo className="h-8 w-8" />
-              <span>EchoMind</span>
-            </Link>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10" />
-          </div>
-        </div>
-      </header>
-    );
-  }
-
-  // 完整的 header 元件渲染
   return (
-    <header className="fixed top-0 z-50 w-full border-b border-gray-200 bg-white/75 dark:border-gray-700 dark:bg-gray-900/75 backdrop-blur">
-      <div className="flex h-16 lg:h-20 items-center justify-between px-4 lg:px-6">
-        {/* 左側區域：選單按鈕和網站標題 */}
-        <div className="flex items-center gap-3 lg:gap-6">
+    <header className="fixed top-0 left-0 right-0 z-50 h-20 border-b border-gray-200 bg-white/80 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-900/80">
+      <div className="flex h-full items-center justify-between px-4 lg:px-6">
+        {/* 左側區域 */}
+        <div className="flex items-center gap-4">
           <button
-            onClick={toggleSidebar}
+            onClick={handleClick}
             className={cn(
-              "p-2 lg:p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors",
-              isSidebarOpen && "bg-gray-100 dark:bg-gray-800"
+              "flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition-colors",
+              isActive ? "bg-gray-100 dark:bg-gray-800" : "hover:bg-gray-100 dark:hover:bg-gray-800"
             )}
+            aria-label="切換側邊欄"
           >
-            <Menu className="h-5 w-5 lg:h-6 lg:w-6 text-gray-600 dark:text-gray-300" />
+            <SidebarToggleIcon isOpen={isSidebarOpen} className="h-5 w-5" />
           </button>
           <Link 
             href="/" 
-            className="flex items-center gap-2 lg:gap-3 text-xl lg:text-2xl font-semibold text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            className="flex items-center gap-2 text-xl lg:text-2xl font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
           >
-            <Logo className="h-7 w-7 lg:h-8 lg:w-8" />
-            <span className="truncate">EchoMind</span>
+            <Logo className="h-8 w-8 lg:h-9 lg:w-9" />
+            <span>EchoMind</span>
           </Link>
         </div>
 
-        {/* 右側區域：主題切換和登入按鈕 */}
-        <div className="flex items-center gap-2 lg:gap-3">
+        {/* 右側區域 */}
+        <div className="flex items-center gap-3">
           {/* 主題切換按鈕 */}
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="p-2 lg:p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
-            aria-label={theme === 'dark' ? '切換至淺色模式' : '切換至深色模式'}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
           >
-            {theme === 'dark' ? (
-              <Sun className="h-5 w-5 lg:h-6 lg:w-6 text-gray-600 dark:text-gray-300" />
-            ) : (
-              <Moon className="h-5 w-5 lg:h-6 lg:w-6 text-gray-600 dark:text-gray-300" />
-            )}
+            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           </button>
+
+          {/* 登入按鈕 */}
           <Link 
             href="/login" 
             className={cn(
               "flex items-center gap-2",
-              "px-3 lg:px-6 py-2 lg:py-3",
+              "px-4 py-2 lg:px-6 lg:py-2.5",
               "bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500",
               "hover:from-amber-600 hover:via-orange-600 hover:to-rose-600",
               "dark:from-amber-400 dark:via-orange-400 dark:to-rose-400",
@@ -134,7 +104,7 @@ const Header: FC<HeaderProps> = ({ toggleSidebar, isSidebarOpen }) => {
             )}
           >
             <LoginIcon className="h-5 w-5 lg:h-6 lg:w-6" />
-            <span className="hidden lg:inline">登入</span>
+            <span className="hidden sm:inline font-medium">登入</span>
           </Link>
         </div>
       </div>
