@@ -2,8 +2,15 @@ import Image from "next/image";
 
 export default function Home() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-      <h1 className="text-4xl font-bold text-gray-800 hover:text-blue-600 transition-colors">歡迎來到我的 Next.js 網站！</h1>
-    </main>
+    <div className="container mx-auto px-4">
+      <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center">
+        <h1 className="mb-4 text-4xl font-bold text-gray-900 dark:text-white">
+          歡迎使用 EchoMind
+        </h1>
+        <p className="text-center text-lg text-gray-600 dark:text-gray-300">
+          您的智能助手，隨時為您服務
+        </p>
+      </div>
+    </div>
   );
 }
