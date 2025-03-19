@@ -5,6 +5,7 @@ import { Menu, Settings, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import { LoginIcon } from '../icons/LoginIcon'
+import { cn } from '@/lib/utils';
 
 // Logo 組件
 const Logo: FC<{ className?: string }> = ({ className }) => (
@@ -38,10 +39,11 @@ const Logo: FC<{ className?: string }> = ({ className }) => (
 // 定義 Header 元件的 Props 介面
 interface HeaderProps {
   toggleSidebar: () => void;
+  isSidebarOpen: boolean;
 }
 
 // Header 元件 - 網站的頂部導航欄
-const Header: FC<HeaderProps> = ({ toggleSidebar }) => {
+const Header: FC<HeaderProps> = ({ toggleSidebar, isSidebarOpen }) => {
   // 使用 next-themes 提供的主題功能
   const { theme, setTheme } = useTheme();
   // 用於處理 hydration 問題的狀態
@@ -80,45 +82,59 @@ const Header: FC<HeaderProps> = ({ toggleSidebar }) => {
   // 完整的 header 元件渲染
   return (
     <header className="fixed top-0 z-50 w-full border-b border-gray-200 bg-white/75 dark:border-gray-700 dark:bg-gray-900/75 backdrop-blur">
-      <div className="flex h-20 items-center justify-between px-6">
+      <div className="flex h-16 lg:h-20 items-center justify-between px-4 lg:px-6">
         {/* 左側區域：選單按鈕和網站標題 */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 lg:gap-6">
           <button
             onClick={toggleSidebar}
-            className="p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+            className={cn(
+              "p-2 lg:p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors",
+              isSidebarOpen && "bg-gray-100 dark:bg-gray-800"
+            )}
           >
-            <Menu className="h-6 w-6 text-gray-600 dark:text-gray-300" />
+            <Menu className="h-5 w-5 lg:h-6 lg:w-6 text-gray-600 dark:text-gray-300" />
           </button>
           <Link 
             href="/" 
-            className="flex items-center gap-3 text-2xl font-semibold text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            className="flex items-center gap-2 lg:gap-3 text-xl lg:text-2xl font-semibold text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
           >
-            <Logo className="h-8 w-8" />
-            <span>EchoMind</span>
+            <Logo className="h-7 w-7 lg:h-8 lg:w-8" />
+            <span className="truncate">EchoMind</span>
           </Link>
         </div>
 
-        {/* 右側區域：主題切換、設定和登入按鈕 */}
-        <div className="flex items-center gap-3">
+        {/* 右側區域：主題切換和登入按鈕 */}
+        <div className="flex items-center gap-2 lg:gap-3">
           {/* 主題切換按鈕 */}
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+            className="p-2 lg:p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
             aria-label={theme === 'dark' ? '切換至淺色模式' : '切換至深色模式'}
           >
             {theme === 'dark' ? (
-              <Sun className="h-6 w-6 text-gray-600 dark:text-gray-300" />
+              <Sun className="h-5 w-5 lg:h-6 lg:w-6 text-gray-600 dark:text-gray-300" />
             ) : (
-              <Moon className="h-6 w-6 text-gray-600 dark:text-gray-300" />
+              <Moon className="h-5 w-5 lg:h-6 lg:w-6 text-gray-600 dark:text-gray-300" />
             )}
           </button>
-          {/* 登入按鈕 */}
           <Link 
             href="/login" 
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-600 hover:via-orange-600 hover:to-rose-600 dark:from-amber-400 dark:via-orange-400 dark:to-rose-400 dark:hover:from-amber-500 dark:hover:via-orange-500 dark:hover:to-rose-500 text-white rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg hover:shadow-orange-500/20 dark:hover:shadow-orange-400/20 text-lg"
+            className={cn(
+              "flex items-center gap-2",
+              "px-3 lg:px-6 py-2 lg:py-3",
+              "bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500",
+              "hover:from-amber-600 hover:via-orange-600 hover:to-rose-600",
+              "dark:from-amber-400 dark:via-orange-400 dark:to-rose-400",
+              "dark:hover:from-amber-500 dark:hover:via-orange-500 dark:hover:to-rose-500",
+              "text-white rounded-lg",
+              "transition-all duration-300 ease-in-out",
+              "transform hover:scale-105 active:scale-95",
+              "shadow-md hover:shadow-lg",
+              "hover:shadow-orange-500/20 dark:hover:shadow-orange-400/20"
+            )}
           >
-            <LoginIcon className="h-6 w-6" />
-            <span>登入</span>
+            <LoginIcon className="h-5 w-5 lg:h-6 lg:w-6" />
+            <span className="hidden lg:inline">登入</span>
           </Link>
         </div>
       </div>
