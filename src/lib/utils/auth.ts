@@ -364,3 +364,41 @@ const getErrorMessage = (errorCode: string): string => {
 
   return errorMessages[errorCode] || '發生未知錯誤，請稍後再試';
 };
+
+/**
+ * 更新用戶資料
+ * @param user - Firebase User 物件
+ * @param data - 要更新的資料
+ */
+export const updateUserProfile = async (
+  user: User,
+  data: {
+    displayName?: string | null;
+    photoURL?: string | null;
+  }
+): Promise<void> => {
+  try {
+    await updateProfile(user, data);
+    
+    // 更新本地存儲
+    const rememberMe = localStorage.getItem('rememberMe') === 'true';
+    const storage = rememberMe ? localStorage : sessionStorage;
+    const storedUser = storage.getItem('user');
+    
+    if (storedUser) {
+      const userData = JSON.parse(storedUser);
+      const updatedUser = {
+        ...userData,
+        displayName: data.displayName || userData.displayName,
+        photoURL: data.photoURL || userData.photoURL,
+      };
+      storage.setItem('user', JSON.stringify(updatedUser));
+    }
+
+    toast.success('個人資料更新成功！');
+  } catch (error) {
+    console.error('更新個人資料失敗:', error);
+    toast.error('更新失敗，請稍後再試');
+    throw error;
+  }
+};
