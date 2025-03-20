@@ -16,9 +16,6 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       }
     ],
-  },
-  experimental: {
-    appDir: true,
   }
 };
 
