@@ -1,12 +1,16 @@
 'use client';
 
-import { FC, useState } from 'react';
-import { Moon, Sun, Menu } from 'lucide-react';
+import { FC, useState, useEffect } from 'react';
+import { Moon, Sun, Menu, LogOut, User as UserIcon, Settings } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { LoginIcon } from '../icons/LoginIcon';
 import { SidebarToggleIcon } from '../icons/SidebarToggleIcon';
+import { auth } from '@/lib/services/firebase';
+import { logout, initializeAuthListener } from '@/lib/utils/auth';
+import { useRouter } from 'next/navigation';
+import type { User } from 'firebase/auth';
 
 // Logo 組件
 const Logo: FC<{ className?: string }> = ({ className }) => (
@@ -45,10 +49,51 @@ interface HeaderProps {
 const Header: FC<HeaderProps> = ({ isSidebarOpen, onToggleSidebar }) => {
   const { theme, setTheme } = useTheme();
   const [isActive, setIsActive] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    // 初始化時從 storage 獲取用戶資訊
+    const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+
+    // 設置 auth 監聽器
+    const unsubscribe = initializeAuthListener((user) => {
+      setUser(user);
+    });
+
+    // 監聽 storage 變化
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'user') {
+        const newUser = e.newValue ? JSON.parse(e.newValue) : null;
+        setUser(newUser);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   const handleClick = () => {
     onToggleSidebar();
     setIsActive(!isActive);
+  };
+
+  // 處理登出
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/login');
+    } catch (error) {
+      console.error('登出失敗:', error);
+    }
   };
 
   return (
@@ -86,26 +131,104 @@ const Header: FC<HeaderProps> = ({ isSidebarOpen, onToggleSidebar }) => {
             <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           </button>
 
-          {/* 登入按鈕 */}
-          <Link 
-            href="/login" 
-            className={cn(
-              "flex items-center gap-2",
-              "px-4 py-2 lg:px-6 lg:py-2.5",
-              "bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500",
-              "hover:from-amber-600 hover:via-orange-600 hover:to-rose-600",
-              "dark:from-amber-400 dark:via-orange-400 dark:to-rose-400",
-              "dark:hover:from-amber-500 dark:hover:via-orange-500 dark:hover:to-rose-500",
-              "text-white rounded-lg",
-              "transition-all duration-300 ease-in-out",
-              "transform hover:scale-105 active:scale-95",
-              "shadow-md hover:shadow-lg",
-              "hover:shadow-orange-500/20 dark:hover:shadow-orange-400/20"
-            )}
-          >
-            <LoginIcon className="h-5 w-5 lg:h-6 lg:w-6" />
-            <span className="hidden sm:inline font-medium">登入</span>
-          </Link>
+          {/* 用戶頭像或登入按鈕 */}
+          {user ? (
+            <div className="relative">
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border-2 border-gray-200 hover:border-blue-500 dark:border-gray-700 dark:hover:border-blue-400"
+              >
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt={user.displayName || '用戶頭像'}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      width="24" 
+                      height="24" 
+                      viewBox="0 0 24 24"
+                      className="h-6 w-6"
+                    >
+                      <path 
+                        fill="currentColor" 
+                        d="M13 3c3.88 0 7 3.14 7 7c0 2.8-1.63 5.19-4 6.31V21H9v-3H8c-1.11 0-2-.89-2-2v-3H4.5c-.42 0-.66-.5-.42-.81L6 9.66A7.003 7.003 0 0 1 13 3m0-2C8.41 1 4.61 4.42 4.06 8.9L2.5 11h-.03l-.02.03c-.55.76-.62 1.76-.19 2.59c.36.69 1 1.17 1.74 1.32V16c0 1.85 1.28 3.42 3 3.87V23h11v-5.5c2.5-1.67 4-4.44 4-7.5c0-4.97-4.04-9-9-9m4.33 8.3l-1.96.51l1.44 1.46c.35.34.35.92 0 1.27s-.93.35-1.27 0l-1.45-1.44l-.52 1.96c-.12.49-.61.76-1.07.64a.91.91 0 0 1-.66-1.11l.53-1.96l-1.96.53a.91.91 0 0 1-1.11-.66c-.12-.45.16-.95.64-1.07l1.96-.52l-1.44-1.45a.9.9 0 0 1 1.27-1.27l1.46 1.44l.51-1.96c.12-.49.62-.77 1.09-.64c.49.13.77.62.64 1.1L14.9 8.1l1.97-.53c.48-.13.97.15 1.1.64c.13.47-.15.97-.64 1.09"
+                      />
+                    </svg>
+                  </div>
+                )}
+              </button>
+
+              {/* 下拉選單 */}
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 rounded-lg border border-gray-200 bg-white py-2 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                  <div className="px-4 py-2">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {user.displayName || '用戶'}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {user.email}
+                    </p>
+                  </div>
+                  <div className="h-px bg-gray-200 dark:bg-gray-700" />
+                  <button
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      router.push('/profile');
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    <UserIcon className="h-4 w-4" />
+                    個人資料
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      router.push('/settings');
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    <Settings className="h-4 w-4" />
+                    設定
+                  </button>
+                  <div className="h-px bg-gray-200 dark:bg-gray-700" />
+                  <button
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      handleLogout();
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-700"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    登出
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link 
+              href="/login" 
+              className={cn(
+                "flex items-center gap-2",
+                "px-4 py-2 lg:px-6 lg:py-2.5",
+                "bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500",
+                "hover:from-amber-600 hover:via-orange-600 hover:to-rose-600",
+                "dark:from-amber-400 dark:via-orange-400 dark:to-rose-400",
+                "dark:hover:from-amber-500 dark:hover:via-orange-500 dark:hover:to-rose-500",
+                "text-white rounded-lg",
+                "transition-all duration-300 ease-in-out",
+                "transform hover:scale-105 active:scale-95",
+                "shadow-md hover:shadow-lg",
+                "hover:shadow-orange-500/20 dark:hover:shadow-orange-400/20"
+              )}
+            >
+              <LoginIcon className="h-5 w-5 lg:h-6 lg:w-6" />
+              <span className="hidden sm:inline font-medium">登入</span>
+            </Link>
+          )}
         </div>
       </div>
     </header>
