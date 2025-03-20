@@ -74,7 +74,7 @@ export default function ProfilePage() {
     try {
       setIsUploading(true);
       const downloadURL = await uploadAvatar(file, user.uid);
-      await updateUserProfile(user, { photoURL: downloadURL });
+      await updateUserProfile(undefined, downloadURL);
       setFormData(prev => ({ ...prev, photoURL: downloadURL }));
     } catch (error) {
       console.error('頭像上傳失敗:', error);
@@ -92,10 +92,10 @@ export default function ProfilePage() {
     if (!user) return;
 
     try {
-      await updateUserProfile(user, {
-        displayName: formData.displayName,
-        photoURL: formData.photoURL,
-      });
+      await updateUserProfile(
+        formData.displayName,
+        formData.photoURL
+      );
       setIsEditing(false);
     } catch (error) {
       console.error('更新失敗:', error);

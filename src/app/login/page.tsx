@@ -30,11 +30,10 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await loginWithEmail({
-        email: formData.email,
-        password: formData.password,
-        rememberMe: formData.rememberMe
-      });
+      await loginWithEmail(
+        formData.email,
+        formData.password
+      );
       router.push('/');
     } catch (err: any) {
       setError(err.message);
@@ -49,7 +48,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await loginWithGoogle(formData.rememberMe);
+      await loginWithGoogle();
       router.push('/');
     } catch (err: any) {
       setError(err.message);

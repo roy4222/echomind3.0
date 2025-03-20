@@ -1,16 +1,15 @@
 'use client';
 
-import { FC, useState, useEffect } from 'react';
+import { FC, useState } from 'react';
 import { Moon, Sun, Menu, LogOut, User as UserIcon, Settings } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { LoginIcon } from '../icons/LoginIcon';
 import { SidebarToggleIcon } from '../icons/SidebarToggleIcon';
-import { auth } from '@/lib/services/firebase';
-import { logout, initializeAuthListener } from '@/lib/utils/auth';
+import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
-import type { User } from 'firebase/auth';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Logo 組件
 const Logo: FC<{ className?: string }> = ({ className }) => (
@@ -49,44 +48,15 @@ interface HeaderProps {
 const Header: FC<HeaderProps> = ({ isSidebarOpen, onToggleSidebar }) => {
   const { theme, setTheme } = useTheme();
   const [isActive, setIsActive] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    // 初始化時從 storage 獲取用戶資訊
-    const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-
-    // 設置 auth 監聽器
-    const unsubscribe = initializeAuthListener((user) => {
-      setUser(user);
-    });
-
-    // 監聽 storage 變化
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'user') {
-        const newUser = e.newValue ? JSON.parse(e.newValue) : null;
-        setUser(newUser);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      unsubscribe();
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
+  const { user, loading, logout } = useAuth();
 
   const handleClick = () => {
     onToggleSidebar();
     setIsActive(!isActive);
   };
 
-  // 處理登出
   const handleLogout = async () => {
     try {
       await logout();
@@ -95,6 +65,38 @@ const Header: FC<HeaderProps> = ({ isSidebarOpen, onToggleSidebar }) => {
       console.error('登出失敗:', error);
     }
   };
+
+  // 如果正在載入，顯示載入狀態
+  if (loading) {
+    return (
+      <header className="fixed top-0 left-0 right-0 z-50 h-20 border-b border-gray-200 bg-white/80 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-900/80">
+        <div className="flex h-full items-center justify-between px-4 lg:px-6">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleClick}
+              className={cn(
+                "flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition-colors",
+                isActive ? "bg-gray-100 dark:bg-gray-800" : "hover:bg-gray-100 dark:hover:bg-gray-800"
+              )}
+              aria-label="切換側邊欄"
+            >
+              <SidebarToggleIcon isOpen={isSidebarOpen} className="h-5 w-5" />
+            </button>
+            <Link 
+              href="/" 
+              className="flex items-center gap-2 text-xl lg:text-2xl font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              <Logo className="h-8 w-8 lg:h-9 lg:w-9" />
+              <span>EchoMind</span>
+            </Link>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="animate-pulse h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700"></div>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-20 border-b border-gray-200 bg-white/80 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-900/80">
