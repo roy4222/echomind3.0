@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { registerWithEmail, loginWithGoogle, updateUserProfile } from '@/lib/utils/auth';
+import { registerWithEmail, updateUserProfile } from '@/lib/utils/auth';
 import { AuthError } from 'firebase/auth';
+import Link from 'next/link';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -60,22 +61,6 @@ export default function RegisterPage() {
     }
   };
 
-  // 處理 Google 註冊
-  const handleGoogleRegister = async () => {
-    setError('');
-    setIsLoading(true);
-
-    try {
-      await loginWithGoogle();
-      router.push('/');
-    } catch (err) {
-      const authError = err as AuthError;
-      setError(authError.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8 rounded-xl bg-white p-8 shadow-lg dark:bg-gray-800">
@@ -85,9 +70,9 @@ export default function RegisterPage() {
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             已經有帳號？{' '}
-            <a href="/login" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
+            <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
               登入
-            </a>
+            </Link>
           </p>
         </div>
 

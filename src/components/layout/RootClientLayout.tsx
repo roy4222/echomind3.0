@@ -12,11 +12,9 @@ import { AuthProvider } from '@/contexts/AuthContext';
  * RootClientLayout 組件的 Props 介面定義
  * @interface RootClientLayoutProps
  * @property {React.ReactNode} children - 子組件
- * @property {string} [className] - 可選的 CSS 類名
  */
 interface RootClientLayoutProps {
   children: React.ReactNode;
-  className?: string;
 }
 
 /**
@@ -25,7 +23,7 @@ interface RootClientLayoutProps {
  * @param {RootClientLayoutProps} props - 組件屬性
  * @returns {JSX.Element} 渲染的組件
  */
-export default function RootClientLayout({ children, className }: RootClientLayoutProps) {
+export default function RootClientLayout({ children }: RootClientLayoutProps) {
   useEffect(() => {
     // 初始化認證監聽器，監聽用戶登入狀態變化
     const unsubscribe = initializeAuthListener((user) => {

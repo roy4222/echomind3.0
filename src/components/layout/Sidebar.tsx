@@ -14,7 +14,7 @@ import {
 
 // 定義側邊欄項目的介面
 interface SidebarItem {
-  icon: React.ComponentType<any> | (() => React.ReactNode);
+  icon: React.ComponentType<{ className?: string }> | (() => React.ReactNode);
   label: string;
   href: string;
 }

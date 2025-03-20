@@ -1,15 +1,15 @@
 'use client';
 
 import { FC, useState } from 'react';
-import { Moon, Sun, Menu, LogOut, User as UserIcon, Settings } from 'lucide-react';
+import { Moon, Sun, LogOut, User as UserIcon, Settings } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { LoginIcon } from '../icons/LoginIcon';
 import { SidebarToggleIcon } from '../icons/SidebarToggleIcon';
-import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import Image from 'next/image';
 
 // Logo 組件
 const Logo: FC<{ className?: string }> = ({ className }) => (
@@ -141,9 +141,11 @@ const Header: FC<HeaderProps> = ({ isSidebarOpen, onToggleSidebar }) => {
                 className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border-2 border-gray-200 hover:border-blue-500 dark:border-gray-700 dark:hover:border-blue-400"
               >
                 {user.photoURL ? (
-                  <img
+                  <Image
                     src={user.photoURL}
                     alt={user.displayName || '用戶頭像'}
+                    width={32}
+                    height={32}
                     className="h-full w-full object-cover"
                   />
                 ) : (

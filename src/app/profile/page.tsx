@@ -7,7 +7,7 @@ import { Camera, Mail, User as UserIcon, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { updateUserProfile } from '@/lib/utils/auth';
 import { uploadAvatar } from '@/lib/utils/upload';
-import { toast } from 'sonner';
+import Image from 'next/image';
 
 /**
  * 個人資料頁面組件
@@ -131,10 +131,12 @@ export default function ProfilePage() {
                 </div>
               ) : formData.photoURL ? (
                 // 顯示用戶頭像
-                <img
+                <Image
                   src={formData.photoURL}
                   alt={formData.displayName || '用戶頭像'}
                   className="h-full w-full object-cover"
+                  width={128}
+                  height={128}
                 />
               ) : (
                 // 無頭像時顯示默認圖標

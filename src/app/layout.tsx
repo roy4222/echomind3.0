@@ -3,6 +3,9 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import RootClientLayout from "@/components/layout/RootClientLayout";
 import type { Metadata } from "next";
+import { AuthProvider } from '@/contexts/AuthContext';
+import { Toaster } from 'sonner';
+import { ThemeProvider } from '@/components/providers/ThemeProvider';
 
 // 設定 Inter 字體,只載入拉丁字集以優化效能
 const inter = Inter({ subsets: ["latin"] });
@@ -43,10 +46,20 @@ export default function RootLayout({
     // 設定網站語言為繁體中文，並禁止 hydration 警告
     <html lang="zh-TW" suppressHydrationWarning>
       <body className={`${inter.className} antialiased`}>
-        {/* 使用客戶端布局組件包裹所有內容 */}
-        <RootClientLayout>
-          {children}
-        </RootClientLayout>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            {/* 使用客戶端布局組件包裹所有內容 */}
+            <RootClientLayout>
+              {children}
+            </RootClientLayout>
+            <Toaster richColors position="top-right" />
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
