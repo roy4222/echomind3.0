@@ -1,4 +1,5 @@
 import { FC } from 'react';
+import { useTheme } from 'next-themes';
 
 // 定義 SidebarToggleIcon 組件的 props 介面
 interface SidebarToggleIconProps {
@@ -8,6 +9,9 @@ interface SidebarToggleIconProps {
 
 // 導出 SidebarToggleIcon 組件
 export const SidebarToggleIcon: FC<SidebarToggleIconProps> = ({ isOpen = false, className }) => {
+  const { theme } = useTheme();
+  const strokeColor = theme === 'dark' ? 'white' : 'black';
+
   // 如果側邊欄是開啟狀態
   if (isOpen) {
     return (
@@ -16,7 +20,7 @@ export const SidebarToggleIcon: FC<SidebarToggleIconProps> = ({ isOpen = false, 
         viewBox="0 0 24 24"
         className={`w-6 h-6 ${className}`}
         fill="none"
-        stroke="white"
+        stroke={strokeColor}
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -35,7 +39,7 @@ export const SidebarToggleIcon: FC<SidebarToggleIconProps> = ({ isOpen = false, 
       viewBox="0 0 24 24"
       className={`w-6 h-6 ${className}`}
       fill="none"
-      stroke="white"
+      stroke={strokeColor}
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
