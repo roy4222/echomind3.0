@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { registerWithEmail, loginWithGoogle, updateUserProfile } from '@/lib/utils/auth';
+import { AuthError } from 'firebase/auth';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -51,8 +52,9 @@ export default function RegisterPage() {
       // 註冊後更新用戶資料
       await updateUserProfile(formData.name);
       router.push('/');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      const authError = err as AuthError;
+      setError(authError.message);
     } finally {
       setIsLoading(false);
     }
@@ -66,8 +68,9 @@ export default function RegisterPage() {
     try {
       await loginWithGoogle();
       router.push('/');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      const authError = err as AuthError;
+      setError(authError.message);
     } finally {
       setIsLoading(false);
     }

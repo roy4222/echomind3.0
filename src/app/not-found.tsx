@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 // 定義 NotFound 組件，用於顯示 404 錯誤頁面
 export default function NotFound() {
   return (
@@ -38,12 +40,12 @@ export default function NotFound() {
         </p>
 
         {/* 返回首頁按鈕 */}
-        <a
+        <Link
           href="/"
           className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
         >
           返回首頁
-        </a>
+        </Link>
       </div>
     </div>
   );

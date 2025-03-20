@@ -2,7 +2,7 @@
 
 // 導入必要的依賴
 import { createContext, useContext, ReactNode } from 'react';
-import { User } from 'firebase/auth';
+import { User, AuthError } from 'firebase/auth';
 import { useAuthState } from '@/hooks/useAuthState';
 import { useAuthActions } from '@/hooks/useAuthActions';
 
@@ -11,7 +11,7 @@ import { useAuthActions } from '@/hooks/useAuthActions';
  * @interface AuthContextType
  * @property {User | null} user - 當前登入的用戶對象或 null
  * @property {boolean} loading - 認證狀態是否正在加載中
- * @property {Error | null} error - 認證過程中可能遇到的錯誤或 null
+ * @property {AuthError | null} error - 認證過程中可能遇到的錯誤或 null
  * @property {function} registerWithEmail - 註冊用戶的函數
  * @property {function} loginWithEmail - 用電子郵件登入的函數
  * @property {function} loginWithGoogle - 用 Google 登入的函數
@@ -20,7 +20,7 @@ import { useAuthActions } from '@/hooks/useAuthActions';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  error: Error | null;
+  error: AuthError | null;
   registerWithEmail: (data: { email: string; password: string; name: string }) => Promise<User>;
   loginWithEmail: (data: { email: string; password: string; rememberMe?: boolean }) => Promise<User>;
   loginWithGoogle: (rememberMe?: boolean) => Promise<User>;
@@ -71,10 +71,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }
 
   // 準備提供給上下文的值
-  const value = {
+  const value: AuthContextType = {
     user,
     loading,
-    error,
+    error: error as AuthError,
     registerWithEmail,
     loginWithEmail,
     loginWithGoogle,

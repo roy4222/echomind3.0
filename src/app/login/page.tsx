@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { loginWithEmail, loginWithGoogle } from '@/lib/utils/auth';
+import { AuthError } from 'firebase/auth';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,8 +37,9 @@ export default function LoginPage() {
         formData.password
       );
       router.push('/');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      const authError = err as AuthError;
+      setError(authError.message);
     } finally {
       setIsLoading(false);
     }
@@ -50,8 +53,9 @@ export default function LoginPage() {
     try {
       await loginWithGoogle();
       router.push('/');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      const authError = err as AuthError;
+      setError(authError.message);
     } finally {
       setIsLoading(false);
     }
@@ -66,9 +70,9 @@ export default function LoginPage() {
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             或者{' '}
-            <a href="/register" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
+            <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
               註冊新帳號
-            </a>
+            </Link>
           </p>
         </div>
 
@@ -170,9 +174,9 @@ export default function LoginPage() {
             </div>
 
             <div className="text-sm">
-              <a href="#" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
+              <Link href="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
                 忘記密碼？
-              </a>
+              </Link>
             </div>
           </div>
 

@@ -39,7 +39,7 @@ export const useAuthActions = () => {
       );
     } catch (error) {
       console.error('設定持久化失敗:', error);
-      throw error;
+      throw error as AuthError;
     }
   };
 
@@ -62,9 +62,9 @@ export const useAuthActions = () => {
       });
 
       return userCredential.user;
-    } catch (error: any) {
-      handleAuthError(error);
-      throw error;
+    } catch (error) {
+      handleAuthError(error as AuthError);
+      throw error as AuthError;
     }
   };
 
@@ -82,9 +82,9 @@ export const useAuthActions = () => {
       });
 
       return userCredential.user;
-    } catch (error: any) {
-      handleAuthError(error);
-      throw error;
+    } catch (error) {
+      handleAuthError(error as AuthError);
+      throw error as AuthError;
     }
   };
 
@@ -109,9 +109,9 @@ export const useAuthActions = () => {
       });
 
       return userCredential.user;
-    } catch (error: any) {
-      handleAuthError(error);
-      throw error;
+    } catch (error) {
+      handleAuthError(error as AuthError);
+      throw error as AuthError;
     }
   };
 
@@ -127,7 +127,7 @@ export const useAuthActions = () => {
       });
     } catch (error) {
       handleAuthError(error as AuthError);
-      throw error;
+      throw error as AuthError;
     }
   };
 

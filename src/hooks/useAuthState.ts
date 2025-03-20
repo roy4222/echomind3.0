@@ -1,13 +1,13 @@
 // 引入必要的 React Hooks 和 Firebase 認證相關功能
 import { useState, useEffect } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
+import { User, onAuthStateChanged, AuthError } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 // 定義認證狀態的介面
 interface AuthState {
   user: User | null;     // 當前登入的用戶，未登入時為 null
   loading: boolean;      // 是否正在載入認證狀態
-  error: Error | null;   // 認證過程中的錯誤，無錯誤時為 null
+  error: AuthError | null;   // 認證過程中的錯誤，無錯誤時為 null
 }
 
 // 自定義 Hook 用於監聽和管理用戶的認證狀態
@@ -15,7 +15,7 @@ export const useAuthState = (): AuthState => {
   // 設置狀態管理
   const [user, setUser] = useState<User | null>(null);        // 用戶狀態
   const [loading, setLoading] = useState(true);               // 載入狀態
-  const [error, setError] = useState<Error | null>(null);     // 錯誤狀態
+  const [error, setError] = useState<AuthError | null>(null);     // 錯誤狀態
 
   useEffect(() => {
     // 設置 Firebase 認證狀態監聽器
@@ -30,7 +30,7 @@ export const useAuthState = (): AuthState => {
           } catch (error) {
             // 處理重新載入用戶資料時的錯誤
             console.error('重新載入用戶資料失敗:', error);
-            setError(error as Error);
+            setError(error as AuthError);
           }
         } else {
           // 如果沒有用戶登入，將用戶狀態設為 null
@@ -42,7 +42,7 @@ export const useAuthState = (): AuthState => {
       (error) => {
         // 處理監聽器本身的錯誤
         console.error('認證狀態監聽錯誤:', error);
-        setError(error as Error);
+        setError(error as AuthError);
         setLoading(false);
       }
     );
