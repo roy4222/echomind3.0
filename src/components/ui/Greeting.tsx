@@ -14,10 +14,12 @@ export const Greeting = () => {
       
       if (hour >= 5 && hour < 12) {
         return '早安';
-      } else if (hour >= 12 && hour < 18) {
-        return '午安';
+      } else if (hour == 12) {
+        return '中午好';
+      } else if (hour > 12 && hour < 18) {
+        return '下午好';
       } else if (hour >= 18 && hour < 22) {
-        return '晚安';
+        return '晚上好';
       } else {
         return '永遠是深夜有多好';
       }
