@@ -1,3 +1,4 @@
+// 引入 Firebase 認證相關功能
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword,
@@ -13,12 +14,14 @@ import {
 } from 'firebase/auth';
 import { auth } from '../firebase';
 
+// 初始化認證狀態監聽器
 export const initializeAuthListener = (callback: (user: User | null) => void) => {
   return onAuthStateChanged(auth, (user) => {
     callback(user);
   });
 };
 
+// 更新用戶個人資料
 export const updateUserProfile = async (
   displayName?: string,
   photoURL?: string
@@ -38,6 +41,7 @@ export const updateUserProfile = async (
   }
 };
 
+// 更新用戶電子郵件
 export const updateUserEmail = async (newEmail: string): Promise<void> => {
   try {
     if (!auth.currentUser) {
@@ -51,6 +55,7 @@ export const updateUserEmail = async (newEmail: string): Promise<void> => {
   }
 };
 
+// 更新用戶密碼
 export const updateUserPassword = async (newPassword: string): Promise<void> => {
   try {
     if (!auth.currentUser) {
@@ -64,6 +69,7 @@ export const updateUserPassword = async (newPassword: string): Promise<void> => 
   }
 };
 
+// 使用電子郵件註冊新用戶
 export const registerWithEmail = async (
   email: string,
   password: string
@@ -77,6 +83,7 @@ export const registerWithEmail = async (
   }
 };
 
+// 使用電子郵件和密碼登入
 export const loginWithEmail = async (
   email: string, 
   password: string
@@ -90,6 +97,7 @@ export const loginWithEmail = async (
   }
 };
 
+// 使用 Google 帳號登入
 export const loginWithGoogle = async (): Promise<UserCredential> => {
   try {
     const provider = new GoogleAuthProvider();
