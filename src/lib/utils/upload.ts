@@ -18,7 +18,7 @@ const checkEnvVariables = () => {
   };
 
   const missingVars = Object.entries(requiredEnvVars)
-    .filter(([_, value]) => !value)
+    .filter(([, value]) => !value)
     .map(([key]) => key);
 
   if (missingVars.length > 0) {
