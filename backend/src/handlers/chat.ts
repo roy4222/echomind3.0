@@ -4,6 +4,29 @@ import { verifyAuth } from '../middlewares/auth';
 import type { ChatMessage, ChatCompletionOptions, GroqChatResponse } from './../types/chat';
 
 /**
+ * 系統提示詞設定
+ * 定義 AI 助手的角色和行為準則
+ */
+const SYSTEM_PROMPT: ChatMessage = {
+  role: 'system',
+  content: `你是輔仁大學資訊管理學系的 AI 助手，名叫 EchoMind。
+  - 使用繁體中文回答
+  - 回答要簡潔但專業
+  - 對學生要友善有耐心
+  - 不確定的事情要誠實說不知道
+  - 需要時可以使用 Markdown 格式美化回答
+  - 專注於資管相關的學術、課程、就業諮詢
+  - 避免討論政治、宗教等敏感話題`
+};
+
+/**
+ * 預設配置參數
+ */
+const DEFAULT_MODEL = 'llama-3.1-8b-instant';  // 預設使用的語言模型
+const DEFAULT_TEMPERATURE = 0.7;                // 預設的溫度參數
+const DEFAULT_MAX_TOKENS = 2048;               // 預設的最大 token 數
+
+/**
  * 處理聊天請求
  * @param request 請求對象
  * @param env 環境變數
@@ -74,7 +97,7 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
  * @returns Groq API 回應
  */
 async function callGroqApi(
-  { messages, model = 'llama-3.1-8b-instant', temperature = 0.7, maxTokens = 2048 }: ChatCompletionOptions,
+  { messages, model = DEFAULT_MODEL, temperature = DEFAULT_TEMPERATURE, maxTokens = DEFAULT_MAX_TOKENS }: ChatCompletionOptions,
   env: Env
 ): Promise<GroqChatResponse> {
   try {
@@ -85,6 +108,9 @@ async function callGroqApi(
       throw new Error('未設定 Groq API 金鑰');
     }
     
+    // 在訊息開頭加入系統提示詞
+    const messagesWithSystemPrompt = [SYSTEM_PROMPT, ...messages];
+    
     // 發送請求到 Groq API
     const response = await fetch(url, {
       method: 'POST',
@@ -94,7 +120,7 @@ async function callGroqApi(
       },
       body: JSON.stringify({
         model,
-        messages,
+        messages: messagesWithSystemPrompt,
         temperature,
         max_tokens: maxTokens
       })

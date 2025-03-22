@@ -13791,6 +13791,20 @@ __name(handleUpload, "handleUpload");
 // src/handlers/chat.ts
 init_checked_fetch();
 init_modules_watch_stub();
+var SYSTEM_PROMPT = {
+  role: "system",
+  content: `\u4F60\u662F\u8F14\u4EC1\u5927\u5B78\u8CC7\u8A0A\u7BA1\u7406\u5B78\u7CFB\u7684 AI \u52A9\u624B\uFF0C\u540D\u53EB EchoMind\u3002
+  - \u4F7F\u7528\u7E41\u9AD4\u4E2D\u6587\u56DE\u7B54
+  - \u56DE\u7B54\u8981\u7C21\u6F54\u4F46\u5C08\u696D
+  - \u5C0D\u5B78\u751F\u8981\u53CB\u5584\u6709\u8010\u5FC3
+  - \u4E0D\u78BA\u5B9A\u7684\u4E8B\u60C5\u8981\u8AA0\u5BE6\u8AAA\u4E0D\u77E5\u9053
+  - \u9700\u8981\u6642\u53EF\u4EE5\u4F7F\u7528 Markdown \u683C\u5F0F\u7F8E\u5316\u56DE\u7B54
+  - \u5C08\u6CE8\u65BC\u8CC7\u7BA1\u76F8\u95DC\u7684\u5B78\u8853\u3001\u8AB2\u7A0B\u3001\u5C31\u696D\u8AEE\u8A62
+  - \u907F\u514D\u8A0E\u8AD6\u653F\u6CBB\u3001\u5B97\u6559\u7B49\u654F\u611F\u8A71\u984C`
+};
+var DEFAULT_MODEL = "llama-3.1-8b-instant";
+var DEFAULT_TEMPERATURE = 0.7;
+var DEFAULT_MAX_TOKENS = 2048;
 async function handleChat(request, env) {
   const headers = { ...getCorsHeadersForRequest(request), "Content-Type": "application/json" };
   try {
@@ -13835,12 +13849,13 @@ async function handleChat(request, env) {
   }
 }
 __name(handleChat, "handleChat");
-async function callGroqApi({ messages, model = "llama-3.1-8b-instant", temperature = 0.7, maxTokens = 2048 }, env) {
+async function callGroqApi({ messages, model = DEFAULT_MODEL, temperature = DEFAULT_TEMPERATURE, maxTokens = DEFAULT_MAX_TOKENS }, env) {
   try {
     const url = "https://api.groq.com/openai/v1/chat/completions";
     if (!env.GROQ_API_KEY) {
       throw new Error("\u672A\u8A2D\u5B9A Groq API \u91D1\u9470");
     }
+    const messagesWithSystemPrompt = [SYSTEM_PROMPT, ...messages];
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -13849,7 +13864,7 @@ async function callGroqApi({ messages, model = "llama-3.1-8b-instant", temperatu
       },
       body: JSON.stringify({
         model,
-        messages,
+        messages: messagesWithSystemPrompt,
         temperature,
         max_tokens: maxTokens
       })
