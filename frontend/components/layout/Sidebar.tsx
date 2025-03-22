@@ -112,7 +112,7 @@ const bottomItems: SidebarItem[] = [
   {
     icon: Settings,
     label: '設定',
-    href: '/#settings',
+    href: '/settings',
   },
 ];
 

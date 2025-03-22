@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Camera, Mail, User as UserIcon, Calendar, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthActions } from '@/hooks/useAuthActions';
-import { uploadClient } from '@/lib/services/uploadClient';
+import { uploadService } from '@/lib/services/upload';
 import Image from 'next/image';
 
 /**
@@ -78,7 +78,7 @@ export default function ProfilePage() {
 
     try {
       setIsUploading(true);
-      const downloadURL = await uploadClient.uploadAvatar(file, user.uid);
+      const downloadURL = await uploadService.uploadAvatar(file, user.uid);
       
       // 使用 updateUserProfile 更新用戶頭像
       await updateUserProfile(undefined, downloadURL);

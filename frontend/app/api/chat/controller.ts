@@ -44,6 +44,27 @@ const groq = new Groq({
  */
 export async function handleChatCompletion(request: Request) {
   try {
+    // 檢查 API 金鑰是否設置
+    if (!process.env.GROQ_API_KEY) {
+      console.error('未設置 GROQ_API_KEY 環境變數');
+      return NextResponse.json<ChatResponse>(
+        {
+          success: false,
+          error: {
+            message: '伺服器配置錯誤：缺少 API 金鑰，請確認環境變數已正確設置',
+            code: 'CONFIG_ERROR'
+          }
+        },
+        { status: 500 }
+      );
+    }
+    
+    // 記錄環境信息（不包含敏感數據）
+    console.log('Groq API 狀態:', { 
+      hasKey: !!process.env.GROQ_API_KEY,
+      environment: process.env.NODE_ENV
+    });
+    
     // 解析請求內容
     const body = await request.json() as ChatCompletionOptions;
     const { messages, model, temperature, maxTokens, stream } = body;

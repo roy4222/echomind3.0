@@ -1,26 +1,12 @@
+import { NextRequest, NextResponse } from 'next/server';
 import { handleChatCompletion } from './controller';
-import { NextResponse } from 'next/server';
 
 /**
  * POST 處理函數
- * 處理來自 /api/chat 的 POST 請求
+ * 處理來自 /api/chat 的 POST 請求，連接到 Groq API
  */
-export async function POST(request: Request) {
-  try {
-    return await handleChatCompletion(request);
-  } catch (error) {
-    console.error("API 處理錯誤:", error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: { 
-          message: "處理請求時發生錯誤", 
-          code: "SERVER_ERROR" 
-        } 
-      },
-      { status: 500 }
-    );
-  }
+export async function POST(request: NextRequest) {
+  return handleChatCompletion(request);
 }
 
 /**
