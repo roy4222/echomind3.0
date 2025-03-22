@@ -1,3 +1,5 @@
 import { handleChatCompletion } from './controller';
 
-export const POST = handleChatCompletion; 
+export async function POST(request: Request) {
+  return handleChatCompletion(request);
+} 

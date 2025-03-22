@@ -1,7 +1,7 @@
 /**
  * 引入聊天相關的型別定義
  */
-import type { ChatCompletionOptions, ChatResponse, GroqChatResponse } from '@/lib/types/chat';
+import type { ChatMessage, ChatCompletionOptions, ChatResponse, GroqChatResponse } from '@/lib/types/chat';
 
 /**
  * Groq 服務類別
@@ -29,39 +29,79 @@ class GroqService {
     stream = false,
   }: ChatCompletionOptions): Promise<GroqChatResponse> {
     try {
-      // 發送 POST 請求到 API 端點
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages,
-          model,
-          temperature,
-          maxTokens,
-          stream,
-        }),
-      });
+      try {
+        // 嘗試發送 POST 請求到 API 端點
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messages,
+            model,
+            temperature,
+            maxTokens,
+            stream,
+          }),
+        });
 
-      // 檢查回應狀態
-      if (!response.ok) {
-        throw new Error('API 請求失敗');
+        // 檢查回應狀態
+        if (!response.ok) {
+          throw new Error('API 請求失敗');
+        }
+
+        // 解析回應資料
+        const data = await response.json() as ChatResponse;
+        
+        // 檢查 API 回應是否成功
+        if (!data.success) {
+          throw new Error(data.error?.message || 'API 請求失敗');
+        }
+
+        return data.data as GroqChatResponse;
+      } catch (apiError) {
+        console.error('API 請求失敗，使用模擬回應。', apiError);
+        
+        // 使用模擬回應作為回退方案
+        return this.getMockResponse(messages);
       }
-
-      // 解析回應資料
-      const data = await response.json() as ChatResponse;
-      
-      // 檢查 API 回應是否成功
-      if (!data.success) {
-        throw new Error(data.error?.message || 'API 請求失敗');
-      }
-
-      return data.data as GroqChatResponse;
     } catch (error) {
       console.error('聊天請求錯誤:', error);
       throw error;
     }
+  }
+
+  /**
+   * 生成模擬回應
+   * @param messages 使用者訊息
+   * @returns 模擬的API回應
+   */
+  private getMockResponse(messages: ChatMessage[]): GroqChatResponse {
+    // 獲取最後一條使用者訊息
+    const lastUserMessage = messages[messages.length - 1].content || '';
+    
+    // 生成簡單的回應
+    return {
+      id: 'mock-' + Date.now(),
+      object: 'chat.completion',
+      created: Math.floor(Date.now() / 1000),
+      model: this.defaultModel,
+      choices: [
+        {
+          message: {
+            role: 'assistant',
+            content: `您好！我是您的AI助手。我們目前正在離線模式，無法連線到API服務。您的訊息是：「${lastUserMessage}」，但我暫時無法提供完整的回答。請稍後再試，或確認網路連接正常。`,
+          },
+          index: 0,
+          finish_reason: 'stop',
+        },
+      ],
+      usage: {
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+      },
+    };
   }
 
   /**
