@@ -63,3 +63,50 @@ Thumbs.db
 .turbo
 .cache/
 
+# 環境變數檔案
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.production
+
+# 專案依賴
+node_modules/
+.pnp
+.pnp.js
+
+# 構建輸出
+.next/
+out/
+build
+dist/
+
+# 快取
+.turbo
+
+# 測試覆蓋率
+coverage/
+
+# 日誌
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 編輯器和 IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 操作系統生成的檔案
+.DS_Store
+Thumbs.db
+
+# 個人筆記和其他
+NOTES.md
+TODO.md
+
