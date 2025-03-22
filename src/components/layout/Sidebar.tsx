@@ -84,12 +84,12 @@ const sidebarItems: SidebarItem[] = [
       </svg>
     ),
     label: '聊天歷史',
-    href: '#',
+    href: '/#history',
   },
   {
     icon: MessageSquare,
     label: '匿名留言板',
-    href: '#',
+    href: '/#anonymous',
   },
   {
     icon: () => (
@@ -98,7 +98,7 @@ const sidebarItems: SidebarItem[] = [
       </svg>
     ),
     label: '小遊戲',
-    href: '#',
+    href: '/#games',
   },
 ];
 
@@ -107,12 +107,12 @@ const bottomItems: SidebarItem[] = [
   {
     icon: HelpCircle,
     label: '幫助',
-    href: '#',
+    href: '/#help',
   },
   {
     icon: Settings,
     label: '設定',
-    href: '#',
+    href: '/#settings',
   },
 ];
 
@@ -208,7 +208,7 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, onClose }) => {
               {chatHistory.map((chat) => (
                 <Link
                   key={chat.id}
-                  href="#"
+                  href={`/#chat-${chat.id}`}
                   className="flex flex-col px-4 py-2 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   <span className="font-medium text-gray-700 dark:text-gray-300 truncate">

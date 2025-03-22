@@ -27,15 +27,21 @@ const checkEnvVariables = () => {
   }
 };
 
+// S3 客戶端實例
+let S3: S3Client | null = null;
+let BUCKET_NAME: string | null = null;
+
 /**
  * 初始化 Cloudflare R2 客戶端
  * 使用環境變數配置 S3 客戶端
  * @returns {S3Client} 配置好的 S3 客戶端實例
  */
 const initS3Client = () => {
+  if (S3) return S3;
+  
   checkEnvVariables();
   
-  return new S3Client({
+  S3 = new S3Client({
     region: 'auto',
     endpoint: process.env.NEXT_PUBLIC_R2_API_ENDPOINT,
     credentials: {
@@ -44,13 +50,11 @@ const initS3Client = () => {
     },
     forcePathStyle: true
   });
+  
+  BUCKET_NAME = process.env.NEXT_PUBLIC_R2_BUCKET!;
+  
+  return S3;
 };
-
-/**
- * 初始化全局 S3 客戶端和存儲桶名稱
- */
-const S3 = initS3Client();
-const BUCKET_NAME = process.env.NEXT_PUBLIC_R2_BUCKET!;
 
 /**
  * 將 File 對象轉換為 Buffer
@@ -81,6 +85,12 @@ const fileToBuffer = async (file: File): Promise<Buffer> => {
  */
 export const uploadFile = async (file: File, path: string): Promise<string> => {
   try {
+    // 初始化 S3 客戶端
+    const client = initS3Client();
+    if (!BUCKET_NAME) {
+      throw new Error("存儲桶名稱未設定");
+    }
+    
     console.log('正在上傳文件到 R2...', {
       bucket: BUCKET_NAME,
       path,
@@ -90,7 +100,7 @@ export const uploadFile = async (file: File, path: string): Promise<string> => {
 
     const buffer = await fileToBuffer(file);
 
-    await S3.send(
+    await client.send(
       new PutObjectCommand({
         Bucket: BUCKET_NAME,
         Key: path,
