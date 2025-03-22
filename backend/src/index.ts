@@ -1,7 +1,7 @@
 import { handleUpload } from './handlers/upload';
 import { handleChat } from './handlers/chat';
 import { handleFaq } from './handlers/faq';
-import { corsHeaders } from './utils/cors';
+import { corsHeaders, handleCors, getCorsHeadersForRequest } from './utils/cors';
 import type { ExecutionContext } from '@cloudflare/workers-types';
 
 // 定義環境變數類型
@@ -31,10 +31,7 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     // 處理 CORS 預檢請求
     if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        status: 204,
-        headers: corsHeaders
-      });
+      return handleCors(request);
     }
 
     const url = new URL(request.url);
@@ -58,7 +55,7 @@ export default {
         return new Response(JSON.stringify({ status: 'ok' }), {
           status: 200,
           headers: {
-            ...corsHeaders,
+            ...getCorsHeadersForRequest(request),
             'Content-Type': 'application/json'
           }
         });
@@ -68,7 +65,7 @@ export default {
       return new Response(JSON.stringify({ error: '路徑不存在' }), { 
         status: 404,
         headers: {
-          ...corsHeaders,
+          ...getCorsHeadersForRequest(request),
           'Content-Type': 'application/json'
         }
       });
@@ -80,7 +77,7 @@ export default {
       }), { 
         status: 500,
         headers: {
-          ...corsHeaders,
+          ...getCorsHeadersForRequest(request),
           'Content-Type': 'application/json'
         }
       });

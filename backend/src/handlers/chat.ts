@@ -1,5 +1,5 @@
 import { Env } from '../index';
-import { corsHeaders } from '../utils/cors';
+import { corsHeaders, getCorsHeadersForRequest } from '../utils/cors';
 import { verifyAuth } from '../middlewares/auth';
 import type { ChatMessage, ChatCompletionOptions, GroqChatResponse } from './../types/chat';
 
@@ -11,7 +11,7 @@ import type { ChatMessage, ChatCompletionOptions, GroqChatResponse } from './../
  */
 export async function handleChat(request: Request, env: Env): Promise<Response> {
   // 添加 CORS 標頭
-  const headers = { ...corsHeaders, 'Content-Type': 'application/json' };
+  const headers = { ...getCorsHeadersForRequest(request), 'Content-Type': 'application/json' };
   
   try {
     // 驗證請求方法

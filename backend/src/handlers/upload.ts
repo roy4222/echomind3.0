@@ -1,5 +1,5 @@
 import { Env } from '../index';
-import { corsHeaders } from '../utils/cors';
+import { corsHeaders, getCorsHeadersForRequest } from '../utils/cors';
 import { verifyAuth } from '../middlewares/auth';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
@@ -41,7 +41,7 @@ function getS3Client(env: Env): S3Client {
  */
 export async function handleUpload(request: Request, env: Env): Promise<Response> {
   // 添加 CORS 標頭
-  const headers = { ...corsHeaders, 'Content-Type': 'application/json' };
+  const headers = { ...getCorsHeadersForRequest(request), 'Content-Type': 'application/json' };
   
   try {
     console.log('開始處理檔案上傳請求');

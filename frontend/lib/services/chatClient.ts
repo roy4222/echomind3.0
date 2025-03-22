@@ -5,6 +5,13 @@ import type { ChatMessage, ChatCompletionOptions, ChatResponse, SimpleChatRespon
  * 處理與聊天 API 的溝通
  */
 export class ChatClientService {
+  private baseUrl: string;
+
+  constructor() {
+    // 使用環境變數中的 API 基礎 URL，或回退到空字串（相對路徑）
+    this.baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+  }
+
   /**
    * 發送聊天請求 (完整回應)
    * @param options 聊天選項
@@ -12,7 +19,7 @@ export class ChatClientService {
    */
   async chat(options: ChatCompletionOptions): Promise<ChatResponse> {
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch(`${this.baseUrl}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -70,7 +77,7 @@ export class ChatClientService {
    */
   async searchFaq(query: string, limit: number = 5): Promise<any> {
     try {
-      const response = await fetch('/api/faq', {
+      const response = await fetch(`${this.baseUrl}/api/faq`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

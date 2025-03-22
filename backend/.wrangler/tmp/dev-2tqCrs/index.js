@@ -2469,12 +2469,37 @@ init_modules_watch_stub();
 // src/utils/cors.ts
 init_checked_fetch();
 init_modules_watch_stub();
-var corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
-  "Access-Control-Max-Age": "86400"
-};
+var ALLOWED_ORIGINS = [
+  "https://echomind3-0.pages.dev",
+  // 原有 Cloudflare Pages 網址
+  "https://a6447ec7.echomind4.pages.dev",
+  // 新部署的 Cloudflare Pages 網址
+  "http://localhost:3000",
+  // 本地開發環境
+  "https://localhost:3000"
+];
+function isOriginAllowed(origin) {
+  return !origin || ALLOWED_ORIGINS.includes(origin);
+}
+__name(isOriginAllowed, "isOriginAllowed");
+function getCorsHeadersForRequest(request) {
+  const origin = request.headers.get("Origin");
+  return {
+    "Access-Control-Allow-Origin": isOriginAllowed(origin) ? origin || "*" : ALLOWED_ORIGINS[0],
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+    "Access-Control-Max-Age": "86400"
+  };
+}
+__name(getCorsHeadersForRequest, "getCorsHeadersForRequest");
+function handleCors(request) {
+  return new Response(null, {
+    status: 204,
+    // No content
+    headers: getCorsHeadersForRequest(request)
+  });
+}
+__name(handleCors, "handleCors");
 
 // node_modules/@aws-sdk/client-s3/dist-es/S3Client.js
 init_checked_fetch();
@@ -13657,7 +13682,7 @@ function getS3Client(env) {
 }
 __name(getS3Client, "getS3Client");
 async function handleUpload(request, env) {
-  const headers = { ...corsHeaders, "Content-Type": "application/json" };
+  const headers = { ...getCorsHeadersForRequest(request), "Content-Type": "application/json" };
   try {
     console.log("\u958B\u59CB\u8655\u7406\u6A94\u6848\u4E0A\u50B3\u8ACB\u6C42");
     if (!env.R2_BUCKET || !env.R2_ENDPOINT || !env.R2_API_ENDPOINT) {
@@ -13767,7 +13792,7 @@ __name(handleUpload, "handleUpload");
 init_checked_fetch();
 init_modules_watch_stub();
 async function handleChat(request, env) {
-  const headers = { ...corsHeaders, "Content-Type": "application/json" };
+  const headers = { ...getCorsHeadersForRequest(request), "Content-Type": "application/json" };
   try {
     if (request.method !== "POST") {
       return new Response(JSON.stringify({
@@ -13989,7 +14014,7 @@ var PineconeClient = class {
 
 // src/handlers/faq.ts
 async function handleFaq(request, env) {
-  const headers = { ...corsHeaders, "Content-Type": "application/json" };
+  const headers = { ...getCorsHeadersForRequest(request), "Content-Type": "application/json" };
   try {
     if (request.method !== "POST") {
       return new Response(JSON.stringify({
@@ -14042,10 +14067,7 @@ __name(handleFaq, "handleFaq");
 var src_default = {
   async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") {
-      return new Response(null, {
-        status: 204,
-        headers: corsHeaders
-      });
+      return handleCors(request);
     }
     const url = new URL(request.url);
     try {
@@ -14062,7 +14084,7 @@ var src_default = {
         return new Response(JSON.stringify({ status: "ok" }), {
           status: 200,
           headers: {
-            ...corsHeaders,
+            ...getCorsHeadersForRequest(request),
             "Content-Type": "application/json"
           }
         });
@@ -14070,7 +14092,7 @@ var src_default = {
       return new Response(JSON.stringify({ error: "\u8DEF\u5F91\u4E0D\u5B58\u5728" }), {
         status: 404,
         headers: {
-          ...corsHeaders,
+          ...getCorsHeadersForRequest(request),
           "Content-Type": "application/json"
         }
       });
@@ -14081,7 +14103,7 @@ var src_default = {
       }), {
         status: 500,
         headers: {
-          ...corsHeaders,
+          ...getCorsHeadersForRequest(request),
           "Content-Type": "application/json"
         }
       });
