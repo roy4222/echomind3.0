@@ -29,30 +29,48 @@ export interface Env {
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    // 處理 CORS 預檢請求
-    if (request.method === 'OPTIONS') {
-      return handleCors(request);
-    }
-
-    const url = new URL(request.url);
+    // 記錄請求基本資訊
+    const startTime = Date.now();
+    const requestId = crypto.randomUUID();
+    console.log(`🔵 [${requestId}] 接收請求:`, {
+      method: request.method,
+      url: request.url,
+      userAgent: request.headers.get('User-Agent'),
+      origin: request.headers.get('Origin'),
+      referer: request.headers.get('Referer'),
+      contentType: request.headers.get('Content-Type'),
+      timestamp: new Date().toISOString()
+    });
     
-    // 路由分發
     try {
-      if (url.pathname === '/api/chat') {
-        return handleChat(request, env);
-      }
-      
-      if (url.pathname === '/api/faq') {
-        return handleFaq(request, env);
-      }
-      
-      if (url.pathname === '/api/upload') {
-        return handleUpload(request, env);
+      // 處理 CORS 預檢請求
+      if (request.method === 'OPTIONS') {
+        console.log(`⚪ [${requestId}] CORS 預檢請求`);
+        return handleCors(request);
       }
 
+      const url = new URL(request.url);
+      console.log(`🔍 [${requestId}] 路由分發: ${url.pathname}`);
+      
+      // 路由分發
+      let response: Response;
+      
+      if (url.pathname === '/api/chat') {
+        console.log(`💬 [${requestId}] 處理聊天請求`);
+        response = await handleChat(request, env);
+      }
+      else if (url.pathname === '/api/faq') {
+        console.log(`❓ [${requestId}] 處理 FAQ 請求`);
+        response = await handleFaq(request, env);
+      }
+      else if (url.pathname === '/api/upload') {
+        console.log(`📤 [${requestId}] 處理上傳請求`);
+        response = await handleUpload(request, env);
+      }
       // 健康檢查端點
-      if (url.pathname === '/api/health') {
-        return new Response(JSON.stringify({ status: 'ok' }), {
+      else if (url.pathname === '/api/health') {
+        console.log(`💓 [${requestId}] 健康檢查`);
+        response = new Response(JSON.stringify({ status: 'ok' }), {
           status: 200,
           headers: {
             ...getCorsHeadersForRequest(request),
@@ -60,20 +78,36 @@ export default {
           }
         });
       }
-
       // 未找到路由
-      return new Response(JSON.stringify({ error: '路徑不存在' }), { 
-        status: 404,
-        headers: {
-          ...getCorsHeadersForRequest(request),
-          'Content-Type': 'application/json'
-        }
-      });
+      else {
+        console.log(`⚠️ [${requestId}] 未找到路由: ${url.pathname}`);
+        response = new Response(JSON.stringify({ error: '路徑不存在' }), { 
+          status: 404,
+          headers: {
+            ...getCorsHeadersForRequest(request),
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+      
+      // 記錄處理時間
+      const processingTime = Date.now() - startTime;
+      console.log(`🟢 [${requestId}] 請求完成: ${response.status}, 耗時 ${processingTime}ms`);
+      
+      return response;
     } catch (error) {
       // 錯誤處理
-      console.error('API 錯誤:', error);
+      const processingTime = Date.now() - startTime;
+      console.error(`🔴 [${requestId}] API 處理錯誤 (${processingTime}ms):`, error);
+      console.error('錯誤詳情:', error instanceof Error ? {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      } : '未知錯誤類型');
+      
       return new Response(JSON.stringify({
-        error: error instanceof Error ? error.message : '伺服器內部錯誤'
+        error: error instanceof Error ? error.message : '伺服器內部錯誤',
+        requestId: requestId
       }), { 
         status: 500,
         headers: {

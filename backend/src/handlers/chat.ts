@@ -33,12 +33,22 @@ const DEFAULT_MAX_TOKENS = 2048;               // 預設的最大 token 數
  * @returns 回應對象
  */
 export async function handleChat(request: Request, env: Env): Promise<Response> {
+  console.log('=== 收到聊天請求 ===');
+  console.log('請求 URL:', request.url);
+  console.log('請求方法:', request.method);
+  console.log('請求來源:', request.headers.get('Origin'));
+  console.log('Worker 環境變數檢查:', {
+    hasGroqApiKey: !!env.GROQ_API_KEY,
+    apiKeyLength: env.GROQ_API_KEY ? env.GROQ_API_KEY.length : 0,
+  });
+  
   // 添加 CORS 標頭
   const headers = { ...getCorsHeadersForRequest(request), 'Content-Type': 'application/json' };
   
   try {
     // 驗證請求方法
     if (request.method !== 'POST') {
+      console.log('❌ 請求失敗: 方法不允許 -', request.method);
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: '方法不允許' } 
@@ -50,9 +60,17 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
     
     // 解析請求數據
     const data = await request.json() as ChatCompletionOptions;
+    console.log('📝 請求內容摘要:', {
+      messagesCount: data.messages?.length || 0,
+      requestedModel: data.model || DEFAULT_MODEL,
+      temperature: data.temperature || DEFAULT_TEMPERATURE,
+      maxTokens: data.maxTokens || DEFAULT_MAX_TOKENS,
+      firstUserMessage: data.messages?.[0]?.content?.substring(0, 50) + '...' || '無內容'
+    });
     
     // 檢查必要參數
     if (!data.messages || !Array.isArray(data.messages) || data.messages.length === 0) {
+      console.log('❌ 請求失敗: 缺少聊天訊息');
       return new Response(JSON.stringify({ 
         success: false, 
         error: { message: '缺少聊天訊息' } 
@@ -62,8 +80,17 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
       });
     }
     
+    console.log('🔄 開始調用 Groq API...');
     // 調用 Groq API
     const groqResponse = await callGroqApi(data, env);
+    
+    console.log('✅ Groq API 調用成功');
+    console.log('回應摘要:', {
+      model: groqResponse.model,
+      totalTokens: groqResponse.usage?.total_tokens || 0,
+      responseTime: new Date().toISOString(), // 使用當前時間代替
+      firstResponseWords: groqResponse.choices[0]?.message?.content?.substring(0, 50) + '...' || '無內容'
+    });
     
     // 返回成功回應
     return new Response(JSON.stringify({
@@ -75,7 +102,11 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
     });
     
   } catch (error) {
-    console.error('聊天處理錯誤:', error);
+    console.error('❌ 聊天處理錯誤:', error);
+    console.error('錯誤詳情:', error instanceof Error ? {
+      message: error.message,
+      stack: error.stack
+    } : '未知錯誤類型');
     
     // 返回錯誤回應
     return new Response(JSON.stringify({
@@ -103,15 +134,26 @@ async function callGroqApi(
   try {
     const url = 'https://api.groq.com/openai/v1/chat/completions';
     
+    console.log('📊 Groq API 請求詳情:', {
+      model: model,
+      messagesCount: messages.length,
+      temperature: temperature,
+      maxTokens: maxTokens
+    });
+    
     // 檢查 API 金鑰
     if (!env.GROQ_API_KEY) {
+      console.error('❌ 缺少 Groq API 金鑰');
       throw new Error('未設定 Groq API 金鑰');
     }
     
     // 在訊息開頭加入系統提示詞
     const messagesWithSystemPrompt = [SYSTEM_PROMPT, ...messages];
+    console.log('🔄 添加系統提示詞，最終訊息數量:', messagesWithSystemPrompt.length);
     
     // 發送請求到 Groq API
+    console.log('🌐 發送請求到 Groq API...');
+    const startTime = Date.now();
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -125,18 +167,38 @@ async function callGroqApi(
         max_tokens: maxTokens
       })
     });
+    const endTime = Date.now();
+    console.log(`⏱️ Groq API 請求耗時: ${endTime - startTime}ms`);
     
     // 檢查回應狀態
     if (!response.ok) {
       const errorData = await response.json();
+      console.error('❌ Groq API 回應錯誤:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorData: errorData
+      });
       throw new Error(`Groq API 錯誤: ${JSON.stringify(errorData)}`);
     }
     
+    // 解析回應
+    const responseData = await response.json() as GroqChatResponse;
+    console.log('✅ Groq API 回應成功:', {
+      model: responseData.model,
+      usage: responseData.usage,
+      responseCharCount: responseData.choices[0]?.message?.content?.length || 0
+    });
+    
     // 返回 Groq API 回應
-    return await response.json() as GroqChatResponse;
+    return responseData;
     
   } catch (error) {
-    console.error('Groq API 請求錯誤:', error);
+    console.error('❌ Groq API 請求錯誤:', error);
+    console.error('錯誤詳情:', error instanceof Error ? {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    } : '未知錯誤類型');
     throw error;
   }
 } 

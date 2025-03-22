@@ -13806,9 +13806,18 @@ var DEFAULT_MODEL = "llama-3.1-8b-instant";
 var DEFAULT_TEMPERATURE = 0.7;
 var DEFAULT_MAX_TOKENS = 2048;
 async function handleChat(request, env) {
+  console.log("=== \u6536\u5230\u804A\u5929\u8ACB\u6C42 ===");
+  console.log("\u8ACB\u6C42 URL:", request.url);
+  console.log("\u8ACB\u6C42\u65B9\u6CD5:", request.method);
+  console.log("\u8ACB\u6C42\u4F86\u6E90:", request.headers.get("Origin"));
+  console.log("Worker \u74B0\u5883\u8B8A\u6578\u6AA2\u67E5:", {
+    hasGroqApiKey: !!env.GROQ_API_KEY,
+    apiKeyLength: env.GROQ_API_KEY ? env.GROQ_API_KEY.length : 0
+  });
   const headers = { ...getCorsHeadersForRequest(request), "Content-Type": "application/json" };
   try {
     if (request.method !== "POST") {
+      console.log("\u274C \u8ACB\u6C42\u5931\u6557: \u65B9\u6CD5\u4E0D\u5141\u8A31 -", request.method);
       return new Response(JSON.stringify({
         success: false,
         error: { message: "\u65B9\u6CD5\u4E0D\u5141\u8A31" }
@@ -13818,7 +13827,15 @@ async function handleChat(request, env) {
       });
     }
     const data = await request.json();
+    console.log("\u{1F4DD} \u8ACB\u6C42\u5167\u5BB9\u6458\u8981:", {
+      messagesCount: data.messages?.length || 0,
+      requestedModel: data.model || DEFAULT_MODEL,
+      temperature: data.temperature || DEFAULT_TEMPERATURE,
+      maxTokens: data.maxTokens || DEFAULT_MAX_TOKENS,
+      firstUserMessage: data.messages?.[0]?.content?.substring(0, 50) + "..." || "\u7121\u5167\u5BB9"
+    });
     if (!data.messages || !Array.isArray(data.messages) || data.messages.length === 0) {
+      console.log("\u274C \u8ACB\u6C42\u5931\u6557: \u7F3A\u5C11\u804A\u5929\u8A0A\u606F");
       return new Response(JSON.stringify({
         success: false,
         error: { message: "\u7F3A\u5C11\u804A\u5929\u8A0A\u606F" }
@@ -13827,7 +13844,16 @@ async function handleChat(request, env) {
         headers
       });
     }
+    console.log("\u{1F504} \u958B\u59CB\u8ABF\u7528 Groq API...");
     const groqResponse = await callGroqApi(data, env);
+    console.log("\u2705 Groq API \u8ABF\u7528\u6210\u529F");
+    console.log("\u56DE\u61C9\u6458\u8981:", {
+      model: groqResponse.model,
+      totalTokens: groqResponse.usage?.total_tokens || 0,
+      responseTime: (/* @__PURE__ */ new Date()).toISOString(),
+      // 使用當前時間代替
+      firstResponseWords: groqResponse.choices[0]?.message?.content?.substring(0, 50) + "..." || "\u7121\u5167\u5BB9"
+    });
     return new Response(JSON.stringify({
       success: true,
       data: groqResponse
@@ -13836,7 +13862,11 @@ async function handleChat(request, env) {
       headers
     });
   } catch (error) {
-    console.error("\u804A\u5929\u8655\u7406\u932F\u8AA4:", error);
+    console.error("\u274C \u804A\u5929\u8655\u7406\u932F\u8AA4:", error);
+    console.error("\u932F\u8AA4\u8A73\u60C5:", error instanceof Error ? {
+      message: error.message,
+      stack: error.stack
+    } : "\u672A\u77E5\u932F\u8AA4\u985E\u578B");
     return new Response(JSON.stringify({
       success: false,
       error: {
@@ -13852,10 +13882,20 @@ __name(handleChat, "handleChat");
 async function callGroqApi({ messages, model = DEFAULT_MODEL, temperature = DEFAULT_TEMPERATURE, maxTokens = DEFAULT_MAX_TOKENS }, env) {
   try {
     const url = "https://api.groq.com/openai/v1/chat/completions";
+    console.log("\u{1F4CA} Groq API \u8ACB\u6C42\u8A73\u60C5:", {
+      model,
+      messagesCount: messages.length,
+      temperature,
+      maxTokens
+    });
     if (!env.GROQ_API_KEY) {
+      console.error("\u274C \u7F3A\u5C11 Groq API \u91D1\u9470");
       throw new Error("\u672A\u8A2D\u5B9A Groq API \u91D1\u9470");
     }
     const messagesWithSystemPrompt = [SYSTEM_PROMPT, ...messages];
+    console.log("\u{1F504} \u6DFB\u52A0\u7CFB\u7D71\u63D0\u793A\u8A5E\uFF0C\u6700\u7D42\u8A0A\u606F\u6578\u91CF:", messagesWithSystemPrompt.length);
+    console.log("\u{1F310} \u767C\u9001\u8ACB\u6C42\u5230 Groq API...");
+    const startTime = Date.now();
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -13869,13 +13909,31 @@ async function callGroqApi({ messages, model = DEFAULT_MODEL, temperature = DEFA
         max_tokens: maxTokens
       })
     });
+    const endTime = Date.now();
+    console.log(`\u23F1\uFE0F Groq API \u8ACB\u6C42\u8017\u6642: ${endTime - startTime}ms`);
     if (!response.ok) {
       const errorData = await response.json();
+      console.error("\u274C Groq API \u56DE\u61C9\u932F\u8AA4:", {
+        status: response.status,
+        statusText: response.statusText,
+        errorData
+      });
       throw new Error(`Groq API \u932F\u8AA4: ${JSON.stringify(errorData)}`);
     }
-    return await response.json();
+    const responseData = await response.json();
+    console.log("\u2705 Groq API \u56DE\u61C9\u6210\u529F:", {
+      model: responseData.model,
+      usage: responseData.usage,
+      responseCharCount: responseData.choices[0]?.message?.content?.length || 0
+    });
+    return responseData;
   } catch (error) {
-    console.error("Groq API \u8ACB\u6C42\u932F\u8AA4:", error);
+    console.error("\u274C Groq API \u8ACB\u6C42\u932F\u8AA4:", error);
+    console.error("\u932F\u8AA4\u8A73\u60C5:", error instanceof Error ? {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    } : "\u672A\u77E5\u932F\u8AA4\u985E\u578B");
     throw error;
   }
 }
@@ -14081,40 +14139,67 @@ __name(handleFaq, "handleFaq");
 // src/index.ts
 var src_default = {
   async fetch(request, env, ctx) {
-    if (request.method === "OPTIONS") {
-      return handleCors(request);
-    }
-    const url = new URL(request.url);
+    const startTime = Date.now();
+    const requestId = crypto.randomUUID();
+    console.log(`\u{1F535} [${requestId}] \u63A5\u6536\u8ACB\u6C42:`, {
+      method: request.method,
+      url: request.url,
+      userAgent: request.headers.get("User-Agent"),
+      origin: request.headers.get("Origin"),
+      referer: request.headers.get("Referer"),
+      contentType: request.headers.get("Content-Type"),
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
     try {
+      if (request.method === "OPTIONS") {
+        console.log(`\u26AA [${requestId}] CORS \u9810\u6AA2\u8ACB\u6C42`);
+        return handleCors(request);
+      }
+      const url = new URL(request.url);
+      console.log(`\u{1F50D} [${requestId}] \u8DEF\u7531\u5206\u767C: ${url.pathname}`);
+      let response;
       if (url.pathname === "/api/chat") {
-        return handleChat(request, env);
-      }
-      if (url.pathname === "/api/faq") {
-        return handleFaq(request, env);
-      }
-      if (url.pathname === "/api/upload") {
-        return handleUpload(request, env);
-      }
-      if (url.pathname === "/api/health") {
-        return new Response(JSON.stringify({ status: "ok" }), {
+        console.log(`\u{1F4AC} [${requestId}] \u8655\u7406\u804A\u5929\u8ACB\u6C42`);
+        response = await handleChat(request, env);
+      } else if (url.pathname === "/api/faq") {
+        console.log(`\u2753 [${requestId}] \u8655\u7406 FAQ \u8ACB\u6C42`);
+        response = await handleFaq(request, env);
+      } else if (url.pathname === "/api/upload") {
+        console.log(`\u{1F4E4} [${requestId}] \u8655\u7406\u4E0A\u50B3\u8ACB\u6C42`);
+        response = await handleUpload(request, env);
+      } else if (url.pathname === "/api/health") {
+        console.log(`\u{1F493} [${requestId}] \u5065\u5EB7\u6AA2\u67E5`);
+        response = new Response(JSON.stringify({ status: "ok" }), {
           status: 200,
           headers: {
             ...getCorsHeadersForRequest(request),
             "Content-Type": "application/json"
           }
         });
+      } else {
+        console.log(`\u26A0\uFE0F [${requestId}] \u672A\u627E\u5230\u8DEF\u7531: ${url.pathname}`);
+        response = new Response(JSON.stringify({ error: "\u8DEF\u5F91\u4E0D\u5B58\u5728" }), {
+          status: 404,
+          headers: {
+            ...getCorsHeadersForRequest(request),
+            "Content-Type": "application/json"
+          }
+        });
       }
-      return new Response(JSON.stringify({ error: "\u8DEF\u5F91\u4E0D\u5B58\u5728" }), {
-        status: 404,
-        headers: {
-          ...getCorsHeadersForRequest(request),
-          "Content-Type": "application/json"
-        }
-      });
+      const processingTime = Date.now() - startTime;
+      console.log(`\u{1F7E2} [${requestId}] \u8ACB\u6C42\u5B8C\u6210: ${response.status}, \u8017\u6642 ${processingTime}ms`);
+      return response;
     } catch (error) {
-      console.error("API \u932F\u8AA4:", error);
+      const processingTime = Date.now() - startTime;
+      console.error(`\u{1F534} [${requestId}] API \u8655\u7406\u932F\u8AA4 (${processingTime}ms):`, error);
+      console.error("\u932F\u8AA4\u8A73\u60C5:", error instanceof Error ? {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      } : "\u672A\u77E5\u932F\u8AA4\u985E\u578B");
       return new Response(JSON.stringify({
-        error: error instanceof Error ? error.message : "\u4F3A\u670D\u5668\u5167\u90E8\u932F\u8AA4"
+        error: error instanceof Error ? error.message : "\u4F3A\u670D\u5668\u5167\u90E8\u932F\u8AA4",
+        requestId
       }), {
         status: 500,
         headers: {
