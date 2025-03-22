@@ -80,19 +80,23 @@ export async function handleChatCompletion(request: Request) {
       data: completion,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     // 錯誤處理
     console.error('Groq API 錯誤:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : '處理請求時發生錯誤';
+    const errorCode = (error as Record<string, string>).code || 'UNKNOWN_ERROR';
+    const errorStatus = (error as Record<string, number>).status || 500;
 
     return NextResponse.json<ChatResponse>(
       {
         success: false,
         error: {
-          message: error.message || '處理請求時發生錯誤',
-          code: error.code || 'UNKNOWN_ERROR',
+          message: errorMessage,
+          code: errorCode,
         },
       },
-      { status: error.status || 500 }
+      { status: errorStatus }
     );
   }
 } 

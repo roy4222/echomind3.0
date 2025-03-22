@@ -1,7 +1,7 @@
 /**
  * 引入聊天相關的型別定義
  */
-import type { ChatMessage, ChatCompletionOptions, ChatResponse } from '@/lib/types/chat';
+import type { ChatCompletionOptions, ChatResponse, GroqChatResponse } from '@/lib/types/chat';
 
 /**
  * Groq 服務類別
@@ -27,7 +27,7 @@ class GroqService {
     temperature = 0.7,
     maxTokens = 2048,
     stream = false,
-  }: ChatCompletionOptions) {
+  }: ChatCompletionOptions): Promise<GroqChatResponse> {
     try {
       // 發送 POST 請求到 API 端點
       const response = await fetch('/api/chat', {
@@ -57,7 +57,7 @@ class GroqService {
         throw new Error(data.error?.message || 'API 請求失敗');
       }
 
-      return data.data;
+      return data.data as GroqChatResponse;
     } catch (error) {
       console.error('聊天請求錯誤:', error);
       throw error;

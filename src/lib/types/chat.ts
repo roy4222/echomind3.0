@@ -30,13 +30,41 @@ export interface ChatCompletionOptions {
 export interface ChatResponse {
   /** API 呼叫是否成功 */
   success: boolean;
-  /** 成功時的回應資料 */
-  data?: any;
+  /** 成功時的回應資料，可以是任何類型的回應 */
+  data?: unknown;
   /** 錯誤時的相關資訊 */
   error?: {
     /** 錯誤訊息 */
     message: string;
     /** 錯誤代碼 */
     code: string;
+  };
+}
+
+/**
+ * Groq API 回應中的選項訊息
+ */
+export interface ChatResponseChoice {
+  message: {
+    role: string;
+    content: string;
+  };
+  index: number;
+  finish_reason: string;
+}
+
+/**
+ * Groq API 回應的具體結構
+ */
+export interface GroqChatResponse {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: ChatResponseChoice[];
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
   };
 } 
