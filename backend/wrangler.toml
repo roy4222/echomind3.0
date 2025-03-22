@@ -1,0 +1,23 @@
+name = "echomind-api"
+main = "src/index.ts"
+compatibility_date = "2023-12-01"
+node_compat = true
+
+[vars]
+# 環境變數通過 Cloudflare Dashboard 或 wrangler secret 設定
+# 以下為示例，實際部署時需要替換
+
+# 用於開發環境的一些默認設置
+R2_ENDPOINT = "example-bucket.your-subdomain.r2.dev"
+
+[env.production]
+# 生產環境配置
+# 這裡的變數值會被 Dashboard 中設置的值覆蓋
+
+[env.staging]
+# 測試環境配置
+name = "echomind-api-staging"
+
+[env.development]
+# 開發環境配置
+name = "echomind-api-dev" 

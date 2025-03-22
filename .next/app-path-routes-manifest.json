@@ -1,0 +1,9 @@
+{
+  "/api/chat/route": "/api/chat",
+  "/favicon.ico/route": "/favicon.ico",
+  "/_not-found/page": "/_not-found",
+  "/page": "/",
+  "/profile/page": "/profile",
+  "/login/page": "/login",
+  "/register/page": "/register"
+}
