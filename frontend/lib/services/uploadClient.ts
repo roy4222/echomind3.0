@@ -11,10 +11,23 @@ export const UPLOAD_CONSTANTS = {
 };
 
 /**
- * 檔案上傳客戶端服務
- * 與後端 Worker API 通訊完成檔案上傳
+ * 取得適用的 API URL
  */
-export class UploadClientService {
+function getApiUrl(): string {
+  // 開發環境優先使用本地 API
+  const useLocalApi = process.env.NODE_ENV === 'development';
+  const localApiUrl = '/api'; // 使用相對路徑，指向 Next.js API 路由
+  const workerApiUrl = process.env.NEXT_PUBLIC_WORKER_API_URL || 'http://localhost:8787/api';
+  
+  // 開發環境使用本地 API，否則使用 Worker API
+  return useLocalApi ? localApiUrl : workerApiUrl;
+}
+
+/**
+ * 用戶端檔案上傳服務
+ * 提供客戶端使用的上傳功能
+ */
+export class UploadClient {
   /**
    * 上傳檔案到雲端存儲
    * @param file 要上傳的檔案
@@ -22,10 +35,13 @@ export class UploadClientService {
    */
   async uploadFile(file: File, path: string): Promise<string> {
     try {
+      const apiUrl = getApiUrl();
+      
       console.log('準備上傳檔案...', {
         path,
         fileType: file.type,
-        fileSize: file.size
+        fileSize: file.size,
+        apiEndpoint: `${apiUrl}/upload`
       });
 
       // 檢查檔案大小
@@ -40,44 +56,34 @@ export class UploadClientService {
       formData.append('file', file);
       formData.append('path', path);
 
-      // 獲取 API 基礎 URL
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-      if (!apiBaseUrl) {
-        console.error('未設定 API 基礎 URL');
-        toast.error('系統配置錯誤，請聯絡管理員');
-        throw new Error('API 基礎 URL 未設定');
-      }
-
-      // 發送上傳請求到 Worker API
-      const response = await fetch(`${apiBaseUrl}/api/upload`, {
+      // 發送上傳請求到選定的 API
+      const response = await fetch(`${apiUrl}/upload`, {
         method: 'POST',
         body: formData,
-        // 注意：使用 FormData 時不設定 Content-Type，瀏覽器會自動添加
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error || `上傳失敗: ${response.statusText}`;
-        console.error('上傳回應錯誤:', errorMessage);
-        toast.error(errorMessage);
+        let errorMessage = `上傳失敗: ${response.statusText}`;
+        try {
+          // 嘗試獲取詳細錯誤信息
+          const errorBody = await response.text();
+          console.error('API 錯誤詳情:', errorBody);
+        } catch (e) {}
+        
         throw new Error(errorMessage);
       }
 
       const data = await response.json() as { success: boolean; url: string; error?: string };
       
       if (!data.success) {
-        const errorMessage = data.error || '上傳失敗';
-        toast.error(errorMessage);
-        throw new Error(errorMessage);
+        throw new Error(data.error || '上傳失敗');
       }
 
       console.log('檔案上傳成功，URL:', data.url);
-      toast.success('檔案上傳成功');
       return data.url;
     } catch (error) {
       console.error('檔案上傳失敗:', error);
-      const errorMessage = error instanceof Error ? error.message : '檔案上傳失敗，請稍後再試';
-      toast.error(errorMessage);
+      toast.error('檔案上傳失敗，請稍後再試');
       throw error;
     }
   }
@@ -107,7 +113,26 @@ export class UploadClientService {
 
     return this.uploadFile(file, path);
   }
+  
+  /**
+   * 上傳聊天相關圖片
+   * @param file 圖片檔案
+   * @param chatId 聊天 ID
+   */
+  async uploadChatImage(file: File, chatId: string): Promise<string> {
+    // 驗證檔案類型
+    if (!UPLOAD_CONSTANTS.ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      toast.error('請上傳有效的圖片檔案 (JPEG, PNG, GIF, WebP)');
+      throw new Error('無效的檔案類型');
+    }
+    
+    // 生成檔案路徑
+    const extension = file.name.split('.').pop() || 'jpg';
+    const path = `chats/${chatId}/images/${Date.now()}.${extension}`;
+    
+    return this.uploadFile(file, path);
+  }
 }
 
-// 建立並匯出默認的上傳客戶端服務實例
-export const uploadClient = new UploadClientService(); 
+// 建立並匯出默認的上傳客戶端實例
+export const uploadClient = new UploadClient(); 

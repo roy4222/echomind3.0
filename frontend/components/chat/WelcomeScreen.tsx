@@ -3,7 +3,7 @@
  * 顯示問候語、聊天輸入框和功能按鈕
  */
 
-import { Greeting } from "@/components/ui/Greeting";
+import { Greeting } from "@/components/chat/Greeting";
 import { Sparkles, Search, Lightbulb } from 'lucide-react';
 import { ChatInput } from './ChatInput';
 
