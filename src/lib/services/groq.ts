@@ -80,7 +80,25 @@ class GroqService {
     // 獲取最後一條使用者訊息
     const lastUserMessage = messages[messages.length - 1].content || '';
     
-    // 生成簡單的回應
+    // 簡單的關鍵詞回應機制
+    let responseContent = '';
+    
+    if (lastUserMessage.includes('你好') || lastUserMessage.includes('嗨') || lastUserMessage.includes('哈囉')) {
+      responseContent = '您好！很高興為您服務。我是輔仁大學資管系的AI助手EchoMind。有什麼我能幫助您的嗎？';
+    } else if (lastUserMessage.includes('課程') || lastUserMessage.includes('學習') || lastUserMessage.includes('教學')) {
+      responseContent = '輔仁大學資管系提供多樣化的課程，包括程式設計、資料庫管理、網路應用等。如果您有特定課程的問題，可以告訴我更多細節。';
+    } else if (lastUserMessage.includes('專題') || lastUserMessage.includes('專案') || lastUserMessage.includes('project')) {
+      responseContent = '資管系的專題是培養實務能力的重要環節。學生通常會在大三或大四時，組隊完成一個與資訊管理相關的專案，從需求分析、設計到實作都需要參與。';
+    } else if (lastUserMessage.includes('就業') || lastUserMessage.includes('工作') || lastUserMessage.includes('職涯')) {
+      responseContent = '資管系畢業生有多元的就業方向，包括：系統分析師、程式開發、資料分析師、專案管理、數位行銷等。根據近年調查，本系畢業生就業率相當高。';
+    } else if (lastUserMessage.includes('老師') || lastUserMessage.includes('教授') || lastUserMessage.includes('師資')) {
+      responseContent = '輔仁大學資管系擁有優秀的師資陣容，包括多位專精於不同領域的教授，如資料科學、人工智慧、電子商務、資訊安全等方面的專家。';
+    } else {
+      // 預設回應
+      responseContent = `您好！我目前無法連線到API服務。您的訊息是：「${lastUserMessage}」，但我暫時無法提供完整的回答。若您有關於輔仁大學資管系的問題，可以用更具體的方式詢問，或者稍後再試。`;
+    }
+    
+    // 生成回應
     return {
       id: 'mock-' + Date.now(),
       object: 'chat.completion',
@@ -90,7 +108,7 @@ class GroqService {
         {
           message: {
             role: 'assistant',
-            content: `您好！我是您的AI助手。我們目前正在離線模式，無法連線到API服務。您的訊息是：「${lastUserMessage}」，但我暫時無法提供完整的回答。請稍後再試，或確認網路連接正常。`,
+            content: responseContent,
           },
           index: 0,
           finish_reason: 'stop',
