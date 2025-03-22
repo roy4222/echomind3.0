@@ -2473,7 +2473,11 @@ var ALLOWED_ORIGINS = [
   "https://echomind3-0.pages.dev",
   // 原有 Cloudflare Pages 網址
   "https://a6447ec7.echomind4.pages.dev",
-  // 新部署的 Cloudflare Pages 網址
+  // 之前部署的 Cloudflare Pages 網址
+  "https://7afc54f9.echomind4.pages.dev",
+  // 之前部署的 Cloudflare Pages 網址
+  "https://c5b90724.echomind4.pages.dev",
+  // 最新部署的 Cloudflare Pages 網址
   "http://localhost:3000",
   // 本地開發環境
   "https://localhost:3000"
