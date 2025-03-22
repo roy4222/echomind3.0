@@ -8,6 +8,7 @@ const ALLOWED_ORIGINS = [
   'https://c5b90724.echomind4.pages.dev',    // 最新部署的 Cloudflare Pages 網址
   'http://localhost:3000',            // 本地開發環境
   'https://localhost:3000',
+  'https://echomind3.roy422.ggff.net',
 ];
 
 /**

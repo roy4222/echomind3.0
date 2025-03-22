@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
   },
   // 環境變數配置
   env: {
-    NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://echomind-api-staging.roy422roy.workers.dev',
+    NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://echomind-api.roy422roy.workers.dev',
   }
 };
 
