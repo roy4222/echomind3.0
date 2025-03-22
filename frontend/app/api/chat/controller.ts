@@ -31,11 +31,20 @@ const DEFAULT_TEMPERATURE = 0.7;                // 預設的溫度參數
 const DEFAULT_MAX_TOKENS = 2048;               // 預設的最大 token 數
 
 /**
- * 初始化 Groq API 客戶端
+ * 初始化 Groq API 客戶端，若環境變數不存在則不初始化
  */
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+let groq: Groq | null = null;
+try {
+  if (process.env.GROQ_API_KEY) {
+    groq = new Groq({
+      apiKey: process.env.GROQ_API_KEY,
+    });
+  } else {
+    console.warn('未設置 GROQ_API_KEY 環境變數，API 將使用模擬響應');
+  }
+} catch (error) {
+  console.error('初始化 Groq API 客戶端失敗:', error);
+}
 
 /**
  * 處理聊天完成請求的主要函數
@@ -44,27 +53,6 @@ const groq = new Groq({
  */
 export async function handleChatCompletion(request: Request) {
   try {
-    // 檢查 API 金鑰是否設置
-    if (!process.env.GROQ_API_KEY) {
-      console.error('未設置 GROQ_API_KEY 環境變數');
-      return NextResponse.json<ChatResponse>(
-        {
-          success: false,
-          error: {
-            message: '伺服器配置錯誤：缺少 API 金鑰，請確認環境變數已正確設置',
-            code: 'CONFIG_ERROR'
-          }
-        },
-        { status: 500 }
-      );
-    }
-    
-    // 記錄環境信息（不包含敏感數據）
-    console.log('Groq API 狀態:', { 
-      hasKey: !!process.env.GROQ_API_KEY,
-      environment: process.env.NODE_ENV
-    });
-    
     // 解析請求內容
     const body = await request.json() as ChatCompletionOptions;
     const { messages, model, temperature, maxTokens, stream } = body;
@@ -82,6 +70,47 @@ export async function handleChatCompletion(request: Request) {
         { status: 400 }
       );
     }
+
+    // 檢查 API 金鑰是否設置
+    if (!groq) {
+      console.warn('使用模擬響應替代 Groq API');
+      
+      // 建立模擬響應
+      const mockResponse = {
+        id: 'mock-response-id',
+        object: 'chat.completion',
+        created: Date.now(),
+        model: model || DEFAULT_MODEL,
+        choices: [
+          {
+            index: 0,
+            message: {
+              role: 'assistant',
+              content: `這是一個模擬回應。實際部署時，請確保設置了 GROQ_API_KEY 環境變數。\n\n您的問題是：${messages[messages.length - 1]?.content || '未提供問題'}`
+            },
+            logprobs: null,
+            finish_reason: 'stop'
+          }
+        ],
+        usage: {
+          prompt_tokens: 100,
+          completion_tokens: 150,
+          total_tokens: 250
+        }
+      };
+      
+      // 回傳模擬結果
+      return NextResponse.json<ChatResponse>({
+        success: true,
+        data: mockResponse,
+      });
+    }
+    
+    // 記錄環境信息（不包含敏感數據）
+    console.log('Groq API 狀態:', { 
+      hasKey: !!process.env.GROQ_API_KEY,
+      environment: process.env.NODE_ENV
+    });
 
     // 在訊息開頭加入系統提示詞
     const messagesWithSystemPrompt = [SYSTEM_PROMPT, ...messages];
