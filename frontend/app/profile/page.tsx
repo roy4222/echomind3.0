@@ -3,10 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { Camera, Mail, User as UserIcon, Calendar } from 'lucide-react';
+import { Camera, Mail, User as UserIcon, Calendar, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { updateUserProfile } from '@/lib/utils/auth';
-import { uploadAvatar } from '@/lib/utils/upload';
+import { useAuthActions } from '@/hooks/useAuthActions';
+import { uploadClient } from '@/lib/services/uploadClient';
 import Image from 'next/image';
 
 /**
@@ -18,11 +18,15 @@ export default function ProfilePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   
+  // 獲取身份驗證相關操作
+  const { logout, updateUserProfile } = useAuthActions();
+  
   // 狀態管理
   const [isEditing, setIsEditing] = useState(false); // 是否處於編輯模式
   const [isUploading, setIsUploading] = useState(false); // 是否正在上傳頭像
   const fileInputRef = useRef<HTMLInputElement>(null); // 文件輸入框引用
   const [formData, setFormData] = useState({
+    name: '',
     displayName: '',
     email: '',
     photoURL: '',
@@ -36,6 +40,7 @@ export default function ProfilePage() {
     } else if (user) {
       // 已登入時初始化表單數據
       setFormData({
+        name: user.name || '',
         displayName: user.displayName || '',
         email: user.email || '',
         photoURL: user.photoURL || '',
@@ -65,7 +70,7 @@ export default function ProfilePage() {
 
   /**
    * 處理文件選擇變化
-   * 上傳新頭像到 Firebase Storage
+   * 上傳新頭像到 Cloudflare R2
    */
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -73,8 +78,11 @@ export default function ProfilePage() {
 
     try {
       setIsUploading(true);
-      const downloadURL = await uploadAvatar(file, user.uid);
+      const downloadURL = await uploadClient.uploadAvatar(file, user.uid);
+      
+      // 使用 updateUserProfile 更新用戶頭像
       await updateUserProfile(undefined, downloadURL);
+      
       setFormData(prev => ({ ...prev, photoURL: downloadURL }));
     } catch (error) {
       console.error('頭像上傳失敗:', error);
@@ -92,14 +100,24 @@ export default function ProfilePage() {
     if (!user) return;
 
     try {
-      await updateUserProfile(
-        formData.displayName,
-        formData.photoURL
-      );
+      // 使用名稱欄位作為顯示名稱，保持一致性
+      const displayName = formData.name || formData.displayName;
+      
+      // 使用 updateUserProfile 函數更新資料
+      await updateUserProfile(displayName, formData.photoURL);
+      
       setIsEditing(false);
     } catch (error) {
       console.error('更新失敗:', error);
     }
+  };
+
+  /**
+   * 處理登出
+   */
+  const handleLogout = async () => {
+    await logout();
+    router.push('/login');
   };
 
   // 載入中狀態
@@ -225,7 +243,7 @@ export default function ProfilePage() {
               <Calendar className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                value={user?.metadata.creationTime ? new Date(user.metadata.creationTime).toLocaleString() : '未知'}
+                value={user?.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleString() : '未知'}
                 disabled
                 className="w-full cursor-not-allowed rounded-lg border border-gray-300 bg-gray-100 py-2 pl-10 pr-3 text-gray-700 opacity-75 dark:border-gray-600 dark:bg-gray-600 dark:text-gray-300"
               />
@@ -233,39 +251,51 @@ export default function ProfilePage() {
           </div>
 
           {/* 操作按鈕區域 */}
-          <div className="flex justify-end space-x-4">
-            {isEditing ? (
-              <>
+          <div className="flex justify-between space-x-4">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-red-900/20"
+            >
+              <LogOut className="h-4 w-4" />
+              登出
+            </button>
+            
+            <div className="flex space-x-4">
+              {isEditing ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditing(false);
+                      setFormData({
+                        name: user?.name || '',
+                        displayName: user?.displayName || '',
+                        email: user?.email || '',
+                        photoURL: user?.photoURL || '',
+                      });
+                    }}
+                    className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700"
+                  >
+                    保存
+                  </button>
+                </>
+              ) : (
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsEditing(false);
-                    setFormData({
-                      displayName: user?.displayName || '',
-                      email: user?.email || '',
-                      photoURL: user?.photoURL || '',
-                    });
-                  }}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                >
-                  取消
-                </button>
-                <button
-                  type="submit"
+                  onClick={() => setIsEditing(true)}
                   className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700"
                 >
-                  保存
+                  編輯資料
                 </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setIsEditing(true)}
-                className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700"
-              >
-                編輯資料
-              </button>
-            )}
+              )}
+            </div>
           </div>
         </form>
       </div>

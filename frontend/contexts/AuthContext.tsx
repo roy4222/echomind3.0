@@ -2,9 +2,10 @@
 
 // 導入必要的依賴
 import { createContext, useContext, ReactNode } from 'react';
-import { User, AuthError } from 'firebase/auth';
+import { User as FirebaseUser, AuthError } from 'firebase/auth';
 import { useAuthState } from '@/hooks/useAuthState';
 import { useAuthActions } from '@/hooks/useAuthActions';
+import { User, normalizeUser } from '@/lib/types/user';
 
 /**
  * 認證上下文的類型定義
@@ -59,8 +60,8 @@ interface AuthProviderProps {
  * @returns {JSX.Element} 認證提供者組件
  */
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const { user, loading, error } = useAuthState();
-  const { registerWithEmail, loginWithEmail, loginWithGoogle, logout } = useAuthActions();
+  const { user: firebaseUser, loading, error } = useAuthState();
+  const { registerWithEmail: registerWithEmailAction, loginWithEmail: loginWithEmailAction, loginWithGoogle: loginWithGoogleAction, logout } = useAuthActions();
 
   if (loading) {
     return (
@@ -69,6 +70,25 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       </div>
     );
   }
+
+  // 將 Firebase 用戶轉換為應用內用戶格式
+  const user = firebaseUser ? normalizeUser(firebaseUser) : null;
+
+  // 包裝認證操作，返回標準化的用戶類型
+  const registerWithEmail = async (data: { email: string; password: string; name: string }): Promise<User> => {
+    const result = await registerWithEmailAction(data);
+    return normalizeUser(result);
+  };
+  
+  const loginWithEmail = async (data: { email: string; password: string; rememberMe?: boolean }): Promise<User> => {
+    const result = await loginWithEmailAction(data);
+    return normalizeUser(result);
+  };
+  
+  const loginWithGoogle = async (rememberMe?: boolean): Promise<User> => {
+    const result = await loginWithGoogleAction(rememberMe);
+    return normalizeUser(result);
+  };
 
   // 準備提供給上下文的值
   const value: AuthContextType = {

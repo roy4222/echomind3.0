@@ -5,171 +5,201 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   signOut,
-  updateProfile,
-  User,
-  setPersistence,
-  browserLocalPersistence,
-  browserSessionPersistence,
+  UserCredential,
+  sendPasswordResetEmail,
   AuthError,
+  updateProfile
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { toast } from 'sonner';
+import { User as FirebaseUser } from 'firebase/auth';
 
 // 註冊資料介面
-interface RegisterData {
+export interface RegisterData {
   email: string;
   password: string;
   name: string;
 }
 
 // 登入資料介面
-interface LoginData {
+export interface LoginData {
   email: string;
   password: string;
   rememberMe?: boolean;
 }
 
-// 認證相關操作的 Hook
-export const useAuthActions = () => {
-  // 設定認證狀態的持久化類型
-  const setPersistenceType = async (rememberMe: boolean): Promise<void> => {
+/**
+ * 提供認證相關操作的Hook
+ * @returns 認證相關的操作函數
+ */
+export function useAuthActions() {
+  /**
+   * 使用電子郵件及密碼註冊
+   * @param data - 註冊資料
+   */
+  const registerWithEmail = async (
+    data: RegisterData
+  ): Promise<FirebaseUser> => {
     try {
-      await setPersistence(auth, 
-        rememberMe ? browserLocalPersistence : browserSessionPersistence
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        data.email,
+        data.password
       );
-    } catch (error) {
-      console.error('設定持久化失敗:', error);
-      throw error as AuthError;
-    }
-  };
-
-  // 使用電子郵件註冊
-  const registerWithEmail = async ({ email, password, name }: RegisterData): Promise<User> => {
-    try {
-      // 設定持久化並創建用戶
-      await setPersistenceType(true);
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // 更新用戶資料
-      await updateProfile(userCredential.user, {
-        displayName: name
-      });
+      // 設置用戶名稱
+      if (data.name && userCredential.user) {
+        await updateProfile(userCredential.user, {
+          displayName: data.name
+        });
+      }
       
-      // 顯示成功訊息
-      toast.success('註冊成功！', {
-        description: '歡迎加入 EchoMind',
-        duration: 3000,
-      });
-
+      toast.success('註冊成功！');
       return userCredential.user;
     } catch (error) {
       handleAuthError(error as AuthError);
-      throw error as AuthError;
+      throw error;
     }
   };
 
-  // 使用電子郵件登入
-  const loginWithEmail = async ({ email, password, rememberMe = false }: LoginData): Promise<User> => {
+  /**
+   * 使用電子郵件及密碼登入
+   * @param data - 登入資料
+   */
+  const loginWithEmail = async (
+    data: LoginData
+  ): Promise<FirebaseUser> => {
     try {
-      // 設定持久化並登入
-      await setPersistenceType(rememberMe);
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        data.email,
+        data.password
+      );
       
-      // 顯示成功訊息
-      toast.success('登入成功！', {
-        description: '歡迎回來',
-        duration: 3000,
-      });
-
+      toast.success('登入成功！');
       return userCredential.user;
     } catch (error) {
       handleAuthError(error as AuthError);
-      throw error as AuthError;
+      throw error;
     }
   };
 
-  // 使用 Google 登入
-  const loginWithGoogle = async (rememberMe: boolean = false): Promise<User> => {
+  /**
+   * 使用Google帳號登入
+   * @param rememberMe - 是否記住登錄狀態
+   */
+  const loginWithGoogle = async (rememberMe?: boolean): Promise<FirebaseUser> => {
     try {
-      // 設定持久化
-      await setPersistenceType(rememberMe);
       const provider = new GoogleAuthProvider();
-      // 設定 Google 登入選項
-      provider.setCustomParameters({
-        prompt: 'select_account'
-      });
-      
-      // 執行 Google 登入
+      if (rememberMe) {
+        auth.setPersistence('local');
+      }
       const userCredential = await signInWithPopup(auth, provider);
       
-      // 顯示成功訊息
-      toast.success('Google 登入成功！', {
-        description: '歡迎回來',
-        duration: 3000,
-      });
-
+      toast.success('Google登入成功！');
       return userCredential.user;
     } catch (error) {
       handleAuthError(error as AuthError);
-      throw error as AuthError;
+      throw error;
     }
   };
 
-  // 登出功能
+  /**
+   * 登出
+   */
   const logout = async (): Promise<void> => {
     try {
       await signOut(auth);
-      
-      // 顯示成功訊息
-      toast.success('登出成功！', {
-        description: '期待您的再次使用',
-        duration: 3000,
-      });
+      toast.success('已登出');
     } catch (error) {
       handleAuthError(error as AuthError);
-      throw error as AuthError;
+      throw error;
     }
   };
 
-  // 返回所有認證操作函數
+  /**
+   * 重設密碼
+   * @param email - 電子郵件
+   */
+  const resetPassword = async (email: string): Promise<void> => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast.success('密碼重設郵件已發送');
+    } catch (error) {
+      handleAuthError(error as AuthError);
+      throw error;
+    }
+  };
+
+  /**
+   * 更新用戶檔案
+   * @param displayName - 顯示名稱
+   * @param photoURL - 頭像 URL
+   */
+  const updateUserProfile = async (
+    displayName?: string, 
+    photoURL?: string
+  ): Promise<void> => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('沒有登入的用戶');
+      }
+      
+      const updateData: {
+        displayName?: string;
+        photoURL?: string;
+      } = {};
+      
+      if (displayName !== undefined) updateData.displayName = displayName;
+      if (photoURL !== undefined) updateData.photoURL = photoURL;
+      
+      await updateProfile(user, updateData);
+      toast.success('用戶資料已更新');
+    } catch (error) {
+      console.error('更新用戶資料失敗:', error);
+      toast.error('更新用戶資料失敗');
+      throw error;
+    }
+  };
+
+  /**
+   * 處理認證錯誤
+   * @param error - 認證錯誤物件
+   */
+  const handleAuthError = (error: AuthError): void => {
+    let message = '發生錯誤，請稍後再試';
+    
+    switch (error.code) {
+      case 'auth/email-already-in-use':
+        message = '此電子郵件已被使用';
+        break;
+      case 'auth/invalid-email':
+        message = '無效的電子郵件格式';
+        break;
+      case 'auth/user-not-found':
+      case 'auth/wrong-password':
+        message = '電子郵件或密碼錯誤';
+        break;
+      case 'auth/weak-password':
+        message = '密碼強度不足';
+        break;
+      case 'auth/popup-closed-by-user':
+        message = '登入視窗已被關閉';
+        break;
+      default:
+        console.error('認證錯誤:', error);
+    }
+    
+    toast.error(message);
+  };
+
   return {
     registerWithEmail,
     loginWithEmail,
     loginWithGoogle,
     logout,
+    resetPassword,
+    updateUserProfile
   };
-};
-
-// 處理認證錯誤
-const handleAuthError = (error: AuthError) => {
-  const errorMessage = getErrorMessage(error.code);
-  console.error('認證錯誤:', error);
-  
-  // 顯示錯誤訊息
-  toast.error('操作失敗', {
-    description: errorMessage,
-    duration: 3000,
-  });
-};
-
-// 取得錯誤訊息對應的中文說明
-const getErrorMessage = (errorCode: string): string => {
-  const errorMessages: { [key: string]: string } = {
-    'auth/email-already-in-use': '此電子郵件已被註冊',
-    'auth/invalid-email': '無效的電子郵件格式',
-    'auth/operation-not-allowed': '此登入方式未啟用',
-    'auth/weak-password': '密碼強度不足',
-    'auth/user-disabled': '此帳號已被停用',
-    'auth/user-not-found': '找不到此用戶',
-    'auth/wrong-password': '密碼錯誤',
-    'auth/popup-closed-by-user': '登入視窗被關閉',
-    'auth/popup-blocked': '登入視窗被阻擋',
-    'auth/cancelled-popup-request': '登入請求已取消',
-    'auth/network-request-failed': '網路連線失敗',
-    'auth/too-many-requests': '登入嘗試次數過多，請稍後再試',
-    'auth/requires-recent-login': '請重新登入以繼續操作',
-    'auth/account-exists-with-different-credential': '此電子郵件已使用其他登入方式註冊',
-  };
-
-  return errorMessages[errorCode] || '發生未知錯誤，請稍後再試';
-}; 
+} 

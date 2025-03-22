@@ -1,35 +1,35 @@
 /**
- * 聊天訊息角色
+ * 聊天訊息的角色類型
  */
-export type MessageRole = 'user' | 'assistant' | 'system';
+export type ChatRole = 'user' | 'assistant' | 'system';
 
 /**
- * 聊天訊息
+ * 聊天訊息介面
  */
 export interface ChatMessage {
-  /** 訊息角色 */
-  role: MessageRole;
+  /** 訊息的角色 */
+  role: ChatRole;
   /** 訊息內容 */
   content: string;
-  /** 訊息 ID */
+  /** 唯一識別碼 */
   id?: string;
-  /** 創建時間 */
-  createdAt?: Date | number;
+  /** 創建時間戳 */
+  createdAt?: number;
 }
 
 /**
  * 聊天完成選項
  */
 export interface ChatCompletionOptions {
-  /** 聊天訊息歷史 */
+  /** 聊天訊息 */
   messages: ChatMessage[];
-  /** 使用的語言模型 */
+  /** 語言模型名稱 */
   model?: string;
   /** 溫度參數 */
   temperature?: number;
-  /** 最大生成的 token 數量 */
+  /** 最大生成token數 */
   maxTokens?: number;
-  /** 是否使用串流回應 */
+  /** 是否使用串流模式 */
   stream?: boolean;
 }
 
@@ -56,7 +56,7 @@ export interface GroqChatResponse {
     /** 回覆訊息 */
     message: {
       /** 訊息角色 */
-      role: MessageRole;
+      role: ChatRole;
       /** 訊息內容 */
       content: string;
     };
@@ -77,15 +77,25 @@ export interface GroqChatResponse {
 }
 
 /**
- * 聊天回應
+ * 聊天響應介面
  */
 export interface ChatResponse {
   /** 是否成功 */
   success: boolean;
   /** 回應數據 */
-  data?: GroqChatResponse;
-  /** 錯誤信息 */
+  data?: any;
+  /** 錯誤訊息 */
   error?: ChatError;
+}
+
+/**
+ * 簡化的聊天響應
+ */
+export interface SimpleChatResponse {
+  /** 回應文本 */
+  text: string;
+  /** 處理時間 (ms) */
+  processingTime?: number;
 }
 
 /**

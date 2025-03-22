@@ -15,10 +15,14 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com',
+        hostname: process.env.NEXT_PUBLIC_R2_ENDPOINT || 'pub-6ee61ab59e054c0facbe8351ca1efce0.r2.dev',
         pathname: '/**',
       }
     ],
+  },
+  // 環境變數配置
+  env: {
+    NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.yourdomain.workers.dev',
   }
 };
 

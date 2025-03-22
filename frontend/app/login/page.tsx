@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { loginWithEmail, loginWithGoogle } from '@/lib/utils/auth';
-import { AuthError } from 'firebase/auth';
+import { useAuthActions } from '@/hooks/useAuthActions';
 import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { loginWithEmail, loginWithGoogle } = useAuthActions();
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -32,14 +33,19 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await loginWithEmail(
-        formData.email,
-        formData.password
-      );
-      router.push('/');
+      console.log('嘗試登入:', formData.email);
+      const result = await loginWithEmail({
+        email: formData.email,
+        password: formData.password,
+        rememberMe: formData.rememberMe
+      });
+      
+      if (result) {
+        router.push('/');
+      }
     } catch (err) {
-      const authError = err as AuthError;
-      setError(authError.message);
+      console.error('登入錯誤:', err);
+      setError('登入失敗，請檢查您的電子郵件和密碼');
     } finally {
       setIsLoading(false);
     }
@@ -51,11 +57,12 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await loginWithGoogle();
-      router.push('/');
+      const result = await loginWithGoogle();
+      if (result) {
+        router.push('/');
+      }
     } catch (err) {
-      const authError = err as AuthError;
-      setError(authError.message);
+      setError('Google登入失敗，請稍後再試');
     } finally {
       setIsLoading(false);
     }

@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { WelcomeScreen } from '@/components/chat/WelcomeScreen';
+import { ChatInput } from '@/components/chat/ChatInput';
 import { ChatMessage } from '@/lib/types/chat';
-import { chatService } from '@/lib/services/chat';
+import { chatClient } from '@/lib/services/chatClient';
 
 /**
  * 聊天頁面組件
@@ -44,16 +45,12 @@ export default function ChatPage() {
       setMessages(updatedMessages);
       
       // 呼叫API
-      const response = await chatService.sendMessage(updatedMessages);
-      
-      if (!response.success || !response.data) {
-        throw new Error(response.error?.message || '無法獲取回應');
-      }
+      const response = await chatClient.sendMessage(updatedMessages);
       
       // 從回應中提取助手訊息
       const assistantMessage: ChatMessage = {
         role: 'assistant',
-        content: response.data.choices[0].message.content,
+        content: response.text,
         id: (Date.now() + 1).toString(),
         createdAt: Date.now(),
       };
@@ -123,7 +120,7 @@ export default function ChatPage() {
             
             {/* 聊天輸入框 */}
             <div className="sticky bottom-4">
-              <WelcomeScreen onSubmit={handleSubmit} isLoading={isLoading} />
+              <ChatInput onSubmit={handleSubmit} isLoading={isLoading} />
             </div>
           </div>
         )}

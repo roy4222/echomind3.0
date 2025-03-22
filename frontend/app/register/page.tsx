@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { registerWithEmail, updateUserProfile } from '@/lib/utils/auth';
-import { AuthError } from 'firebase/auth';
+import { useAuthActions } from '@/hooks/useAuthActions';
 import Link from 'next/link';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { registerWithEmail } = useAuthActions();
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -46,16 +47,19 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      await registerWithEmail(
-        formData.email,
-        formData.password
-      );
-      // 註冊後更新用戶資料
-      await updateUserProfile(formData.name);
-      router.push('/');
+      console.log('嘗試註冊:', formData.email);
+      const result = await registerWithEmail({
+        email: formData.email,
+        password: formData.password,
+        name: formData.name
+      });
+      
+      if (result) {
+        router.push('/');
+      }
     } catch (err) {
-      const authError = err as AuthError;
-      setError(authError.message);
+      console.error('註冊錯誤:', err);
+      setError('註冊失敗，請稍後再試');
     } finally {
       setIsLoading(false);
     }

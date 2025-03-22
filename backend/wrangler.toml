@@ -1,7 +1,7 @@
 name = "echomind-api"
 main = "src/index.ts"
-compatibility_date = "2023-12-01"
-node_compat = true
+compatibility_date = "2023-12-18"
+compatibility_flags = ["nodejs_compat"]
 
 [vars]
 # 環境變數通過 Cloudflare Dashboard 或 wrangler secret 設定
@@ -13,10 +13,17 @@ R2_ENDPOINT = "example-bucket.your-subdomain.r2.dev"
 [env.production]
 # 生產環境配置
 # 這裡的變數值會被 Dashboard 中設置的值覆蓋
+name = "echomind-api"
+routes = [
+  { pattern = "api.yourdomain.com/*", zone_name = "yourdomain.com" }
+]
 
 [env.staging]
 # 測試環境配置
 name = "echomind-api-staging"
+routes = [
+  { pattern = "api-staging.yourdomain.com/*", zone_name = "yourdomain.com" }
+]
 
 [env.development]
 # 開發環境配置

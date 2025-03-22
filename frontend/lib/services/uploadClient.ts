@@ -1,4 +1,3 @@
-import { apiService } from './api';
 import { toast } from 'sonner';
 
 /**
@@ -12,10 +11,10 @@ export const UPLOAD_CONSTANTS = {
 };
 
 /**
- * 檔案上傳服務
+ * 檔案上傳客戶端服務
  * 與後端 Worker API 通訊完成檔案上傳
  */
-export class UploadService {
+export class UploadClientService {
   /**
    * 上傳檔案到雲端存儲
    * @param file 要上傳的檔案
@@ -41,28 +40,44 @@ export class UploadService {
       formData.append('file', file);
       formData.append('path', path);
 
+      // 獲取 API 基礎 URL
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+      if (!apiBaseUrl) {
+        console.error('未設定 API 基礎 URL');
+        toast.error('系統配置錯誤，請聯絡管理員');
+        throw new Error('API 基礎 URL 未設定');
+      }
+
       // 發送上傳請求到 Worker API
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upload`, {
+      const response = await fetch(`${apiBaseUrl}/api/upload`, {
         method: 'POST',
         body: formData,
         // 注意：使用 FormData 時不設定 Content-Type，瀏覽器會自動添加
       });
 
       if (!response.ok) {
-        throw new Error(`上傳失敗: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || `上傳失敗: ${response.statusText}`;
+        console.error('上傳回應錯誤:', errorMessage);
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       }
 
       const data = await response.json() as { success: boolean; url: string; error?: string };
       
       if (!data.success) {
-        throw new Error(data.error || '上傳失敗');
+        const errorMessage = data.error || '上傳失敗';
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       }
 
       console.log('檔案上傳成功，URL:', data.url);
+      toast.success('檔案上傳成功');
       return data.url;
     } catch (error) {
       console.error('檔案上傳失敗:', error);
-      toast.error('檔案上傳失敗，請稍後再試');
+      const errorMessage = error instanceof Error ? error.message : '檔案上傳失敗，請稍後再試';
+      toast.error(errorMessage);
       throw error;
     }
   }
@@ -94,5 +109,5 @@ export class UploadService {
   }
 }
 
-// 建立並匯出默認的上傳服務實例
-export const uploadService = new UploadService(); 
+// 建立並匯出默認的上傳客戶端服務實例
+export const uploadClient = new UploadClientService(); 

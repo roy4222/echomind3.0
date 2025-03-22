@@ -8,7 +8,7 @@ import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { WelcomeScreen } from './WelcomeScreen';
 import { type ChatMessage } from '@/lib/types/chat';
-import { groqService } from '@/lib/services/groq';
+import { chatClient } from '@/lib/services/chatClient';
 
 export function ChatInterface() {
   // 狀態管理
@@ -48,14 +48,13 @@ export function ChatInterface() {
     if (!isChatStarted) setIsChatStarted(true);
 
     try {
-      // 發送請求到 Groq API
-      const response = await groqService.chat({
-        messages: [...messages, userMessage],
-      });
+      // 發送請求到聊天 API
+      const chatMessages = [...messages, userMessage];
+      const response = await chatClient.sendMessage(chatMessages);
 
       const assistantMessage: ChatMessage = {
         role: 'assistant',
-        content: response.choices[0]?.message?.content || '抱歉，我現在無法回答。',
+        content: response.text,
       };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
