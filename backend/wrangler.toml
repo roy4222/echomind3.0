@@ -14,16 +14,13 @@ R2_ENDPOINT = "example-bucket.your-subdomain.r2.dev"
 # 生產環境配置
 # 這裡的變數值會被 Dashboard 中設置的值覆蓋
 name = "echomind-api"
-routes = [
-  { pattern = "api.yourdomain.com/*", zone_name = "yourdomain.com" }
-]
 
 [env.staging]
 # 測試環境配置
 name = "echomind-api-staging"
-routes = [
-  { pattern = "api-staging.yourdomain.com/*", zone_name = "yourdomain.com" }
-]
+# 添加 vars 部分解決警告
+[env.staging.vars]
+R2_ENDPOINT = "example-bucket.your-subdomain.r2.dev"
 
 [env.development]
 # 開發環境配置

@@ -8,7 +8,10 @@ import {
   UserCredential,
   sendPasswordResetEmail,
   AuthError,
-  updateProfile
+  updateProfile,
+  getAuth,
+  browserLocalPersistence,
+  browserSessionPersistence
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { toast } from 'sonner';
@@ -92,7 +95,9 @@ export function useAuthActions() {
     try {
       const provider = new GoogleAuthProvider();
       if (rememberMe) {
-        auth.setPersistence('local');
+        auth.setPersistence(browserLocalPersistence);
+      } else {
+        auth.setPersistence(browserSessionPersistence);
       }
       const userCredential = await signInWithPopup(auth, provider);
       
