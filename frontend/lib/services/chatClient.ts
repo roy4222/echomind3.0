@@ -8,8 +8,8 @@ export class ChatClientService {
   private baseUrl: string;
 
   constructor() {
-    // 使用環境變數中的 API 基礎 URL，或回退到空字串（相對路徑）
-    this.baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+    // 使用環境變數中的 API 基礎 URL，或回退到默認 Worker URL
+    this.baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://echomind-api.roy422roy.workers.dev';
     console.log('🌐 初始化聊天客戶端，API基礎URL:', this.baseUrl);
   }
 
