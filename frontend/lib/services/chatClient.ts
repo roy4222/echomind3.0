@@ -20,11 +20,13 @@ export class ChatClientService {
    */
   async chat(options: ChatCompletionOptions): Promise<ChatResponse> {
     const requestId = Math.random().toString(36).substring(2, 10);
+    // 直接使用 Workers API 端點
     const apiUrl = `${this.baseUrl}/api/chat`;
     
     console.log(`📤 [${requestId}] 發送聊天請求到 ${apiUrl}:`, {
       messagesCount: options.messages?.length || 0,
       model: options.model || '默認模型',
+      modelType: typeof options.model,
       firstMessage: options.messages?.[0]?.content?.substring(0, 50) + '...' || '無內容'
     });
     
@@ -72,21 +74,39 @@ export class ChatClientService {
   /**
    * 發送聊天訊息 (簡化回應)
    * @param messages 聊天訊息陣列
+   * @param modelId 選擇的模型ID (default, advanced, creative)
    * @returns 簡化的聊天回應
    */
-  async sendMessage(messages: ChatMessage[]): Promise<SimpleChatResponse> {
+  async sendMessage(
+    messages: ChatMessage[],
+    modelId?: string
+  ): Promise<SimpleChatResponse> {
     console.log('💬 準備發送聊天訊息:', {
       messagesCount: messages.length,
+      modelId: modelId || 'default',
+      modelIdType: typeof modelId,
       lastMessage: messages.length > 0 ? 
         messages[messages.length-1].content?.substring(0, 50) + '...' : 
         '無訊息'
     });
     
     try {
-      const response = await this.chat({ messages });
+      const requestOptions = { 
+        messages,
+        model: modelId || 'default' // 傳遞選擇的模型
+      };
+      
+      console.log('📦 發送到 API 的請求:', JSON.stringify(requestOptions).substring(0, 200) + '...');
+      
+      const response = await this.chat(requestOptions);
       
       if (!response.success || !response.data) {
-        console.error('❌ 未能獲取有效回應:', response.error);
+        console.error('❌ 未能獲取有效回應:', {
+          error: response.error,
+          success: response.success,
+          hasData: !!response.data,
+          responseDetails: JSON.stringify(response).substring(0, 300) + '...'
+        });
         throw new Error(response.error?.message || '無法獲取回應');
       }
       
@@ -98,12 +118,18 @@ export class ChatClientService {
       
       console.log('✅ 收到AI回應:', {
         length: result.text.length,
-        tokens: result.processingTime
+        tokens: result.processingTime,
+        model: response.data.model
       });
       
       return result;
     } catch (error) {
       console.error('❌ 聊天請求處理錯誤:', error);
+      console.error('詳細錯誤信息:', error instanceof Error ? {
+        name: error.name,
+        message: error.message,
+        stack: error.stack?.substring(0, 500)
+      } : '未知錯誤類型');
       throw error;
     }
   }
@@ -165,4 +191,4 @@ export class ChatClientService {
 }
 
 // 建立並匯出默認的聊天客戶端服務實例
-export const chatClient = new ChatClientService(); 
+export const chatClient = new ChatClientService();

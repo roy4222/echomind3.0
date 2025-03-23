@@ -134,8 +134,24 @@ async function callGroqApi(
   try {
     const url = 'https://api.groq.com/openai/v1/chat/completions';
     
+    // 根據前端選擇的模型 ID 映射到實際模型名稱
+    let actualModel = DEFAULT_MODEL;
+    
+    // 如果前端傳入的是模型 ID，進行映射
+    if (model === 'default') {
+      actualModel = 'llama-3.1-8b-instant';
+    } else if (model === 'advanced') {
+      actualModel = 'deepseek-r1-distill-llama-70b';
+    } else if (model === 'creative') {
+      actualModel = 'qwen-2.5-32b';
+    } else if (model.includes('llama') || model.includes('deepseek') || model.includes('qwen')) {
+      // 如果傳入的是完整模型名稱，直接使用
+      actualModel = model;
+    }
+    
     console.log('📊 Groq API 請求詳情:', {
-      model: model,
+      modelId: model,
+      actualModel: actualModel,
       messagesCount: messages.length,
       temperature: temperature,
       maxTokens: maxTokens
@@ -161,7 +177,7 @@ async function callGroqApi(
         'Authorization': `Bearer ${env.GROQ_API_KEY}`
       },
       body: JSON.stringify({
-        model,
+        model: actualModel,  // 使用映射後的模型名稱
         messages: messagesWithSystemPrompt,
         temperature,
         max_tokens: maxTokens

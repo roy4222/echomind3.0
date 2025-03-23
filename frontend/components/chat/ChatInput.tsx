@@ -8,7 +8,7 @@ import { Send, Database, Sparkles, ChevronDown, Search, Paperclip, ArrowUp, Link
 
 interface ChatInputProps {
   /** 提交訊息的回調函數 */
-  onSubmit: (input: string) => Promise<void>;
+  onSubmit: (input: string, modelId?: string) => Promise<void>;
   /** 是否正在載入中 */
   isLoading: boolean;
 }
@@ -59,8 +59,8 @@ export function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
     if (!inputValue.trim() || isLoading) return;
     
     try {
-      // 提交訊息 (注意：目前僅傳遞輸入值，不傳遞模型或搜尋選項)
-      await onSubmit(inputValue);
+      // 提交訊息 (傳遞輸入值和選擇的模型)
+      await onSubmit(inputValue, selectedModelId);
       // 清空輸入框
       setInputValue('');
     } catch (error) {
@@ -70,6 +70,11 @@ export function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
 
   // 處理模型選擇
   const handleModelSelect = (modelId: string) => {
+    console.log(`🔄 切換模型: ${modelId}`, {
+      前一個模型: selectedModelId,
+      新模型: modelId,
+      模型資訊: MODEL_OPTIONS.find(m => m.id === modelId)
+    });
     setSelectedModelId(modelId);
     setIsModelDropdownOpen(false);
   };

@@ -24,8 +24,9 @@ export default function ChatPage() {
   /**
    * 處理用戶提交的訊息
    * @param input 用戶輸入的訊息
+   * @param modelId 選擇的模型ID
    */
-  const handleSubmit = async (input: string) => {
+  const handleSubmit = async (input: string, modelId?: string) => {
     try {
       // 重置錯誤狀態
       setError(null);
@@ -51,8 +52,10 @@ export default function ChatPage() {
         content
       }));
       
-      // 呼叫API
-      const response = await chatClient.sendMessage(apiMessages);
+      console.log(`使用模型 ID: ${modelId || 'default'}`);
+      
+      // 呼叫API (傳遞模型選擇)
+      const response = await chatClient.sendMessage(apiMessages, modelId);
       
       // 從回應中提取助手訊息
       const assistantMessage: ChatMessage = {
