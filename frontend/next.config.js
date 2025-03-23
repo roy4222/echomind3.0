@@ -19,14 +19,17 @@ const nextConfig = {
     ];
   },
   async rewrites() {
+    // 確保 API URL 在編譯時有默認值
+    const apiBaseUrl = 'https://echomind-api.roy422roy.workers.dev';
+    
     return [
       {
         source: '/api/:path*',
-        destination: process.env.NEXT_PUBLIC_API_BASE_URL + '/:path*'
+        destination: `${apiBaseUrl}/api/:path*`
       },
       {
         source: '/upload',
-        destination: process.env.NEXT_PUBLIC_API_BASE_URL + '/upload'
+        destination: `${apiBaseUrl}/api/upload`
       }
     ];
   }

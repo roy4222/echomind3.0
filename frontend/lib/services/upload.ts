@@ -36,7 +36,7 @@ export class UploadService {
         path,
         fileType: file.type,
         fileSize: file.size,
-        apiEndpoint: `${apiUrl}/upload`
+        apiEndpoint: `${apiUrl}/api/upload`
       });
 
       // 檢查檔案大小
