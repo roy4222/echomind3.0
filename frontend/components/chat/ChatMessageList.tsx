@@ -114,7 +114,7 @@ export const ChatMessageList = ({
   error,
 }: ChatMessageListProps) => {
   return (
-    <div className="space-y-6 pb-4">
+    <div className="space-y-6">
       {messages.map((message) => (
         <div
           key={message.id}
@@ -123,7 +123,7 @@ export const ChatMessageList = ({
           }`}
         >
           <div
-            className={`max-w-3xl rounded-lg px-5 py-3 shadow-sm ${
+            className={`max-w-[85%] rounded-lg px-5 py-3 shadow-sm ${
               message.role === 'user'
                 ? 'bg-blue-500 text-white'
                 : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
@@ -153,7 +153,7 @@ export const ChatMessageList = ({
       {/* 載入指示器 */}
       {isLoading && (
         <div className="flex justify-start">
-          <div className="max-w-3xl rounded-lg bg-gray-100 px-4 py-2 dark:bg-gray-800">
+          <div className="rounded-lg bg-gray-100 px-4 py-2 dark:bg-gray-800">
             <div className="flex space-x-2">
               <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400 dark:bg-gray-500 [animation-delay:-0.3s]"></div>
               <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400 dark:bg-gray-500 [animation-delay:-0.15s]"></div>

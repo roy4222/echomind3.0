@@ -86,41 +86,44 @@ export function ChatInterface() {
         
         {/* 聊天輸入框 */}
         <ChatInput onSubmit={handleSubmit} isLoading={isLoading} />
-
       </>
     );
   };
 
+  // 使用全頁面佈局，讓瀏覽器處理捲動
   return (
-    <div className="flex h-full flex-col">
-      <main className="flex-1 overflow-hidden">
-        <div className="relative flex h-full flex-col bg-dot-pattern dark:bg-dot-pattern-dark">
-          <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center px-4">
-            <div className="w-full max-w-3xl space-y-8 py-12">
-              {!isChatStarted ? (
-                // 顯示歡迎畫面
-                renderWelcomeScreen()
-              ) : (
-                <div className="flex flex-col h-[calc(100vh-10rem)] justify-between">
-                  <div className="flex-1 overflow-y-auto pb-4 pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
-                    <ChatMessageList 
-                      messages={messages} 
-                      isLoading={isLoading} 
-                      error={error}
-                    />
-                  </div>
-                  <div className="sticky bottom-0 z-10 border-t border-gray-200 bg-white py-3 px-1 shadow-sm backdrop-blur-sm transition-all dark:border-gray-800 dark:bg-gray-900/70 dark:backdrop-blur-md">
-                    <ChatInput 
-                      onSubmit={handleSubmit}
-                      isLoading={isLoading}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
+    <div className="h-screen w-full flex flex-col">
+      {!isChatStarted ? (
+        // 歡迎畫面
+        <div className="flex-1 flex items-center justify-center px-4 bg-dot-pattern dark:bg-dot-pattern-dark">
+          <div className="w-full max-w-3xl space-y-8 py-12">
+            {renderWelcomeScreen()}
           </div>
         </div>
-      </main>
+      ) : (
+        <>
+          {/* 訊息區域 - 讓瀏覽器處理捲動 */}
+          <div className="flex-1 bg-dot-pattern dark:bg-dot-pattern-dark">
+            <div className="w-full max-w-3xl mx-auto px-4 pt-4 pb-4">
+              <ChatMessageList 
+                messages={messages} 
+                isLoading={isLoading} 
+                error={error}
+              />
+            </div>
+          </div>
+          
+          {/* 輸入區域 */}
+          <div className="w-full border-t border-gray-200 bg-white py-3 dark:border-gray-800 dark:bg-gray-900">
+            <div className="max-w-3xl mx-auto px-4">
+              <ChatInput 
+                onSubmit={handleSubmit}
+                isLoading={isLoading}
+              />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 } 
