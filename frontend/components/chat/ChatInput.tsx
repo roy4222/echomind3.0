@@ -15,9 +15,24 @@ interface ChatInputProps {
 
 // 模型選項 (僅用於 UI 展示)
 const MODEL_OPTIONS = [
-  { id: 'default', name: 'Llama 3.1 (預設)', icon: '⚡' },
-  { id: 'advanced', name: 'Llama 3.1 Pro', icon: '🧠' },
-  { id: 'creative', name: 'Gemma', icon: '💎' },
+  { 
+    id: 'default', 
+    name: 'Llama 3.1 8B Instant', 
+    icon: '⚡', 
+    description: '高效能即時回應，適合日常知識管理任務'
+  },
+  { 
+    id: 'advanced', 
+    name: 'Deepseek R1 Distill Llama 70B', 
+    icon: '🧠', 
+    description: '知識豐富，適合複雜問題與深度理解任務'
+  },
+  { 
+    id: 'creative', 
+    name: 'Qwen 2.5 32B', 
+    icon: '💎', 
+    description: '平衡效能與資源，優秀的跨語言能力'
+  },
 ];
 
 /**
@@ -158,7 +173,11 @@ export function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
                         <div className="flex-1">
                           <div className="font-medium text-sm text-gray-900 dark:text-white">{model.name}</div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {model.id === 'default' ? '標準模型' : model.id === 'advanced' ? '進階模型' : '創意模型'}
+                            {model.id === 'default' 
+                              ? model.description 
+                              : model.id === 'advanced' 
+                                ? model.description 
+                                : model.description}
                           </div>
                         </div>
                         {model.id === selectedModelId && (
