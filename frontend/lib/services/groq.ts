@@ -1,5 +1,8 @@
 import type { ChatMessage, ChatResponse, SimpleChatResponse } from '../types/chat';
 
+// Workers API 網址
+const WORKER_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://echomind-api.roy422roy.workers.dev';
+
 /**
  * Groq 聊天服務
  */
@@ -7,17 +10,24 @@ export const groqService = {
   /**
    * 發送聊天訊息
    * @param messages - 聊天訊息陣列
+   * @param modelId - 選擇的模型ID (default, advanced, creative)
    * @returns 包含 AI 回應的 Promise
    */
-  async sendMessage(messages: ChatMessage[]): Promise<SimpleChatResponse> {
+  async sendMessage(
+    messages: ChatMessage[], 
+    modelId: string = 'default'
+  ): Promise<SimpleChatResponse> {
     try {
-      // 建構包含聊天歷史的請求
-      const response = await fetch('/api/chat', {
+      // 直接調用 Cloudflare Workers API
+      const response = await fetch(`${WORKER_API_URL}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ 
+          messages,
+          model: modelId  // 傳遞模型 ID
+        }),
       });
 
       if (!response.ok) {

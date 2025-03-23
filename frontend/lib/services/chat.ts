@@ -1,6 +1,9 @@
 import { apiService } from './api';
 import type { ChatMessage, ChatCompletionOptions, ChatResponse } from '@/lib/types/chat';
 
+// Workers API 網址
+const WORKER_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://echomind-api.roy422roy.workers.dev';
+
 /**
  * 聊天服務
  * 處理與後端 AI 服務的通訊
@@ -17,12 +20,24 @@ export class ChatService {
     options?: Partial<Omit<ChatCompletionOptions, 'messages'>>
   ): Promise<ChatResponse> {
     try {
-      const response = await apiService.post<ChatResponse>('/api/chat', {
-        messages,
-        ...options
+      // 直接調用 Cloudflare Workers API
+      const response = await fetch(`${WORKER_API_URL}/api/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages,
+          ...options
+        }),
       });
       
-      return response;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || '伺服器錯誤');
+      }
+
+      return await response.json() as ChatResponse;
     } catch (error) {
       console.error('聊天請求失敗:', error);
       
@@ -44,10 +59,24 @@ export class ChatService {
    */
   async searchFaq(query: string, limit: number = 5): Promise<any> {
     try {
-      return await apiService.post('/api/faq', {
-        query,
-        limit
+      // 直接調用 Cloudflare Workers API
+      const response = await fetch(`${WORKER_API_URL}/api/faq`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query,
+          limit
+        }),
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || '伺服器錯誤');
+      }
+
+      return await response.json();
     } catch (error) {
       console.error('FAQ查詢失敗:', error);
       return {

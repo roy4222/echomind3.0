@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 /**
@@ -10,12 +11,155 @@ export const UPLOAD_CONSTANTS = {
   ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
 };
 
+// Workers API 網址
+const WORKER_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://echomind-api.roy422roy.workers.dev';
+
 /**
- * 取得適用的 API URL
+ * 檔案上傳結果
  */
-function getApiUrl(): string {
-  // 直接使用配置的 API URL
-  return process.env.NEXT_PUBLIC_API_BASE_URL || 'https://echomind-api.roy422roy.workers.dev';
+interface UploadResult {
+  success: boolean;
+  url?: string;
+  error?: string;
+}
+
+/**
+ * 檔案上傳狀態
+ */
+export interface UploadState {
+  uploading: boolean;
+  progress: number;
+  result: UploadResult | null;
+  error: string | null;
+}
+
+/**
+ * 檔案上傳選項
+ */
+export interface UploadOptions {
+  /** 檔案存放路徑 */
+  path: string;
+  /** 允許的檔案類型 */
+  acceptedFileTypes?: string[];
+  /** 最大檔案大小 (bytes) */
+  maxFileSize?: number;
+}
+
+/**
+ * 上傳服務 Hook
+ * @param options 上傳選項
+ * @returns 上傳狀態和上傳函數
+ */
+export function useUpload(options: UploadOptions) {
+  const [state, setState] = useState<UploadState>({
+    uploading: false,
+    progress: 0,
+    result: null,
+    error: null
+  });
+
+  /**
+   * 上傳檔案
+   * @param file 要上傳的檔案
+   */
+  const uploadFile = async (file: File): Promise<UploadResult> => {
+    // 檢查檔案類型
+    if (options.acceptedFileTypes && !options.acceptedFileTypes.includes(file.type)) {
+      return {
+        success: false,
+        error: `不支援的檔案類型: ${file.type}。請上傳 ${options.acceptedFileTypes.join(', ')} 格式的檔案。`
+      };
+    }
+
+    // 檢查檔案大小
+    if (options.maxFileSize && file.size > options.maxFileSize) {
+      const maxSizeMB = (options.maxFileSize / (1024 * 1024)).toFixed(2);
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      return {
+        success: false,
+        error: `檔案太大: ${fileSizeMB}MB。最大允許大小為 ${maxSizeMB}MB。`
+      };
+    }
+
+    try {
+      // 設置上傳中狀態
+      setState({
+        uploading: true,
+        progress: 10,
+        result: null,
+        error: null
+      });
+
+      // 建立 FormData
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('path', options.path);
+
+      // 模擬上傳進度
+      const progressInterval = setInterval(() => {
+        setState(prev => ({
+          ...prev,
+          progress: Math.min(prev.progress + 10, 90)
+        }));
+      }, 200);
+
+      // 直接調用 Workers 上傳 API
+      const response = await fetch(`${WORKER_API_URL}/api/upload`, {
+        method: 'POST',
+        body: formData
+      });
+
+      // 清除進度計時器
+      clearInterval(progressInterval);
+
+      // 處理回應
+      if (!response.ok) {
+        const error = await response.json();
+        return {
+          success: false,
+          error: error.error || '上傳失敗'
+        };
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        url: data.url
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '上傳過程發生錯誤'
+      };
+    } finally {
+      // 完成上傳，設置最終狀態
+      setState(prev => ({
+        ...prev,
+        uploading: false,
+        progress: 100
+      }));
+    }
+  };
+
+  /**
+   * 執行上傳並更新狀態
+   * @param file 要上傳的檔案
+   */
+  const upload = async (file: File) => {
+    const result = await uploadFile(file);
+    setState({
+      uploading: false,
+      progress: result.success ? 100 : 0,
+      result,
+      error: result.error || null
+    });
+    return result;
+  };
+
+  return {
+    state,
+    upload
+  };
 }
 
 /**
@@ -30,7 +174,7 @@ export class UploadService {
    */
   async uploadFile(file: File, path: string): Promise<string> {
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = WORKER_API_URL;
       
       console.log('準備上傳檔案...', {
         path,
