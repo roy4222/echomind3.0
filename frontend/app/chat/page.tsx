@@ -21,6 +21,9 @@ export default function ChatPage() {
   // 錯誤訊息
   const [error, setError] = useState<string | null>(null);
   
+  // 記住當前選擇的模型 ID
+  const [currentModelId, setCurrentModelId] = useState<string>('default');
+  
   /**
    * 處理用戶提交的訊息
    * @param input 用戶輸入的訊息
@@ -28,6 +31,14 @@ export default function ChatPage() {
    */
   const handleSubmit = async (input: string, modelId?: string) => {
     try {
+      // 更新當前選擇的模型 ID
+      if (modelId) {
+        setCurrentModelId(modelId);
+      }
+      
+      // 實際使用的模型 ID
+      const activeModelId = modelId || currentModelId;
+      
       // 重置錯誤狀態
       setError(null);
       
@@ -52,10 +63,10 @@ export default function ChatPage() {
         content
       }));
       
-      console.log(`使用模型 ID: ${modelId || 'default'}`);
+      console.log(`使用模型 ID: ${activeModelId}`);
       
       // 呼叫API (傳遞模型選擇)
-      const response = await chatClient.sendMessage(apiMessages, modelId);
+      const response = await chatClient.sendMessage(apiMessages, activeModelId);
       
       // 從回應中提取助手訊息
       const assistantMessage: ChatMessage = {

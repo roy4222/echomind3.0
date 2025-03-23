@@ -14,6 +14,11 @@ R2_ENDPOINT = "example-bucket.your-subdomain.r2.dev"
 # 生產環境配置
 # 這裡的變數值會被 Dashboard 中設置的值覆蓋
 name = "echomind-api"
+# 添加 vars 部分以解決部署警告
+[env.production.vars]
+# 提醒：實際的 API 金鑰應通過 wrangler secret 設定
+# wrangler secret put GROQ_API_KEY --env production
+R2_ENDPOINT = "example-bucket.your-subdomain.r2.dev"
 
 [env.staging]
 # 測試環境配置

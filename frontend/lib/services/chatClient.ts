@@ -1,4 +1,4 @@
-import type { ChatMessage, ChatCompletionOptions, ChatResponse, SimpleChatResponse } from '@/lib/types/chat';
+import type { ChatMessage, ChatCompletionOptions, ChatResponse, SimpleChatResponse, ChatRole } from '@/lib/types/chat';
 
 /**
  * 聊天客戶端服務
@@ -72,64 +72,49 @@ export class ChatClientService {
   }
 
   /**
-   * 發送聊天訊息 (簡化回應)
-   * @param messages 聊天訊息陣列
-   * @param modelId 選擇的模型ID (default, advanced, creative)
-   * @returns 簡化的聊天回應
+   * 發送聊天訊息到後端 API
+   * @param messages 聊天訊息列表
+   * @param modelId 選擇的模型 ID（可選）
    */
   async sendMessage(
-    messages: ChatMessage[],
+    messages: { role: string; content: string }[],
     modelId?: string
   ): Promise<SimpleChatResponse> {
-    console.log('💬 準備發送聊天訊息:', {
-      messagesCount: messages.length,
-      modelId: modelId || 'default',
-      modelIdType: typeof modelId,
-      lastMessage: messages.length > 0 ? 
-        messages[messages.length-1].content?.substring(0, 50) + '...' : 
-        '無訊息'
-    });
-    
     try {
-      const requestOptions = { 
-        messages,
-        model: modelId || 'default' // 傳遞選擇的模型
+      console.log(`正在發送 ${messages.length} 條訊息到 API`);
+      console.log(`使用模型: ${modelId || 'default'}`);
+      console.log(`最後一條訊息: ${messages[messages.length - 1].content.substring(0, 50)}...`);
+
+      // 將消息轉換為符合 ChatMessage 類型的格式
+      const chatMessages: ChatMessage[] = messages.map(msg => ({
+        role: msg.role as ChatRole,
+        content: msg.content
+      }));
+
+      // 構建請求對象，包含訊息和模型 ID
+      const requestBody: ChatCompletionOptions = {
+        messages: chatMessages,
+        model: modelId || 'default',  // 確保即使未提供模型 ID 也有預設值
       };
-      
-      console.log('📦 發送到 API 的請求:', JSON.stringify(requestOptions).substring(0, 200) + '...');
-      
-      const response = await this.chat(requestOptions);
-      
+
+      const startTime = Date.now();
+      const response = await this.chat(requestBody);
+      const processingTime = Date.now() - startTime;
+
       if (!response.success || !response.data) {
-        console.error('❌ 未能獲取有效回應:', {
-          error: response.error,
-          success: response.success,
-          hasData: !!response.data,
-          responseDetails: JSON.stringify(response).substring(0, 300) + '...'
-        });
-        throw new Error(response.error?.message || '無法獲取回應');
+        console.error('API 請求失敗:', response.error?.message);
+        throw new Error(`API 請求失敗: ${response.error?.message || '未知錯誤'}`);
       }
-      
-      // 返回簡化的回應格式
-      const result = { 
+
+      console.log(`API 響應時間: ${processingTime}ms`);
+      console.log('API 請求成功');
+
+      return {
         text: response.data.choices[0].message.content,
-        processingTime: response.data.usage ? response.data.usage.total_tokens : undefined
+        processingTime,
       };
-      
-      console.log('✅ 收到AI回應:', {
-        length: result.text.length,
-        tokens: result.processingTime,
-        model: response.data.model
-      });
-      
-      return result;
     } catch (error) {
-      console.error('❌ 聊天請求處理錯誤:', error);
-      console.error('詳細錯誤信息:', error instanceof Error ? {
-        name: error.name,
-        message: error.message,
-        stack: error.stack?.substring(0, 500)
-      } : '未知錯誤類型');
+      console.error('聊天請求錯誤:', error);
       throw error;
     }
   }

@@ -27,6 +27,31 @@ const DEFAULT_TEMPERATURE = 0.7;                // 預設的溫度參數
 const DEFAULT_MAX_TOKENS = 2048;               // 預設的最大 token 數
 
 /**
+ * 模型參數映射表
+ * 提供不同模型的配置參數和顯示名稱
+ */
+const MODEL_MAPPING = {
+  default: {
+    name: 'llama-3.1-8b-instant',
+    displayName: 'Llama 3.1 8B Instant',
+    temperature: 0.7,
+    maxTokens: 2048
+  },
+  advanced: {
+    name: 'deepseek-r1-distill-llama-70b',
+    displayName: 'Deepseek R1 Distill Llama 70B',
+    temperature: 0.5,
+    maxTokens: 4096
+  },
+  creative: {
+    name: 'qwen-2.5-32b',
+    displayName: 'Qwen 2.5 32B',
+    temperature: 0.9,
+    maxTokens: 3072
+  }
+};
+
+/**
  * 處理聊天請求
  * @param request 請求對象
  * @param env 環境變數
@@ -134,27 +159,44 @@ async function callGroqApi(
   try {
     const url = 'https://api.groq.com/openai/v1/chat/completions';
     
-    // 根據前端選擇的模型 ID 映射到實際模型名稱
+    // 根據前端選擇的模型 ID 映射到實際模型名稱和參數
     let actualModel = DEFAULT_MODEL;
+    let actualTemperature = temperature;
+    let actualMaxTokens = maxTokens;
+    let modelDisplayName = '預設模型';
     
-    // 如果前端傳入的是模型 ID，進行映射
-    if (model === 'default') {
-      actualModel = 'llama-3.1-8b-instant';
-    } else if (model === 'advanced') {
-      actualModel = 'deepseek-r1-distill-llama-70b';
-    } else if (model === 'creative') {
-      actualModel = 'qwen-2.5-32b';
+    // 使用映射表處理模型選擇
+    if (model in MODEL_MAPPING) {
+      const modelConfig = MODEL_MAPPING[model as keyof typeof MODEL_MAPPING];
+      actualModel = modelConfig.name;
+      modelDisplayName = modelConfig.displayName;
+      
+      // 如果沒有明確傳入溫度和最大 tokens，則使用對應模型的建議值
+      if (temperature === DEFAULT_TEMPERATURE) {
+        actualTemperature = modelConfig.temperature;
+      }
+      if (maxTokens === DEFAULT_MAX_TOKENS) {
+        actualMaxTokens = modelConfig.maxTokens;
+      }
+      
+      console.log(`🔄 切換到模型: ${modelDisplayName} (ID: ${model})`);
+      console.log(`📝 模型參數: 溫度=${actualTemperature}, 最大Tokens=${actualMaxTokens}`);
     } else if (model.includes('llama') || model.includes('deepseek') || model.includes('qwen')) {
       // 如果傳入的是完整模型名稱，直接使用
       actualModel = model;
+      modelDisplayName = model;
+      console.log(`🔄 使用直接指定的模型: ${model}`);
+    } else {
+      console.log(`⚠️ 未知模型 ID: ${model}，使用預設模型: ${DEFAULT_MODEL}`);
     }
     
     console.log('📊 Groq API 請求詳情:', {
       modelId: model,
       actualModel: actualModel,
+      modelName: modelDisplayName,
       messagesCount: messages.length,
-      temperature: temperature,
-      maxTokens: maxTokens
+      temperature: actualTemperature,
+      maxTokens: actualMaxTokens
     });
     
     // 檢查 API 金鑰
@@ -168,7 +210,7 @@ async function callGroqApi(
     console.log('🔄 添加系統提示詞，最終訊息數量:', messagesWithSystemPrompt.length);
     
     // 發送請求到 Groq API
-    console.log('🌐 發送請求到 Groq API...');
+    console.log(`🌐 發送請求到 Groq API (模型: ${modelDisplayName})...`);
     const startTime = Date.now();
     const response = await fetch(url, {
       method: 'POST',
@@ -179,12 +221,12 @@ async function callGroqApi(
       body: JSON.stringify({
         model: actualModel,  // 使用映射後的模型名稱
         messages: messagesWithSystemPrompt,
-        temperature,
-        max_tokens: maxTokens
+        temperature: actualTemperature,
+        max_tokens: actualMaxTokens
       })
     });
     const endTime = Date.now();
-    console.log(`⏱️ Groq API 請求耗時: ${endTime - startTime}ms`);
+    console.log(`⏱️ Groq API 請求耗時: ${endTime - startTime}ms (模型: ${modelDisplayName})`);
     
     // 檢查回應狀態
     if (!response.ok) {
@@ -199,7 +241,7 @@ async function callGroqApi(
     
     // 解析回應
     const responseData = await response.json() as GroqChatResponse;
-    console.log('✅ Groq API 回應成功:', {
+    console.log(`✅ 模型 ${modelDisplayName} 回應成功:`, {
       model: responseData.model,
       usage: responseData.usage,
       responseCharCount: responseData.choices[0]?.message?.content?.length || 0
