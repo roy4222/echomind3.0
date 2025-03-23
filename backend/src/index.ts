@@ -67,6 +67,11 @@ export default {
         console.log(`📤 [${requestId}] 處理上傳請求`);
         response = await handleUpload(request, env);
       }
+      // 添加新的上傳路由路徑
+      else if (url.pathname === '/upload') {
+        console.log(`📤 [${requestId}] 處理上傳請求 (直接路徑)`);
+        response = await handleUpload(request, env);
+      }
       // 健康檢查端點
       else if (url.pathname === '/api/health') {
         console.log(`💓 [${requestId}] 健康檢查`);

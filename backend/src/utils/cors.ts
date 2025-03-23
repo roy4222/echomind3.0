@@ -9,6 +9,9 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',            // 本地開發環境
   'https://localhost:3000',
   'https://echomind3.roy422.ggff.net',
+  'https://echomind2-afcdb.web.app',   // Firebase 網址
+  'https://echomind2-afcdb.firebaseapp.com',  // Firebase 備用網址
+  '*',    // 允許所有來源，確保不會因為來源問題被拒絕
 ];
 
 /**
@@ -33,6 +36,8 @@ export function getCorsHeadersForRequest(request: Request): HeadersInit {
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
     'Access-Control-Max-Age': '86400',
+    'Access-Control-Allow-Credentials': 'true',
+    'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
   };
 }
 
@@ -45,6 +50,7 @@ export const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
   'Access-Control-Max-Age': '86400',
+  'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
 };
 
 /**

@@ -14,13 +14,8 @@ export const UPLOAD_CONSTANTS = {
  * 取得適用的 API URL
  */
 function getApiUrl(): string {
-  // 開發環境優先使用本地 API
-  const useLocalApi = process.env.NODE_ENV === 'development';
-  const localApiUrl = '/api'; // 使用相對路徑，指向 Next.js API 路由
-  const workerApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_WORKER_API_URL || 'http://localhost:8787/api';
-  
-  // 開發環境使用本地 API，否則使用 Worker API
-  return useLocalApi ? localApiUrl : workerApiUrl;
+  // 直接使用配置的 API URL
+  return process.env.NEXT_PUBLIC_API_BASE_URL || 'https://echomind-api.roy422roy.workers.dev';
 }
 
 /**
@@ -56,10 +51,11 @@ export class UploadService {
       formData.append('file', file);
       formData.append('path', path);
 
-      // 發送上傳請求到選定的 API
-      const response = await fetch(`${apiUrl}/upload`, {
+      // 發送上傳請求到API
+      const response = await fetch(`${apiUrl}/api/upload`, {
         method: 'POST',
         body: formData,
+        credentials: 'include' // 添加憑證支援，確保 Cookie 能夠跨域傳送
       });
 
       if (!response.ok) {
