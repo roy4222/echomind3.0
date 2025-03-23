@@ -4,6 +4,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatInput } from './ChatInput';
 import { Greeting } from "@/components/chat/Greeting";
@@ -17,6 +18,29 @@ export function ChatInterface() {
   const [isLoading, setIsLoading] = useState(false); // 載入狀態
   const [isChatStarted, setIsChatStarted] = useState(false); // 是否開始聊天
   const [error, setError] = useState<string | null>(null); // 錯誤訊息
+  
+  // 取得 URL 參數
+  const searchParams = useSearchParams();
+  
+  // 監聽 URL 參數變化，當 new=true 時重置聊天
+  useEffect(() => {
+    const isNewChat = searchParams.get('new') === 'true';
+    console.log('ChatInterface - URL參數:', Array.from(searchParams.entries()));
+    console.log('ChatInterface - isNewChat:', isNewChat);
+    console.log('ChatInterface - 當前聊天狀態:', {
+      messagesCount: messages.length,
+      isChatStarted,
+      hasError: error !== null
+    });
+    
+    if (isNewChat) {
+      // 重置所有聊天狀態
+      console.log('ChatInterface - 重置聊天狀態');
+      setMessages([]);
+      setIsChatStarted(false);
+      setError(null);
+    }
+  }, [searchParams]);
 
   /**
    * 處理訊息提交
@@ -44,7 +68,10 @@ export function ChatInterface() {
       // 更新訊息列表
       const updatedMessages = [...messages, userMessage];
       setMessages(updatedMessages);
-      if (!isChatStarted) setIsChatStarted(true);
+      if (!isChatStarted) {
+        console.log('ChatInterface - 將聊天狀態設為已開始');
+        setIsChatStarted(true);
+      }
       
       // 準備要傳送到API的訊息 (移除createdAt欄位)
       const apiMessages = updatedMessages.map(({ role, content }) => ({

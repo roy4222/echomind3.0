@@ -54,7 +54,7 @@ const sidebarItems: SidebarItem[] = [
       </svg>
     ),
     label: '開啟新對話',
-    href: '/',
+    href: '/?new=true',
   },
   {
     icon: () => (
