@@ -6,7 +6,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatInput } from './ChatInput';
-import { WelcomeScreen } from './WelcomeScreen';
+import { Greeting } from "@/components/chat/Greeting";
+import { Sparkles, Search, Lightbulb } from 'lucide-react';
 import { type ChatMessage } from '@/lib/types/chat';
 import { chatClient } from '@/lib/services/chatClient';
 
@@ -73,6 +74,23 @@ export function ChatInterface() {
     }
   };
 
+  /**
+   * 渲染歡迎畫面
+   * @returns 歡迎畫面 JSX 元素
+   */
+  const renderWelcomeScreen = () => {
+    return (
+      <>
+        {/* 問候語組件 */}
+        <Greeting />
+        
+        {/* 聊天輸入框 */}
+        <ChatInput onSubmit={handleSubmit} isLoading={isLoading} />
+
+      </>
+    );
+  };
+
   return (
     <div className="flex h-full flex-col">
       <main className="flex-1 overflow-hidden">
@@ -80,8 +98,8 @@ export function ChatInterface() {
           <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center px-4">
             <div className="w-full max-w-3xl space-y-8 py-12">
               {!isChatStarted ? (
-                // 顯示歡迎畫面或聊天介面
-                <WelcomeScreen onSubmit={handleSubmit} isLoading={isLoading} />
+                // 顯示歡迎畫面
+                renderWelcomeScreen()
               ) : (
                 <div className="flex flex-col h-[calc(100vh-10rem)] justify-between">
                   <div className="flex-1 overflow-y-auto pb-4 pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
