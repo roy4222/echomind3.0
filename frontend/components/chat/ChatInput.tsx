@@ -156,7 +156,7 @@ export function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
                 }`}
               >
                 <Database className="h-4 w-4" />
-                <span>資料庫搜尋</span>
+                <span>學業資料庫搜尋</span>
               </button>
             </div>
             

@@ -89,11 +89,31 @@ const formatAssistantMessage = (text: string) => {
   if (thinkContent) {
     formattedLines.push(
       <div key="thinking-chain" className="mb-4">
+        {/* 使用 HTML5 details/summary 元素創建可折疊區塊 */}
         <details className="thinking-chain">
+          {/* summary 元素作為可點擊的標題區域 */}
           <summary className="cursor-pointer p-2 bg-purple-100 dark:bg-purple-900/40 rounded-t-lg font-medium flex items-center text-purple-800 dark:text-purple-300">
+            {/* 思考過程的圖示 */}
             <span className="mr-2">💭</span> 思考過程
+            {/* 下拉箭頭圖示 */}
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="h-4 w-4 ml-2" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M19 9l-7 7-7-7" 
+              />
+            </svg>
           </summary>
+          {/* 思考鏈內容區域，使用淺色背景和圓角設計 */}
           <div className="p-3 text-sm bg-purple-50 dark:bg-purple-900/20 rounded-b-lg border-t border-purple-200 dark:border-purple-800 whitespace-pre-wrap">
+            {/* 顯示思考鏈的實際內容，保留原始格式 */}
             {thinkContent}
           </div>
         </details>
