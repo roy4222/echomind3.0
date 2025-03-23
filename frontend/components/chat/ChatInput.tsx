@@ -62,6 +62,10 @@ export function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
       >
         <Send className="h-5 w-5" />
       </button>
+      {/* 警告標語 - 置中顯示 */}
+      <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-gray-500 dark:text-gray-400">
+        請注意: AI 可能會產生錯誤資訊，建議您查證回覆內容的準確性。
+      </div>
     </form>
   );
 } 

@@ -4,7 +4,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { MessageList } from './MessageList';
+import { ChatMessageList } from './ChatMessageList';
 import { ChatInput } from './ChatInput';
 import { WelcomeScreen } from './WelcomeScreen';
 import { type ChatMessage } from '@/lib/types/chat';
@@ -15,19 +15,7 @@ export function ChatInterface() {
   const [messages, setMessages] = useState<ChatMessage[]>([]); // 儲存聊天訊息
   const [isLoading, setIsLoading] = useState(false); // 載入狀態
   const [isChatStarted, setIsChatStarted] = useState(false); // 是否開始聊天
-  const messagesEndRef = useRef<HTMLDivElement>(null); // 用於自動滾動到最新訊息
-
-  /**
-   * 滾動到訊息列表底部
-   */
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  // 當訊息更新時自動滾動到底部
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  const [error, setError] = useState<string | null>(null); // 錯誤訊息
 
   /**
    * 處理訊息提交
@@ -36,35 +24,51 @@ export function ChatInterface() {
   const handleSubmit = async (input: string) => {
     if (!input.trim() || isLoading) return;
 
-    // 建立使用者訊息物件
-    const userMessage: ChatMessage = {
-      role: 'user',
-      content: input.trim(),
-    };
-
-    // 更新訊息列表和狀態
-    setMessages(prev => [...prev, userMessage]);
-    setIsLoading(true);
-    if (!isChatStarted) setIsChatStarted(true);
-
     try {
-      // 發送請求到聊天 API
-      const chatMessages = [...messages, userMessage];
-      const response = await chatClient.sendMessage(chatMessages);
-
+      // 重置錯誤狀態
+      setError(null);
+      
+      // 開始載入
+      setIsLoading(true);
+      
+      // 建立用戶訊息
+      const userMessage: ChatMessage = {
+        role: 'user',
+        content: input.trim(),
+        id: Date.now().toString(),
+        createdAt: Date.now(),
+      };
+      
+      // 更新訊息列表
+      const updatedMessages = [...messages, userMessage];
+      setMessages(updatedMessages);
+      if (!isChatStarted) setIsChatStarted(true);
+      
+      // 準備要傳送到API的訊息 (移除createdAt欄位)
+      const apiMessages = updatedMessages.map(({ role, content }) => ({
+        role,
+        content
+      }));
+      
+      // 呼叫API
+      const response = await chatClient.sendMessage(apiMessages);
+      
+      // 從回應中提取助手訊息
       const assistantMessage: ChatMessage = {
         role: 'assistant',
         content: response.text,
+        id: (Date.now() + 1).toString(),
+        createdAt: Date.now(),
       };
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      // 錯誤處理
-      console.error('聊天發生錯誤:', error);
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: '抱歉，處理您的請求時發生錯誤。請稍後再試。',
-      }]);
+      
+      // 更新訊息列表
+      setMessages([...updatedMessages, assistantMessage]);
+    } catch (err) {
+      // 處理錯誤
+      console.error('聊天請求錯誤:', err);
+      setError(err instanceof Error ? err.message : '發生未知錯誤');
     } finally {
+      // 結束載入
       setIsLoading(false);
     }
   };
@@ -80,15 +84,19 @@ export function ChatInterface() {
                 <WelcomeScreen onSubmit={handleSubmit} isLoading={isLoading} />
               ) : (
                 <div className="flex flex-col h-[calc(100vh-10rem)] justify-between">
-                  <MessageList 
-                    messages={messages} 
-                    isLoading={isLoading} 
-                    messagesEndRef={messagesEndRef}
-                  />
-                  <ChatInput 
-                    onSubmit={handleSubmit}
-                    isLoading={isLoading}
-                  />
+                  <div className="flex-1 overflow-y-auto pb-4 pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
+                    <ChatMessageList 
+                      messages={messages} 
+                      isLoading={isLoading} 
+                      error={error}
+                    />
+                  </div>
+                  <div className="sticky bottom-0 z-10 border-t border-gray-200 bg-white py-3 px-1 shadow-sm backdrop-blur-sm transition-all dark:border-gray-800 dark:bg-gray-900/70 dark:backdrop-blur-md">
+                    <ChatInput 
+                      onSubmit={handleSubmit}
+                      isLoading={isLoading}
+                    />
+                  </div>
                 </div>
               )}
             </div>

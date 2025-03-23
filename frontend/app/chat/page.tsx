@@ -5,6 +5,7 @@ import { WelcomeScreen } from '@/components/chat/WelcomeScreen';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { ChatMessage } from '@/lib/types/chat';
 import { chatClient } from '@/lib/services/chatClient';
+import { ChatMessageList } from '@/components/chat/ChatMessageList';
 
 /**
  * 聊天頁面組件
@@ -44,8 +45,14 @@ export default function ChatPage() {
       const updatedMessages = [...messages, userMessage];
       setMessages(updatedMessages);
       
+      // 準備要傳送到API的訊息 (移除createdAt欄位)
+      const apiMessages = updatedMessages.map(({ role, content }) => ({
+        role,
+        content
+      }));
+      
       // 呼叫API
-      const response = await chatClient.sendMessage(updatedMessages);
+      const response = await chatClient.sendMessage(apiMessages);
       
       // 從回應中提取助手訊息
       const assistantMessage: ChatMessage = {
@@ -69,57 +76,24 @@ export default function ChatPage() {
   
   // 渲染歡迎畫面或聊天介面
   return (
-    <main className="container mx-auto flex min-h-[calc(100vh-5rem)] flex-col items-center justify-center p-4 md:p-8">
-      <div className="w-full max-w-4xl space-y-8">
+    <main className="container mx-auto flex min-h-[calc(100vh-5rem)] flex-col items-center justify-between p-4 md:p-8">
+      <div className="w-full max-w-4xl space-y-6 overflow-hidden">
         {/* 如果沒有訊息，顯示歡迎畫面 */}
         {messages.length === 0 ? (
           <WelcomeScreen onSubmit={handleSubmit} isLoading={isLoading} />
         ) : (
-          <div className="space-y-8">
-            {/* 訊息列表 */}
-            <div className="space-y-6">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${
-                    message.role === 'user' ? 'justify-end' : 'justify-start'
-                  }`}
-                >
-                  <div
-                    className={`max-w-3xl rounded-lg px-4 py-2 ${
-                      message.role === 'user'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-                    }`}
-                  >
-                    {message.content}
-                  </div>
-                </div>
-              ))}
-              
-              {/* 錯誤訊息 */}
-              {error && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-500 dark:border-red-800 dark:bg-red-900/50 dark:text-red-400">
-                  {error}
-                </div>
-              )}
-              
-              {/* 載入指示器 */}
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="max-w-3xl rounded-lg bg-gray-100 px-4 py-2 dark:bg-gray-800">
-                    <div className="flex space-x-2">
-                      <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400 dark:bg-gray-500 [animation-delay:-0.3s]"></div>
-                      <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400 dark:bg-gray-500 [animation-delay:-0.15s]"></div>
-                      <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400 dark:bg-gray-500"></div>
-                    </div>
-                  </div>
-                </div>
-              )}
+          <div className="flex h-[calc(100vh-10rem)] flex-col">
+            {/* 訊息列表區域 */}
+            <div className="flex-1 overflow-y-auto pb-4 pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
+              <ChatMessageList 
+                messages={messages} 
+                isLoading={isLoading} 
+                error={error} 
+              />
             </div>
             
             {/* 聊天輸入框 */}
-            <div className="sticky bottom-4">
+            <div className="sticky bottom-0 z-10 border-t border-gray-200 bg-white py-3 px-1 shadow-sm backdrop-blur-sm transition-all dark:border-gray-800 dark:bg-gray-900/70 dark:backdrop-blur-md">
               <ChatInput onSubmit={handleSubmit} isLoading={isLoading} />
             </div>
           </div>
