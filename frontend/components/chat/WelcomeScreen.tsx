@@ -2,7 +2,7 @@ import { ChatInput } from './ChatInput';
 import { Greeting } from './Greeting';
 
 interface WelcomeScreenProps {
-  onSubmit: (input: string) => Promise<void>;
+  onSubmit: (input: string, modelId?: string) => Promise<void>;
   isLoading: boolean;
 }
 

@@ -31,13 +31,15 @@ export default function ChatPage() {
    */
   const handleSubmit = async (input: string, modelId?: string) => {
     try {
-      // 更新當前選擇的模型 ID
-      if (modelId) {
-        setCurrentModelId(modelId);
-      }
+      console.log(`接收到提交請求 - 輸入: ${input.substring(0, 20)}..., 模型ID: ${modelId || '未提供'}`);
       
-      // 實際使用的模型 ID
-      const activeModelId = modelId || currentModelId;
+      // 更新當前選擇的模型 ID (如果提供了新的模型 ID)
+      let useModelId = currentModelId;
+      if (modelId) {
+        console.log(`更新模型 ID: ${currentModelId} -> ${modelId}`);
+        setCurrentModelId(modelId);
+        useModelId = modelId;
+      }
       
       // 重置錯誤狀態
       setError(null);
@@ -63,10 +65,10 @@ export default function ChatPage() {
         content
       }));
       
-      console.log(`使用模型 ID: ${activeModelId}`);
+      console.log(`--> 實際使用模型 ID: "${useModelId}"`);
       
       // 呼叫API (傳遞模型選擇)
-      const response = await chatClient.sendMessage(apiMessages, activeModelId);
+      const response = await chatClient.sendMessage(apiMessages, useModelId);
       
       // 從回應中提取助手訊息
       const assistantMessage: ChatMessage = {

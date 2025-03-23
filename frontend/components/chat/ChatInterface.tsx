@@ -21,8 +21,9 @@ export function ChatInterface() {
   /**
    * 處理訊息提交
    * @param input - 使用者輸入的訊息
+   * @param modelId - 選擇的模型 ID
    */
-  const handleSubmit = async (input: string) => {
+  const handleSubmit = async (input: string, modelId?: string) => {
     if (!input.trim() || isLoading) return;
 
     try {
@@ -51,8 +52,10 @@ export function ChatInterface() {
         content
       }));
       
-      // 呼叫API
-      const response = await chatClient.sendMessage(apiMessages);
+      console.log(`ChatInterface 接收到的模型 ID: "${modelId || '未提供'}"`);
+      
+      // 呼叫API (傳遞選擇的模型 ID)
+      const response = await chatClient.sendMessage(apiMessages, modelId);
       
       // 從回應中提取助手訊息
       const assistantMessage: ChatMessage = {

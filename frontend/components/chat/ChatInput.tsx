@@ -60,8 +60,11 @@ export function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
     if (!inputValue.trim() || isLoading) return;
     
     try {
-      // 提交訊息 (傳遞輸入值和選擇的模型)
+      console.log(`提交訊息 - 使用模型: ${selectedModelId}`);
+      
+      // 提交訊息 (始終傳遞當前選擇的模型)
       await onSubmit(inputValue, selectedModelId);
+      
       // 清空輸入框
       setInputValue('');
     } catch (error) {
@@ -76,7 +79,15 @@ export function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
       新模型: modelId,
       模型資訊: MODEL_OPTIONS.find(m => m.id === modelId)
     });
+    
     setSelectedModelId(modelId);
+    
+    // 如果輸入框有內容，即時更新選定的模型
+    if (inputValue.trim()) {
+      // 不立即提交，只是更新選定的模型
+      console.log(`🔄 更新選定模型為: ${modelId}`);
+    }
+    
     setIsModelDropdownOpen(false);
   };
 

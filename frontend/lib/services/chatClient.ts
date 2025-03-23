@@ -27,8 +27,12 @@ export class ChatClientService {
       messagesCount: options.messages?.length || 0,
       model: options.model || '默認模型',
       modelType: typeof options.model,
+      modelIdValue: `"${options.model}"`, // 額外顯示原始值，便於檢查
       firstMessage: options.messages?.[0]?.content?.substring(0, 50) + '...' || '無內容'
     });
+    
+    // 打印完整請求體，方便調試
+    console.log(`📦 [${requestId}] 完整請求體:`, JSON.stringify(options).substring(0, 500) + '...');
     
     const startTime = Date.now();
     
@@ -45,15 +49,31 @@ export class ChatClientService {
       console.log(`⏱️ [${requestId}] API回應時間: ${endTime - startTime}ms, 狀態: ${response.status}`);
 
       if (!response.ok) {
-        const error = await response.json();
-        console.error(`❌ [${requestId}] API請求失敗:`, error);
-        throw new Error(error.error?.message || '伺服器錯誤');
+        const errorText = await response.text();
+        let errorJson;
+        try {
+          errorJson = JSON.parse(errorText);
+        } catch (e) {
+          // 如果不是 JSON，保留原始文本
+        }
+        
+        console.error(`❌ [${requestId}] API請求失敗:`, {
+          status: response.status,
+          statusText: response.statusText,
+          errorData: errorJson || errorText
+        });
+        
+        throw new Error(
+          errorJson?.error?.message || 
+          `伺服器錯誤 (${response.status}: ${response.statusText})`
+        );
       }
 
       const data = await response.json() as ChatResponse;
       console.log(`✅ [${requestId}] API請求成功:`, {
         success: data.success,
         model: data.data?.model,
+        requestedModel: options.model, // 顯示請求的模型 ID
         tokensUsed: data.data?.usage?.total_tokens,
         responseLength: data.data?.choices?.[0]?.message?.content?.length || 0
       });
@@ -62,10 +82,20 @@ export class ChatClientService {
     } catch (error) {
       console.error(`❌ [${requestId}] 聊天請求錯誤:`, error);
       
+      // 提供更詳細的錯誤信息
+      const errorMessage = error instanceof Error 
+        ? `${error.message} (${error.name}${error.cause ? ': ' + error.cause : ''})`
+        : '聊天服務暫時不可用';
+      
+      console.error(`❌ [${requestId}] 詳細錯誤:`, {
+        message: errorMessage,
+        originalError: error
+      });
+      
       return {
         success: false,
         error: {
-          message: error instanceof Error ? error.message : '聊天服務暫時不可用'
+          message: errorMessage
         }
       };
     }
@@ -81,8 +111,9 @@ export class ChatClientService {
     modelId?: string
   ): Promise<SimpleChatResponse> {
     try {
-      console.log(`正在發送 ${messages.length} 條訊息到 API`);
-      console.log(`使用模型: ${modelId || 'default'}`);
+      console.log(`===== 發送聊天訊息 =====`);
+      console.log(`訊息數量: ${messages.length}`);
+      console.log(`選擇的模型 ID: "${modelId || 'default'}"`);
       console.log(`最後一條訊息: ${messages[messages.length - 1].content.substring(0, 50)}...`);
 
       // 將消息轉換為符合 ChatMessage 類型的格式
@@ -91,12 +122,19 @@ export class ChatClientService {
         content: msg.content
       }));
 
+      // 確保模型 ID 有值並且正確傳遞
+      const actualModelId = modelId || 'default';
+      console.log(`確認使用模型 ID: "${actualModelId}"`);
+
       // 構建請求對象，包含訊息和模型 ID
       const requestBody: ChatCompletionOptions = {
         messages: chatMessages,
-        model: modelId || 'default',  // 確保即使未提供模型 ID 也有預設值
+        model: actualModelId  // 使用確認過的模型 ID
       };
 
+      console.log(`準備發送模型 ID: "${requestBody.model}"`);
+      console.log(`請求對象類型: ${typeof requestBody}, model 欄位類型: ${typeof requestBody.model}`);
+      
       const startTime = Date.now();
       const response = await this.chat(requestBody);
       const processingTime = Date.now() - startTime;
@@ -107,7 +145,9 @@ export class ChatClientService {
       }
 
       console.log(`API 響應時間: ${processingTime}ms`);
-      console.log('API 請求成功');
+      console.log(`API 使用的模型: ${response.data.model}`);
+      console.log(`API 請求成功`);
+      console.log(`===== 聊天訊息結束 =====`);
 
       return {
         text: response.data.choices[0].message.content,

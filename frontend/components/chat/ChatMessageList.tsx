@@ -69,13 +69,37 @@ const formatUserMessage = (text: string) => {
  * - 標題 (# 開頭)
  * - 列表 (- 開頭)
  * - 粗體文字 (**文字**)
+ * - 思考鏈 (<think>內容</think>)
  * @param text - 要格式化的文字
  * @returns 格式化後的 JSX 元素
  */
 const formatAssistantMessage = (text: string) => {
+  // 處理思考鏈部分
+  const thinkMatch = text.match(/<think>([\s\S]*?)<\/think>/);
+  const thinkContent = thinkMatch ? thinkMatch[1].trim() : null;
+  
+  // 移除思考鏈部分，只處理剩餘文字
+  const cleanedText = thinkContent ? text.replace(/<think>[\s\S]*?<\/think>/, '').trim() : text;
+
   // 將文字分割成行
-  const lines = text.split('\n');
+  const lines = cleanedText.split('\n');
   const formattedLines = [];
+  
+  // 如果有思考鏈內容，添加可折疊區塊
+  if (thinkContent) {
+    formattedLines.push(
+      <div key="thinking-chain" className="mb-4">
+        <details className="thinking-chain">
+          <summary className="cursor-pointer p-2 bg-purple-100 dark:bg-purple-900/40 rounded-t-lg font-medium flex items-center text-purple-800 dark:text-purple-300">
+            <span className="mr-2">💭</span> 思考過程
+          </summary>
+          <div className="p-3 text-sm bg-purple-50 dark:bg-purple-900/20 rounded-b-lg border-t border-purple-200 dark:border-purple-800 whitespace-pre-wrap">
+            {thinkContent}
+          </div>
+        </details>
+      </div>
+    );
+  }
   
   // 逐行處理文字格式
   for (let i = 0; i < lines.length; i++) {
