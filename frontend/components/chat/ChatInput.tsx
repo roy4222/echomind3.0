@@ -176,7 +176,7 @@ export function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
       
       {/* 底部警告標語 */}
       <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-        AI 可能產生不準確資訊
+        AI 可能產生不準確資訊。請勿提供個人敏感資料，並謹慎核實重要資訊。
       </div>
     </div>
   );
