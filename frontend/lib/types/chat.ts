@@ -114,4 +114,22 @@ export interface FaqSearchResult {
   category?: string;
   /** 標籤 */
   tags?: string[];
+}
+
+/**
+ * 聊天歷史記錄介面
+ */
+export interface ChatHistory {
+  /** 聊天記錄唯一識別碼 */
+  id: string;
+  /** 聊天標題 */
+  title: string;
+  /** 訊息列表 */
+  messages: ChatMessage[];
+  /** 使用的模型識別碼 */
+  modelId: string;
+  /** 最後更新時間戳 */
+  lastUpdated: number;
+  /** 建立時間戳 */
+  createdAt: number;
 } 

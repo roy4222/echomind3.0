@@ -6,27 +6,14 @@ import {
   getDoc, 
   getDocs, 
   query, 
-  where, 
   orderBy, 
   deleteDoc,
-  serverTimestamp,
   Firestore
 } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
-import { ChatMessage } from '@/lib/types/chat';
+import { ChatMessage, ChatHistory } from '@/lib/types/chat';
+import { authService } from '@/lib/utils/auth';
 import { toast } from 'sonner';
-
-/**
- * 聊天歷史記錄介面
- */
-export interface ChatHistory {
-  id: string;
-  title: string;
-  messages: ChatMessage[];
-  modelId: string;
-  lastUpdated: number;
-  createdAt: number;
-}
 
 /**
  * 聊天歷史記錄服務
@@ -34,29 +21,9 @@ export interface ChatHistory {
  */
 export class ChatHistoryService {
   private db: Firestore;
-  private userId: string | null = null;
 
   constructor() {
     this.db = getFirestore(app);
-  }
-
-  /**
-   * 設定目前使用者 ID
-   * @param userId 使用者 ID
-   */
-  setUserId(userId: string | null) {
-    this.userId = userId;
-  }
-
-  /**
-   * 驗證是否已設定使用者 ID
-   */
-  private validateUser(): boolean {
-    if (!this.userId) {
-      toast.error('請先登入以使用聊天歷史功能');
-      return false;
-    }
-    return true;
   }
 
   /**
@@ -71,11 +38,11 @@ export class ChatHistoryService {
     title: string = '新對話',
     modelId: string = 'default'
   ): Promise<string> {
-    if (!this.validateUser()) return '';
+    if (!authService.validateUser('請先登入以使用聊天歷史功能')) return '';
 
     try {
       // 確保 userId 非空
-      const userId = this.userId as string;
+      const userId = authService.getUserId() as string;
       
       const chatId = doc(collection(this.db, 'chats')).id;
       const now = Date.now();
@@ -114,11 +81,11 @@ export class ChatHistoryService {
     title?: string,
     modelId?: string
   ): Promise<boolean> {
-    if (!this.validateUser() || !chatId) return false;
+    if (!authService.validateUser('請先登入以使用聊天歷史功能') || !chatId) return false;
 
     try {
       // 確保 userId 非空
-      const userId = this.userId as string;
+      const userId = authService.getUserId() as string;
       
       const chatRef = doc(this.db, 'users', userId, 'chats', chatId);
       const chatSnap = await getDoc(chatRef);
@@ -152,11 +119,11 @@ export class ChatHistoryService {
    * @returns 聊天歷史記錄或 null
    */
   async getChat(chatId: string): Promise<ChatHistory | null> {
-    if (!this.validateUser() || !chatId) return null;
+    if (!authService.validateUser('請先登入以使用聊天歷史功能') || !chatId) return null;
 
     try {
       // 確保 userId 非空
-      const userId = this.userId as string;
+      const userId = authService.getUserId() as string;
       
       const chatRef = doc(this.db, 'users', userId, 'chats', chatId);
       const chatSnap = await getDoc(chatRef);
@@ -179,11 +146,11 @@ export class ChatHistoryService {
    * @returns 聊天歷史記錄陣列
    */
   async getAllChats(): Promise<ChatHistory[]> {
-    if (!this.validateUser()) return [];
+    if (!authService.validateUser('請先登入以使用聊天歷史功能')) return [];
 
     try {
       // 確保 userId 非空
-      const userId = this.userId as string;
+      const userId = authService.getUserId() as string;
       
       const chatsRef = collection(this.db, 'users', userId, 'chats');
       const q = query(chatsRef, orderBy('lastUpdated', 'desc'));
@@ -208,11 +175,11 @@ export class ChatHistoryService {
    * @returns 是否成功刪除
    */
   async deleteChat(chatId: string): Promise<boolean> {
-    if (!this.validateUser() || !chatId) return false;
+    if (!authService.validateUser('請先登入以使用聊天歷史功能') || !chatId) return false;
 
     try {
       // 確保 userId 非空
-      const userId = this.userId as string;
+      const userId = authService.getUserId() as string;
       
       const chatRef = doc(this.db, 'users', userId, 'chats', chatId);
       await deleteDoc(chatRef);

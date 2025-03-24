@@ -14,7 +14,9 @@ import {
   Clock,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { chatHistoryService, ChatHistory } from '@/lib/services/chatHistory';
+import { chatHistoryService } from '@/lib/services/chatHistory';
+import { ChatHistory } from '@/lib/types/chat';
+import { authService } from '@/lib/utils/auth';
 
 // 定義側邊欄項目的介面
 interface SidebarItem {
@@ -132,7 +134,7 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, onClose }) => {
 
       setIsLoading(true);
       try {
-        chatHistoryService.setUserId(user.uid);
+        authService.setUserId(user.uid);
         const histories = await chatHistoryService.getAllChats();
         // 只顯示最近的 5 個聊天記錄
         setChatHistories(histories.slice(0, 5));

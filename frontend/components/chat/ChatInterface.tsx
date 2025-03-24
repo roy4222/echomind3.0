@@ -12,6 +12,7 @@ import { type ChatMessage } from '@/lib/types/chat';
 import { chatClient } from '@/lib/services/chatClient';
 import { chatHistoryService } from '@/lib/services/chatHistory';
 import { useAuth } from '@/contexts/AuthContext';
+import { authService } from '@/lib/utils/auth';
 
 interface ChatInterfaceProps {
   chatId?: string | null;
@@ -38,9 +39,9 @@ export function ChatInterface({
   // 當使用者變更時，設定聊天歷史服務的使用者 ID
   useEffect(() => {
     if (user) {
-      chatHistoryService.setUserId(user.uid);
+      authService.setUserId(user.uid);
     } else {
-      chatHistoryService.setUserId(null);
+      authService.setUserId(null);
     }
   }, [user]);
   

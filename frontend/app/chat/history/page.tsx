@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { chatHistoryService, ChatHistory } from '@/lib/services/chatHistory';
+import { chatHistoryService } from '@/lib/services/chatHistory';
+import { ChatHistory } from '@/lib/types/chat';
+import { authService } from '@/lib/utils/auth';
 import { formatDistanceToNow } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -38,7 +40,7 @@ export default function ChatHistoryPage() {
       setIsLoading(true);
       try {
         // 設置服務的用戶 ID 並獲取所有聊天記錄
-        chatHistoryService.setUserId(user.uid);
+        authService.setUserId(user.uid);
         const histories = await chatHistoryService.getAllChats();
         setChatHistories(histories);
       } catch (error) {
