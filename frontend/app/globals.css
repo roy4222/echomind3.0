@@ -16,6 +16,17 @@ body {
     background-image: radial-gradient(circle at 1px 1px, rgb(51 65 85 / 0.3) 1px, transparent 0);
     background-size: 24px 24px;
   }
+
+  /* 新增打字機效果的動畫 */
+  @keyframes blink {
+    0% { opacity: 0; }
+    50% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  
+  .animate-blink {
+    animation: blink 0.8s infinite;
+  }
 }
 
 :root {

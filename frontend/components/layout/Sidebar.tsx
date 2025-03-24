@@ -1,9 +1,11 @@
 'use client';
 
-import React, { FC } from 'react';
+import React, { FC, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { formatDistanceToNow } from 'date-fns';
+import { zhTW } from 'date-fns/locale';
 import {
   MessageSquare,
   Settings,
@@ -11,6 +13,8 @@ import {
   X,
   Clock,
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { chatHistoryService, ChatHistory } from '@/lib/services/chatHistory';
 
 // 定義側邊欄項目的介面
 interface SidebarItem {
@@ -24,13 +28,6 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-// 模擬的聊天歷史記錄
-const chatHistory = [
-  { id: 1, title: "關於 AI 的討論", time: "3 小時前" },
-  { id: 2, title: "如何學習程式設計", time: "昨天" },
-  { id: 3, title: "探討未來科技趨勢", time: "2 天前" },
-];
 
 // 側邊欄導航項目
 const sidebarItems: SidebarItem[] = [
@@ -54,7 +51,7 @@ const sidebarItems: SidebarItem[] = [
       </svg>
     ),
     label: '開啟新對話',
-    href: '/?new=true',
+    href: '/chat?new=true',
   },
   {
     icon: () => (
@@ -84,7 +81,7 @@ const sidebarItems: SidebarItem[] = [
       </svg>
     ),
     label: '聊天歷史',
-    href: '/#history',
+    href: '/chat/history',
   },
   {
     icon: MessageSquare,
@@ -120,6 +117,34 @@ const bottomItems: SidebarItem[] = [
 const Sidebar: FC<SidebarProps> = ({ isOpen, onClose }) => {
   // 使用 Next.js 的 usePathname hook 獲取當前路徑
   const pathname = usePathname();
+  const router = useRouter();
+  const { user } = useAuth();
+  const [chatHistories, setChatHistories] = useState<ChatHistory[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // 當用戶登入狀態變更時，獲取聊天歷史
+  useEffect(() => {
+    const loadChatHistories = async () => {
+      if (!user) {
+        setChatHistories([]);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        chatHistoryService.setUserId(user.uid);
+        const histories = await chatHistoryService.getAllChats();
+        // 只顯示最近的 5 個聊天記錄
+        setChatHistories(histories.slice(0, 5));
+      } catch (error) {
+        console.error('載入聊天歷史失敗:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadChatHistories();
+  }, [user]);
 
   // 導航項目組件
   const NavItem: FC<{ item: SidebarItem }> = ({ item }) => {
@@ -205,20 +230,46 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, onClose }) => {
               </div>
             </div>
             <div className="space-y-1">
-              {chatHistory.map((chat) => (
+              {!user ? (
+                <div className="px-4 py-2 text-sm text-gray-500">
+                  請登入以查看聊天歷史
+                </div>
+              ) : isLoading ? (
+                <div className="px-4 py-2 text-sm text-gray-500">
+                  載入中...
+                </div>
+              ) : chatHistories.length === 0 ? (
+                <div className="px-4 py-2 text-sm text-gray-500">
+                  尚無聊天記錄
+                </div>
+              ) : (
+                chatHistories.map((chat) => (
+                  <Link
+                    key={chat.id}
+                    href={`/chat?id=${chat.id}`}
+                    className="flex flex-col px-4 py-2 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    <span className="font-medium text-gray-700 dark:text-gray-300 truncate">
+                      {chat.title}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {formatDistanceToNow(new Date(chat.lastUpdated), {
+                        addSuffix: true,
+                        locale: zhTW
+                      })}
+                    </span>
+                  </Link>
+                ))
+              )}
+              
+              {user && chatHistories.length > 0 && (
                 <Link
-                  key={chat.id}
-                  href={`/#chat-${chat.id}`}
-                  className="flex flex-col px-4 py-2 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                  href="/chat/history"
+                  className="flex items-center justify-center px-4 py-2 text-xs text-blue-600 dark:text-blue-400 hover:underline"
                 >
-                  <span className="font-medium text-gray-700 dark:text-gray-300 truncate">
-                    {chat.title}
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {chat.time}
-                  </span>
+                  查看全部聊天記錄
                 </Link>
-              ))}
+              )}
             </div>
           </div>
         </nav>

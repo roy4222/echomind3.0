@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { WelcomeScreen } from '@/components/chat/WelcomeScreen';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { ChatMessage } from '@/lib/types/chat';
 import { chatClient } from '@/lib/services/chatClient';
 import { ChatMessageList } from '@/components/chat/ChatMessageList';
+import { chatHistoryService } from '@/lib/services/chatHistory';
+import { useAuth } from '@/contexts/AuthContext';
 
 /**
  * 聊天頁面組件
@@ -23,6 +26,60 @@ export default function ChatPage() {
   
   // 記住當前選擇的模型 ID
   const [currentModelId, setCurrentModelId] = useState<string>('default');
+  
+  // 當前聊天 ID
+  const [chatId, setChatId] = useState<string>('');
+  
+  // 取得路由和參數
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // 取得當前使用者
+  const { user } = useAuth();
+  
+  // 當使用者變更時，設定聊天歷史服務的使用者 ID
+  useEffect(() => {
+    if (user) {
+      chatHistoryService.setUserId(user.uid);
+    } else {
+      chatHistoryService.setUserId(null);
+    }
+  }, [user]);
+  
+  // 檢查 URL 中是否有指定的聊天 ID
+  useEffect(() => {
+    const loadChatId = searchParams.get('id');
+    
+    // 如果 URL 中有 new=true，重置聊天
+    if (searchParams.get('new') === 'true') {
+      setChatId('');
+      setMessages([]);
+      return;
+    }
+    
+    // 如果有指定的聊天 ID，載入該聊天記錄
+    if (loadChatId && user) {
+      const loadChat = async () => {
+        setIsLoading(true);
+        try {
+          const chat = await chatHistoryService.getChat(loadChatId);
+          if (chat) {
+            setMessages(chat.messages);
+            setCurrentModelId(chat.modelId);
+            setChatId(loadChatId);
+          } else {
+            console.error('找不到指定的聊天記錄');
+          }
+        } catch (error) {
+          console.error('載入聊天記錄失敗:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      loadChat();
+    }
+  }, [searchParams, user]);
   
   /**
    * 處理用戶提交的訊息
@@ -78,8 +135,43 @@ export default function ChatPage() {
         createdAt: Date.now(),
       };
       
-      // 更新訊息列表
-      setMessages([...updatedMessages, assistantMessage]);
+      // 更新訊息列表，包含AI回應
+      const finalMessages = [...updatedMessages, assistantMessage];
+      setMessages(finalMessages);
+      
+      // 使用非阻塞方式儲存聊天記錄
+      if (user) {
+        // 若是第一條訊息且用戶已登入，自動創建聊天記錄
+        if (messages.length === 0 && !chatId) {
+          // 使用 setTimeout 將 Firebase 操作移到下一個事件循環，不阻塞 UI
+          setTimeout(async () => {
+            try {
+              // 使用訊息內容作為標題
+              const title = input.length > 30 ? input.substring(0, 30) + '...' : input;
+              const newChatId = await chatHistoryService.createChat(finalMessages, title, useModelId);
+              if (newChatId) {
+                setChatId(newChatId);
+                // 更新 URL，但不刷新頁面
+                window.history.replaceState({}, '', `/chat?id=${newChatId}`);
+              }
+            } catch (error) {
+              console.error('自動創建聊天記錄失敗:', error);
+              // 不阻止聊天流程繼續
+            }
+          }, 0);
+        } 
+        // 如果已有聊天ID，自動更新聊天記錄
+        else if (chatId) {
+          // 使用 setTimeout 將 Firebase 操作移到下一個事件循環，不阻塞 UI
+          setTimeout(async () => {
+            try {
+              await chatHistoryService.updateChat(chatId, finalMessages, undefined, useModelId);
+            } catch (error) {
+              console.error('更新聊天記錄失敗:', error);
+            }
+          }, 0);
+        }
+      }
     } catch (err) {
       // 處理錯誤
       console.error('聊天請求錯誤:', err);

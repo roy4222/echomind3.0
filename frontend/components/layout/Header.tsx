@@ -83,7 +83,7 @@ const Header: FC<HeaderProps> = ({ isSidebarOpen, onToggleSidebar }) => {
               <SidebarToggleIcon isOpen={isSidebarOpen} className="h-5 w-5" />
             </button>
             <Link 
-              href="/?new=true" 
+              href="/chat?new=true" 
               className="flex items-center gap-2 text-xl lg:text-2xl font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
               <Logo className="h-8 w-8 lg:h-9 lg:w-9" />
