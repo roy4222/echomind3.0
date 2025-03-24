@@ -4,43 +4,88 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatInput } from './ChatInput';
 import { Greeting } from "@/components/chat/Greeting";
 import { Sparkles, Search, Lightbulb } from 'lucide-react';
 import { type ChatMessage } from '@/lib/types/chat';
 import { chatClient } from '@/lib/services/chatClient';
+import { chatHistoryService } from '@/lib/services/chatHistory';
+import { useAuth } from '@/contexts/AuthContext';
 
-export function ChatInterface() {
+interface ChatInterfaceProps {
+  chatId?: string | null;
+  isNewChat?: boolean;
+  onResetUrl?: () => void;
+}
+
+export function ChatInterface({ 
+  chatId: initialChatId = null,
+  isNewChat = false,
+  onResetUrl
+}: ChatInterfaceProps) {
   // 狀態管理
   const [messages, setMessages] = useState<ChatMessage[]>([]); // 儲存聊天訊息
   const [isLoading, setIsLoading] = useState(false); // 載入狀態
   const [isChatStarted, setIsChatStarted] = useState(false); // 是否開始聊天
   const [error, setError] = useState<string | null>(null); // 錯誤訊息
+  const [currentModelId, setCurrentModelId] = useState<string>('default'); // 當前使用的模型
+  const [chatId, setChatId] = useState<string | null>(initialChatId); // 聊天ID
   
-  // 取得 URL 參數
-  const searchParams = useSearchParams();
+  // 取得當前使用者
+  const { user } = useAuth();
   
-  // 監聽 URL 參數變化，當 new=true 時重置聊天
+  // 當使用者變更時，設定聊天歷史服務的使用者 ID
   useEffect(() => {
-    const isNewChat = searchParams.get('new') === 'true';
-    console.log('ChatInterface - URL參數:', Array.from(searchParams.entries()));
-    console.log('ChatInterface - isNewChat:', isNewChat);
-    console.log('ChatInterface - 當前聊天狀態:', {
-      messagesCount: messages.length,
-      isChatStarted,
-      hasError: error !== null
-    });
+    if (user) {
+      chatHistoryService.setUserId(user.uid);
+    } else {
+      chatHistoryService.setUserId(null);
+    }
+  }, [user]);
+  
+  // 監聽 URL 參數變化，處理新聊天和載入聊天
+  useEffect(() => {
+    // 重置 URL 參數
+    if (onResetUrl) {
+      onResetUrl();
+    }
     
+    // 如果 URL 中有 new=true，重置聊天
     if (isNewChat) {
-      // 重置所有聊天狀態
-      console.log('ChatInterface - 重置聊天狀態');
       setMessages([]);
       setIsChatStarted(false);
+      setChatId(null);
       setError(null);
+      return;
     }
-  }, [searchParams]);
+    
+    // 如果有指定的聊天 ID，載入該聊天記錄
+    if (initialChatId && user) {
+      const loadChat = async () => {
+        setIsLoading(true);
+        try {
+          const chat = await chatHistoryService.getChat(initialChatId);
+          if (chat) {
+            setMessages(chat.messages);
+            setCurrentModelId(chat.modelId || 'default');
+            setChatId(initialChatId);
+            if (chat.messages.length > 0) {
+              setIsChatStarted(true);
+            }
+          } else {
+            console.error('找不到指定的聊天記錄');
+          }
+        } catch (error) {
+          console.error('載入聊天記錄失敗:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      loadChat();
+    }
+  }, [initialChatId, isNewChat, user, onResetUrl]);
 
   /**
    * 處理訊息提交
@@ -51,6 +96,13 @@ export function ChatInterface() {
     if (!input.trim() || isLoading) return;
 
     try {
+      // 更新當前選擇的模型 ID (如果提供了新的模型 ID)
+      let useModelId = currentModelId;
+      if (modelId) {
+        setCurrentModelId(modelId);
+        useModelId = modelId;
+      }
+      
       // 重置錯誤狀態
       setError(null);
       
@@ -69,7 +121,6 @@ export function ChatInterface() {
       const updatedMessages = [...messages, userMessage];
       setMessages(updatedMessages);
       if (!isChatStarted) {
-        console.log('ChatInterface - 將聊天狀態設為已開始');
         setIsChatStarted(true);
       }
       
@@ -79,10 +130,8 @@ export function ChatInterface() {
         content
       }));
       
-      console.log(`ChatInterface 接收到的模型 ID: "${modelId || '未提供'}"`);
-      
       // 呼叫API (傳遞選擇的模型 ID)
-      const response = await chatClient.sendMessage(apiMessages, modelId);
+      const response = await chatClient.sendMessage(apiMessages, useModelId);
       
       // 從回應中提取助手訊息
       const assistantMessage: ChatMessage = {
@@ -92,8 +141,43 @@ export function ChatInterface() {
         createdAt: Date.now(),
       };
       
-      // 更新訊息列表
-      setMessages([...updatedMessages, assistantMessage]);
+      // 更新訊息列表，包含AI回應
+      const finalMessages = [...updatedMessages, assistantMessage];
+      setMessages(finalMessages);
+      
+      // 使用非阻塞方式儲存聊天記錄
+      if (user) {
+        // 若是第一條訊息且用戶已登入，自動創建聊天記錄
+        if (messages.length === 0 && !chatId) {
+          // 使用 setTimeout 將 Firebase 操作移到下一個事件循環，不阻塞 UI
+          setTimeout(async () => {
+            try {
+              // 使用訊息內容作為標題
+              const title = input.length > 30 ? input.substring(0, 30) + '...' : input;
+              const newChatId = await chatHistoryService.createChat(finalMessages, title, useModelId);
+              if (newChatId) {
+                setChatId(newChatId);
+                // 更新 URL，但不刷新頁面
+                window.history.replaceState({}, '', `/?id=${newChatId}`);
+              }
+            } catch (error) {
+              console.error('自動創建聊天記錄失敗:', error);
+              // 不阻止聊天流程繼續
+            }
+          }, 0);
+        } 
+        // 如果已有聊天ID，自動更新聊天記錄
+        else if (chatId) {
+          // 使用 setTimeout 將 Firebase 操作移到下一個事件循環，不阻塞 UI
+          setTimeout(async () => {
+            try {
+              await chatHistoryService.updateChat(chatId, finalMessages, undefined, useModelId);
+            } catch (error) {
+              console.error('更新聊天記錄失敗:', error);
+            }
+          }, 0);
+        }
+      }
     } catch (err) {
       // 處理錯誤
       console.error('聊天請求錯誤:', err);
