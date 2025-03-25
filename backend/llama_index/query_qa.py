@@ -1,21 +1,26 @@
 """
 查詢 Pinecone 向量庫的腳本
-使用 LlamaIndex、Cohere 和 Pinecone 查詢結構化問答資料
+直接使用 Cohere 和 Pinecone 查詢結構化問答資料
 """
 import os
-from dotenv import load_dotenv
-import logging
-from llama_index.core import VectorStoreIndex, StorageContext
-from llama_index.vector_stores.pinecone import PineconeVectorStore
-from llama_index.embeddings.cohere import CohereEmbedding
-from pinecone import Pinecone
-import argparse
-from typing import Optional
-import numpy as np
 import sys
+import json
+import argparse
+import logging
+import numpy as np
+from typing import Optional, List, Dict, Any
+from dotenv import load_dotenv
+from pinecone import Pinecone
+from cohere import ClientV2
 
 # 設定日誌輸出
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 logger = logging.getLogger(__name__)
 
 def initialize_pinecone():
@@ -36,161 +41,170 @@ def initialize_pinecone():
     
     return pc.Index(index_name)
 
-def setup_query_engine(category: Optional[str] = None, min_importance: Optional[int] = None):
-    """設定查詢引擎"""
-    pinecone_index = initialize_pinecone()
-    
-    # 使用 Cohere 嵌入模型
+def initialize_cohere():
+    """初始化 Cohere 客戶端"""
     cohere_api_key = os.getenv("COHERE_API_KEY")
     if not cohere_api_key:
         raise ValueError("請確保設定了 COHERE_API_KEY 環境變數")
     
-    embed_model = CohereEmbedding(
-        model_name=os.getenv("COHERE_MODEL_NAME", "embed-multilingual-v3.0"),
-        api_key=cohere_api_key,
-        input_type="search_query",
-        embedding_types=["float"]
-    )
-    logger.info(f"使用 Cohere 嵌入模型: {embed_model.model_name}")
+    return ClientV2(api_key=cohere_api_key)
 
-    # 設定向量存儲
-    vector_store = PineconeVectorStore(pinecone_index=pinecone_index)
-    storage_context = StorageContext.from_defaults(vector_store=vector_store)
-    
-    # 創建索引
-    index = VectorStoreIndex.from_vector_store(
-        vector_store,
-        storage_context=storage_context,
-        embed_model=embed_model,
-    )
+def get_index_stats(pinecone_index):
+    """獲取 Pinecone 索引統計資訊"""
+    try:
+        stats = pinecone_index.describe_index_stats()
+        logger.info("Pinecone 索引統計資訊:")
+        logger.info(f"總向量數: {stats.total_vector_count}")
+        logger.info(f"命名空間: {stats.namespaces}")
+        return stats
+    except Exception as e:
+        logger.error(f"獲取索引統計資訊時出錯: {str(e)}")
+        return None
 
-    # 檢查向量存儲中的內容
-    logger.info("檢查向量存儲中的內容:")
-    stats = pinecone_index.describe_index_stats()
-    logger.info(f"總向量數: {stats.total_vector_count}")
-    logger.info(f"命名空間: {stats.namespaces}")
-    
-    # 獲取所有向量樣本
+def get_sample_vectors(pinecone_index, top_k=3):
+    """獲取向量樣本"""
     try:
         dimension = 1024  # Cohere embed-multilingual-v3.0 的輸出維度
         zero_vector = np.zeros(dimension)
         query_response = pinecone_index.query(
             vector=zero_vector.tolist(),
-            top_k=5,
+            top_k=top_k,
             include_metadata=True
         )
-        logger.info("向量存儲中的問答對示例:")
-        for match in query_response.matches[:3]:  # 只顯示前3個作為示例
-            logger.info(f"ID: {match.id}")
-            logger.info(f"相似度: {match.score}")
-            logger.info(f"元數據: {match.metadata}")
+        
+        if query_response and query_response.matches:
+            logger.info(f"獲取到 {len(query_response.matches)} 個向量樣本")
+            return query_response.matches
+        else:
+            logger.warning("沒有獲取到向量樣本")
+            return []
     except Exception as e:
-        logger.error(f"獲取向量示例時出錯: {str(e)}")
-    
-    # 創建基本查詢引擎（不使用 LLM）
-    query_engine = index.as_query_engine(
-        similarity_top_k=3
-    )
-    
-    return query_engine, pinecone_index
+        logger.error(f"獲取向量樣本時出錯: {str(e)}")
+        return []
 
-def direct_query(query_text, pinecone_index, top_k=3):
-    """直接使用 Pinecone 查詢，不通過 LlamaIndex"""
+def generate_embedding(text: str, cohere_client, model="embed-multilingual-v3.0"):
+    """使用 Cohere 生成文本嵌入"""
     try:
-        # 使用 Cohere 生成查詢嵌入
-        cohere_api_key = os.getenv("COHERE_API_KEY")
-        if not cohere_api_key:
-            raise ValueError("請確保設定了 COHERE_API_KEY 環境變數")
-        
-        from cohere import ClientV2
-        co = ClientV2(api_key=cohere_api_key)
-        
-        # 生成查詢嵌入
-        embedding_response = co.embed(
-            texts=[query_text],
-            model="embed-multilingual-v3.0",
+        response = cohere_client.embed(
+            texts=[text],
+            model=model,
             input_type="search_query",
             embedding_types=["float"]
         )
+        return response.embeddings.float[0]
+    except Exception as e:
+        logger.error(f"生成嵌入時出錯: {str(e)}")
+        raise
+
+def search_vectors(query_text: str, pinecone_index, cohere_client, top_k=3, 
+                  category: Optional[str] = None, min_importance: Optional[int] = None):
+    """搜索向量"""
+    try:
+        # 生成查詢嵌入
+        query_embedding = generate_embedding(query_text, cohere_client)
         
-        # 獲取嵌入向量
-        query_embedding = embedding_response.embeddings.float[0]
+        # 構建過濾條件
+        filter_dict = {}
+        if category:
+            filter_dict["category"] = category
+        if min_importance is not None:
+            filter_dict["importance"] = {"$gte": min_importance}
         
         # 使用嵌入向量查詢 Pinecone
         results = pinecone_index.query(
             vector=query_embedding,
             top_k=top_k,
-            include_metadata=True
+            include_metadata=True,
+            filter=filter_dict if filter_dict else None
         )
         
         return results
     except Exception as e:
-        logger.error(f"直接查詢時出錯: {str(e)}")
+        logger.error(f"搜索向量時出錯: {str(e)}")
         return None
 
-def format_direct_results(results):
-    """格式化直接查詢的結果"""
+def format_results(results):
+    """格式化查詢結果"""
     if not results or not results.matches:
         logger.info("沒有找到匹配的結果")
         return
     
-    logger.info("\n查詢結果:")
-    logger.info("-" * 50)
+    print("\n" + "="*50)
+    print("查詢結果")
+    print("="*50)
     
     for i, match in enumerate(results.matches):
-        logger.info(f"\n結果 {i+1}:")
+        print(f"\n結果 {i+1}:")
         metadata = match.metadata
-        logger.info(f"問題: {metadata.get('question', 'N/A')}")
-        logger.info(f"答案: {metadata.get('answer', 'N/A')}")
-        logger.info(f"類別: {metadata.get('category', 'N/A')}")
-        logger.info(f"重要性: {metadata.get('importance', 'N/A')}")
-        logger.info(f"相似度: {match.score}")
-        logger.info("-" * 50)
+        print(f"問題: {metadata.get('question', 'N/A')}")
+        print(f"答案: {metadata.get('answer', 'N/A')}")
+        print(f"類別: {metadata.get('category', 'N/A')}")
+        print(f"重要性: {metadata.get('importance', 'N/A')}")
+        if metadata.get('resources'):
+            print(f"資源: {metadata.get('resources')}")
+        print(f"相似度: {match.score}")
+        print("-" * 50)
 
 def main():
     parser = argparse.ArgumentParser(description="查詢 Q&A 系統")
-    parser.add_argument("query", help="查詢文本")
+    parser.add_argument("query", nargs='?', help="查詢文本")
     parser.add_argument("--top-k", type=int, default=3, help="返回的結果數量")
     parser.add_argument("--category", help="按類別過濾")
     parser.add_argument("--min-importance", type=int, help="最小重要性級別")
-    parser.add_argument("--direct", action="store_true", help="直接使用 Pinecone 查詢，不通過 LlamaIndex")
+    parser.add_argument("--output", help="輸出結果到 JSON 文件")
+    parser.add_argument("--stats", action="store_true", help="顯示索引統計資訊")
+    parser.add_argument("--samples", action="store_true", help="顯示向量樣本")
     
     args = parser.parse_args()
     
     try:
-        query_engine, pinecone_index = setup_query_engine(
-            category=args.category,
-            min_importance=args.min_importance
-        )
+        # 初始化 Pinecone 和 Cohere
+        pinecone_index = initialize_pinecone()
+        cohere_client = initialize_cohere()
         
-        if args.direct:
-            # 直接使用 Pinecone 查詢
-            logger.info(f"直接查詢: {args.query}")
-            results = direct_query(args.query, pinecone_index, top_k=args.top_k)
-            format_direct_results(results)
-        else:
-            # 使用 LlamaIndex 查詢
-            logger.info(f"使用 LlamaIndex 查詢: {args.query}")
-            try:
-                response = query_engine.query(args.query)
-                if hasattr(response, 'source_nodes'):
-                    logger.info("\n查詢結果:")
-                    logger.info("-" * 50)
-                    for i, node in enumerate(response.source_nodes):
-                        metadata = node.metadata
-                        logger.info(f"\n結果 {i+1}:")
-                        logger.info(f"問題: {metadata.get('question', 'N/A')}")
-                        logger.info(f"答案: {metadata.get('answer', 'N/A')}")
-                        logger.info(f"類別: {metadata.get('category', 'N/A')}")
-                        logger.info(f"重要性: {metadata.get('importance', 'N/A')}")
-                        logger.info("-" * 50)
-                else:
-                    logger.info(f"\n{response}")
-            except Exception as e:
-                logger.error(f"使用 LlamaIndex 查詢時出錯: {str(e)}")
-                logger.info("嘗試直接查詢...")
-                results = direct_query(args.query, pinecone_index, top_k=args.top_k)
-                format_direct_results(results)
+        # 顯示索引統計資訊
+        if args.stats:
+            get_index_stats(pinecone_index)
+        
+        # 顯示向量樣本
+        if args.samples:
+            samples = get_sample_vectors(pinecone_index, top_k=args.top_k)
+            print("\n向量樣本:")
+            for i, sample in enumerate(samples):
+                print(f"\n樣本 {i+1}:")
+                print(f"ID: {sample.id}")
+                print(f"相似度: {sample.score}")
+                print(f"元數據: {sample.metadata}")
+        
+        # 執行查詢
+        if args.query:
+            logger.info(f"查詢: {args.query}")
+            results = search_vectors(
+                args.query, 
+                pinecone_index, 
+                cohere_client, 
+                top_k=args.top_k,
+                category=args.category,
+                min_importance=args.min_importance
+            )
+            
+            # 格式化並顯示結果
+            format_results(results)
+            
+            # 輸出結果到 JSON 文件
+            if args.output and results and results.matches:
+                output_data = []
+                for match in results.matches:
+                    match_data = {
+                        "id": match.id,
+                        "score": match.score,
+                        "metadata": match.metadata
+                    }
+                    output_data.append(match_data)
+                
+                with open(args.output, 'w', encoding='utf-8') as f:
+                    json.dump(output_data, f, ensure_ascii=False, indent=2)
+                logger.info(f"結果已保存到 {args.output}")
         
     except Exception as e:
         logger.error(f"錯誤: {str(e)}")
