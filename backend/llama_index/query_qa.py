@@ -2,56 +2,59 @@
 查詢 Pinecone 向量庫的腳本
 直接使用 Cohere 和 Pinecone 查詢結構化問答資料
 """
-import os
-import sys
-import json
-import argparse
-import logging
-import numpy as np
-from typing import Optional, List, Dict, Any
-from dotenv import load_dotenv
-from pinecone import Pinecone
-from cohere import ClientV2
+import os                      # 用於訪問環境變數
+import sys                     # 用於系統相關操作，如退出程序
+import json                    # 用於處理 JSON 格式資料
+import argparse                # 用於解析命令列參數
+import logging                 # 用於日誌記錄
+import numpy as np             # 用於數值計算
+from typing import Optional, List, Dict, Any  # 用於類型提示
+from dotenv import load_dotenv  # 用於載入環境變數
+from pinecone import Pinecone  # 用於連接 Pinecone 向量資料庫
+from cohere import ClientV2    # 用於連接 Cohere API
 
 # 設定日誌輸出
 logging.basicConfig(
-    level=logging.INFO, 
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    level=logging.INFO,        # 設定日誌級別為 INFO
+    format='%(asctime)s - %(levelname)s - %(message)s',  # 設定日誌格式
     handlers=[
-        logging.StreamHandler(sys.stdout)
+        logging.StreamHandler(sys.stdout)  # 將日誌輸出到標準輸出
     ]
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)  # 獲取日誌記錄器
 
 def initialize_pinecone():
     """初始化 Pinecone 客戶端並檢查索引是否存在"""
-    load_dotenv()
-    api_key = os.getenv("PINECONE_API_KEY")
-    env = os.getenv("PINECONE_ENVIRONMENT")
-    index_name = os.getenv("PINECONE_INDEX_NAME")
+    load_dotenv()  # 載入 .env 檔案中的環境變數
+    api_key = os.getenv("PINECONE_API_KEY")  # 獲取 Pinecone API 金鑰
+    env = os.getenv("PINECONE_ENVIRONMENT")  # 獲取 Pinecone 環境
+    index_name = os.getenv("PINECONE_INDEX_NAME")  # 獲取 Pinecone 索引名稱
 
+    # 檢查必要的環境變數是否都已設定
     if not all([api_key, env, index_name]):
         raise ValueError("請確保設定了所有必要的 Pinecone 環境變數")
 
     logger.info(f"連接 Pinecone: 環境 {env}, 索引 {index_name}")
-    pc = Pinecone(api_key=api_key)
+    pc = Pinecone(api_key=api_key)  # 初始化 Pinecone 客戶端
     
+    # 檢查索引是否存在
     if index_name not in pc.list_indexes().names():
         raise ValueError(f"索引 '{index_name}' 不存在")
     
-    return pc.Index(index_name)
+    return pc.Index(index_name)  # 返回索引實例
 
 def initialize_cohere():
     """初始化 Cohere 客戶端"""
-    cohere_api_key = os.getenv("COHERE_API_KEY")
+    cohere_api_key = os.getenv("COHERE_API_KEY")  # 獲取 Cohere API 金鑰
     if not cohere_api_key:
         raise ValueError("請確保設定了 COHERE_API_KEY 環境變數")
     
-    return ClientV2(api_key=cohere_api_key)
+    return ClientV2(api_key=cohere_api_key)  # 返回 Cohere 客戶端實例
 
 def get_index_stats(pinecone_index):
     """獲取 Pinecone 索引統計資訊"""
     try:
+        # 獲取索引統計資訊
         stats = pinecone_index.describe_index_stats()
         logger.info("Pinecone 索引統計資訊:")
         logger.info(f"總向量數: {stats.total_vector_count}")
@@ -65,7 +68,8 @@ def get_sample_vectors(pinecone_index, top_k=3):
     """獲取向量樣本"""
     try:
         dimension = 1024  # Cohere embed-multilingual-v3.0 的輸出維度
-        zero_vector = np.zeros(dimension)
+        zero_vector = np.zeros(dimension)  # 創建全零向量
+        # 使用零向量查詢，獲取隨機樣本
         query_response = pinecone_index.query(
             vector=zero_vector.tolist(),
             top_k=top_k,
@@ -85,13 +89,14 @@ def get_sample_vectors(pinecone_index, top_k=3):
 def generate_embedding(text: str, cohere_client, model="embed-multilingual-v3.0"):
     """使用 Cohere 生成文本嵌入"""
     try:
+        # 調用 Cohere API 生成文本嵌入
         response = cohere_client.embed(
-            texts=[text],
-            model=model,
-            input_type="search_query",
-            embedding_types=["float"]
+            texts=[text],  # 輸入文本列表
+            model=model,   # 使用的嵌入模型
+            input_type="search_query",  # 指定輸入類型為搜索查詢
+            embedding_types=["float"]   # 指定嵌入類型為浮點數
         )
-        return response.embeddings.float[0]
+        return response.embeddings.float[0]  # 返回生成的嵌入向量
     except Exception as e:
         logger.error(f"生成嵌入時出錯: {str(e)}")
         raise
@@ -106,16 +111,16 @@ def search_vectors(query_text: str, pinecone_index, cohere_client, top_k=3,
         # 構建過濾條件
         filter_dict = {}
         if category:
-            filter_dict["category"] = category
+            filter_dict["category"] = category  # 按類別過濾
         if min_importance is not None:
-            filter_dict["importance"] = {"$gte": min_importance}
+            filter_dict["importance"] = {"$gte": min_importance}  # 按最小重要性過濾
         
         # 使用嵌入向量查詢 Pinecone
         results = pinecone_index.query(
-            vector=query_embedding,
-            top_k=top_k,
-            include_metadata=True,
-            filter=filter_dict if filter_dict else None
+            vector=query_embedding,  # 查詢向量
+            top_k=top_k,             # 返回結果數量
+            include_metadata=True,   # 包含元數據
+            filter=filter_dict if filter_dict else None  # 應用過濾條件
         )
         
         return results
@@ -133,6 +138,7 @@ def format_results(results):
     print("查詢結果")
     print("="*50)
     
+    # 遍歷並顯示每個匹配結果
     for i, match in enumerate(results.matches):
         print(f"\n結果 {i+1}:")
         metadata = match.metadata
@@ -146,6 +152,7 @@ def format_results(results):
         print("-" * 50)
 
 def main():
+    # 設定命令列參數解析器
     parser = argparse.ArgumentParser(description="查詢 Q&A 系統")
     parser.add_argument("query", nargs='?', help="查詢文本")
     parser.add_argument("--top-k", type=int, default=3, help="返回的結果數量")
@@ -155,7 +162,7 @@ def main():
     parser.add_argument("--stats", action="store_true", help="顯示索引統計資訊")
     parser.add_argument("--samples", action="store_true", help="顯示向量樣本")
     
-    args = parser.parse_args()
+    args = parser.parse_args()  # 解析命令列參數
     
     try:
         # 初始化 Pinecone 和 Cohere
@@ -194,6 +201,7 @@ def main():
             # 輸出結果到 JSON 文件
             if args.output and results and results.matches:
                 output_data = []
+                # 將結果轉換為 JSON 格式
                 for match in results.matches:
                     match_data = {
                         "id": match.id,
@@ -202,13 +210,14 @@ def main():
                     }
                     output_data.append(match_data)
                 
+                # 寫入 JSON 文件
                 with open(args.output, 'w', encoding='utf-8') as f:
                     json.dump(output_data, f, ensure_ascii=False, indent=2)
                 logger.info(f"結果已保存到 {args.output}")
         
     except Exception as e:
         logger.error(f"錯誤: {str(e)}")
-        sys.exit(1)
+        sys.exit(1)  # 發生錯誤時退出程序
 
 if __name__ == "__main__":
-    main()
+    main()  # 程式入口點
