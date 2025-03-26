@@ -322,3 +322,120 @@ EchoMind2 正在持續開發中，以下是我們的開發路線圖：
 ## 授權
 
 [MIT](LICENSE)
+
+# EchoMind 問題排解與解決方案
+
+## 向量搜尋功能問題排解
+
+### 問題描述
+
+我們在實作向量搜尋功能時遇到以下問題：
+
+1. 前端向後端發送查詢請求後收到空結果數組 `[]`，儘管後端日誌顯示 Pinecone 確實返回了結果
+2. 後端日誌顯示「過濾後返回 3 個結果」但最終輸出「沒有匹配的結果可返回」
+3. 前端與後端間的參數傳遞可能不一致
+
+### 解決方案
+
+#### 1. 修正後端過濾邏輯
+
+問題核心在於後端的重要性(importance)過濾邏輯，對於沒有定義 `importance` 屬性的項目，直接被過濾掉：
+
+```typescript
+// 原始代碼 - 有問題的過濾邏輯
+filteredResults = filteredResults.filter(item => {
+  const importance = (item as any).importance;
+  return importance !== undefined && importance >= minImportance;
+});
+```
+
+解決方案是為沒有 `importance` 屬性的項目提供預設值：
+
+```typescript
+// 修正後的代碼
+filteredResults = filteredResults.filter(item => {
+  const importance = (item as any).importance;
+  // 如果未定義重要性，默認為 1.0 (允許通過)
+  const effectiveImportance = importance !== undefined ? importance : 1.0;
+  return effectiveImportance >= minImportance;
+});
+```
+
+#### 2. 加強日誌記錄
+
+添加更詳細的日誌輸出，以便更好地診斷問題：
+
+```typescript
+// 添加過濾前後日誌
+console.log(`🔍 [${requestId}] 篩選重要性閾值: ${minImportance}`);
+console.log(`🔍 [${requestId}] 篩選前結果數量: ${filteredResults.length}`);
+  
+const beforeFilterCount = filteredResults.length;
+// ... 過濾代碼 ...
+  
+console.log(`🔍 [${requestId}] 重要性篩選後結果數量: ${filteredResults.length}, 移除了: ${beforeFilterCount - filteredResults.length} 個結果`);
+```
+
+#### 3. 確保前後端參數一致性
+
+檢查並確認前端和後端使用相同的參數名稱：
+
+- 前端發送：`{ "query": "...", "topK": 3, "minImportance": 0 }`
+- 後端接收：`const { query, topK = 3, category, minImportance } = requestData;`
+
+#### 4. 在前端添加更多日誌
+
+在前端添加更多日誌來顯示 API 返回的詳細資訊：
+
+```typescript
+if (results.length > 0) {
+  console.log('搜尋結果詳情:', results.map((r: any) => ({
+    id: r.id,
+    question: r.question?.substring(0, 30) + '...',
+    answer: r.answer?.substring(0, 30) + '...',
+    score: r.score,
+    category: r.category || '無類別'
+  })));
+} else {
+  console.log('API返回了一個空結果數組或無效結果');
+  console.log('原始回應資料類型:', typeof data, '原始回應結構:', Object.keys(data));
+}
+```
+
+### 成功指標
+
+修復後，API 返回正確結果：
+- 篩選前結果數量：3 個
+- 重要性篩選後結果數量：3 個，移除了 0 個結果
+- 前端成功顯示搜尋結果
+
+## Cohere API 整合問題
+
+與上述問題相關，我們還發現使用 Cohere API 生成嵌入向量時的一些注意事項：
+
+### 正確的 Cohere API 使用方式
+
+```typescript
+// 正確的嵌入生成
+const response = await fetch(`${apiUrl}/embeddings`, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${apiKey}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    model: "embed-multilingual-v3.0",
+    input: [text],
+    input_type: "search_query",  // 必須提供
+    embedding_types: ["float"]   // 必須提供
+  })
+});
+```
+
+確保在向量搜尋和數據上傳時使用一致的 `input_type` 參數：
+- 搜尋查詢時使用 `search_query`
+- 文檔嵌入時使用 `search_document`
+
+## 結論
+
+Vector search 功能的問題主要源於後端過濾邏輯中對未定義 `importance` 屬性的處理不當。通過提供預設值和更詳細的日誌記錄，我們能夠診斷並解決問題，使向量搜尋功能正常工作。
