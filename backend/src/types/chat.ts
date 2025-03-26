@@ -104,4 +104,6 @@ export interface FaqSearchResult {
   category?: string;
   /** 標籤 */
   tags?: string[];
+  /** 重要程度 (1-5) */
+  importance?: number;
 } 

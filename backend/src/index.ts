@@ -1,15 +1,23 @@
 import { handleUpload } from './handlers/upload';
 import { handleChat } from './handlers/chat';
 import { handleFaq } from './handlers/faq';
+import { handleVectorSearch } from './handlers/vector-search';
 import { corsHeaders, handleCors, getCorsHeadersForRequest } from './utils/cors';
 import type { ExecutionContext } from '@cloudflare/workers-types';
 
-// 定義環境變數類型
+/**
+ * 環境變數接口
+ */
 export interface Env {
-  // Pinecone 相關
+  // Pinecone 配置
   PINECONE_API_KEY: string;
   PINECONE_ENVIRONMENT: string;
-  PINECONE_INDEX: string;
+  PINECONE_INDEX?: string;
+  PINECONE_INDEX_NAME?: string;
+  PINECONE_API_URL?: string;
+  
+  // Cohere 配置
+  COHERE_API_KEY: string;
   
   // Groq 相關
   GROQ_API_KEY: string;
@@ -21,10 +29,21 @@ export interface Env {
   R2_BUCKET: string;
   R2_ENDPOINT: string;
   
-  // Firebase 相關
+  // Firebase 配置
   FIREBASE_PROJECT_ID: string;
   FIREBASE_CLIENT_EMAIL: string;
   FIREBASE_PRIVATE_KEY: string;
+  
+  // 新增 Python API 配置 (可選)
+  PYTHON_API_URL?: string;
+}
+
+// 處理 CORS 預檢請求
+function handleCors(request: Request): Response {
+  return new Response(null, {
+    status: 204,
+    headers: getCorsHeadersForRequest(request)
+  });
 }
 
 export default {
@@ -72,6 +91,11 @@ export default {
         console.log(`📤 [${requestId}] 處理上傳請求 (直接路徑)`);
         response = await handleUpload(request, env);
       }
+      // 添加向量搜索路由
+      else if (url.pathname === '/api/vector-search') {
+        console.log(`🔍 [${requestId}] 處理向量搜索請求`);
+        response = await handleVectorSearch(request, env);
+      }
       // 健康檢查端點
       else if (url.pathname === '/api/health') {
         console.log(`💓 [${requestId}] 健康檢查`);
@@ -95,11 +119,27 @@ export default {
         });
       }
       
+      // 確保所有響應都包含CORS頭
+      const originalHeaders = response.headers;
+      const corsHeaders = getCorsHeadersForRequest(request);
+      
+      const newHeaders = new Headers(originalHeaders);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        newHeaders.set(key, value);
+      });
+      
+      // 使用原始響應建立新的響應，但添加CORS頭
+      const newResponse = new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders
+      });
+      
       // 記錄處理時間
       const processingTime = Date.now() - startTime;
-      console.log(`🟢 [${requestId}] 請求完成: ${response.status}, 耗時 ${processingTime}ms`);
+      console.log(`🟢 [${requestId}] 請求完成: ${newResponse.status}, 耗時 ${processingTime}ms`);
       
-      return response;
+      return newResponse;
     } catch (error) {
       // 錯誤處理
       const processingTime = Date.now() - startTime;

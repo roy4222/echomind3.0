@@ -12,6 +12,8 @@ from typing import Optional, List, Dict, Any  # 用於類型提示
 from dotenv import load_dotenv  # 用於載入環境變數
 from pinecone import Pinecone  # 用於連接 Pinecone 向量資料庫
 from cohere import ClientV2    # 用於連接 Cohere API
+import cohere
+import pinecone
 
 # 設定日誌輸出
 logging.basicConfig(
@@ -22,6 +24,46 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)  # 獲取日誌記錄器
+
+# 加載環境變數
+load_dotenv()
+
+def get_cohere_client():
+    """
+    獲取 Cohere 客戶端實例
+    """
+    api_key = os.getenv("COHERE_API_KEY")
+    if not api_key:
+        raise ValueError("未設置 COHERE_API_KEY 環境變數")
+    
+    return cohere.Client(api_key)
+
+def get_pinecone_client():
+    """
+    獲取並初始化 Pinecone 索引
+    """
+    api_key = os.getenv("PINECONE_API_KEY")
+    environment = os.getenv("PINECONE_ENVIRONMENT")
+    index_name = os.getenv("PINECONE_INDEX") or os.getenv("PINECONE_INDEX_NAME")
+    
+    if not api_key:
+        raise ValueError("未設置 PINECONE_API_KEY 環境變數")
+    if not environment:
+        raise ValueError("未設置 PINECONE_ENVIRONMENT 環境變數")
+    if not index_name:
+        raise ValueError("未設置 PINECONE_INDEX/PINECONE_INDEX_NAME 環境變數")
+    
+    # 初始化 Pinecone
+    pinecone.init(api_key=api_key, environment=environment)
+    
+    # 獲取索引
+    try:
+        index = pinecone.Index(index_name)
+        logger.info(f"成功連接到 Pinecone 索引: {index_name}")
+        return index
+    except Exception as e:
+        logger.error(f"連接 Pinecone 時出錯: {str(e)}")
+        raise
 
 def initialize_pinecone():
     """初始化 Pinecone 客戶端並檢查索引是否存在"""
@@ -166,8 +208,8 @@ def main():
     
     try:
         # 初始化 Pinecone 和 Cohere
-        pinecone_index = initialize_pinecone()
-        cohere_client = initialize_cohere()
+        pinecone_index = get_pinecone_client()
+        cohere_client = get_cohere_client()
         
         # 顯示索引統計資訊
         if args.stats:

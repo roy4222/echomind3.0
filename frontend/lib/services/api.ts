@@ -6,7 +6,8 @@ export class ApiService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+    // 使用與 ChatInput.tsx 相同的環境變數
+    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
   }
 
   /**
@@ -84,6 +85,151 @@ export class ApiService {
     } catch (error) {
       console.error('獲取認證令牌失敗:', error);
       return null;
+    }
+  }
+
+  /**
+   * 測試 API 連接狀態
+   * @param endpoint 要測試的端點
+   * @returns 連接測試結果
+   */
+  async testConnection(endpoint: string = '/api/health'): Promise<{
+    success: boolean;
+    statusCode?: number;
+    message: string;
+    timeMs: number;
+  }> {
+    const startTime = Date.now();
+    try {
+      const url = `${this.baseUrl}${endpoint}`;
+      console.log(`測試 API 連接: ${url}`);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+      
+      const timeMs = Date.now() - startTime;
+      
+      if (!response.ok) {
+        return {
+          success: false,
+          statusCode: response.status,
+          message: `服務端回應錯誤: ${response.status} ${response.statusText}`,
+          timeMs
+        };
+      }
+      
+      return {
+        success: true,
+        statusCode: response.status,
+        message: `連接成功 (${response.status})`,
+        timeMs
+      };
+    } catch (error) {
+      const timeMs = Date.now() - startTime;
+      return {
+        success: false,
+        message: `連接失敗: ${error instanceof Error ? error.message : '未知錯誤'}`,
+        timeMs
+      };
+    }
+  }
+  
+  /**
+   * 測試向量搜尋 API
+   * @returns 向量搜尋 API 測試結果
+   */
+  async testVectorSearch(): Promise<{
+    success: boolean;
+    pingSuccess?: boolean;
+    searchSuccess?: boolean;
+    message: string;
+    details?: any;
+  }> {
+    try {
+      // 先測試健康檢查端點
+      const pingTest = await this.testConnection();
+      
+      if (!pingTest.success) {
+        return {
+          success: false,
+          pingSuccess: false,
+          message: `API 服務無法連接: ${pingTest.message}`,
+          details: pingTest
+        };
+      }
+      
+      // 測試向量搜尋端點
+      console.log('測試向量搜尋 API...');
+      const testQuery = "這是一個測試查詢";
+      
+      try {
+        const searchUrl = `${this.baseUrl}/api/vector-search`;
+        console.log('向量搜尋測試 URL:', searchUrl);
+        
+        const response = await fetch(searchUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: testQuery,
+            topK: 1,
+          }),
+        });
+        
+        if (!response.ok) {
+          let errorMsg = `向量搜尋端點回應錯誤: ${response.status} ${response.statusText}`;
+          
+          try {
+            const errorData = await response.json();
+            return {
+              success: false,
+              pingSuccess: true,
+              searchSuccess: false,
+              message: errorMsg,
+              details: errorData
+            };
+          } catch (e) {
+            return {
+              success: false, 
+              pingSuccess: true,
+              searchSuccess: false,
+              message: errorMsg,
+              details: { status: response.status }
+            };
+          }
+        }
+        
+        const result = await response.json();
+        return {
+          success: true,
+          pingSuccess: true,
+          searchSuccess: true,
+          message: '向量搜尋 API 連接成功',
+          details: {
+            resultsCount: result.results?.length || 0,
+            responseData: result
+          }
+        };
+      } catch (error) {
+        return {
+          success: false,
+          pingSuccess: true,
+          searchSuccess: false,
+          message: `向量搜尋請求失敗: ${error instanceof Error ? error.message : '未知錯誤'}`,
+          details: { error: String(error) }
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `API 測試過程發生錯誤: ${error instanceof Error ? error.message : '未知錯誤'}`,
+        details: { error: String(error) }
+      };
     }
   }
 }

@@ -9,6 +9,19 @@ compatibility_flags = ["nodejs_compat"]
 
 # 用於開發環境的一些默認設置
 R2_ENDPOINT = "example-bucket.your-subdomain.r2.dev"
+# Pinecone 配置
+PINECONE_ENVIRONMENT = "asia-southeast1-gcp"
+PINECONE_INDEX = "echomind2"
+
+# 備註：敏感資訊如 API 金鑰請使用 wrangler secret 設定，例如：
+# wrangler secret put COHERE_API_KEY
+# wrangler secret put PINECONE_API_KEY
+
+# 以下環境變數需要在 Cloudflare Dashboard 中進行設置
+# - PINECONE_API_KEY
+# - PINECONE_INDEX
+# - COHERE_API_KEY
+# - PYTHON_API_URL (新增) - Python API 服務的基礎 URL
 
 [env.production]
 # 生產環境配置
@@ -18,7 +31,11 @@ name = "echomind-api"
 [env.production.vars]
 # 提醒：實際的 API 金鑰應通過 wrangler secret 設定
 # wrangler secret put GROQ_API_KEY --env production
+# wrangler secret put COHERE_API_KEY --env production
+# wrangler secret put PINECONE_API_KEY --env production
 R2_ENDPOINT = "example-bucket.your-subdomain.r2.dev"
+PINECONE_ENVIRONMENT = "us-east-1"
+PINECONE_INDEX = "echomind2"
 
 [env.staging]
 # 測試環境配置
@@ -26,7 +43,13 @@ name = "echomind-api-staging"
 # 添加 vars 部分解決警告
 [env.staging.vars]
 R2_ENDPOINT = "example-bucket.your-subdomain.r2.dev"
+PINECONE_ENVIRONMENT = "us-east-1"
+PINECONE_INDEX = "echomind2"
 
 [env.development]
 # 開發環境配置
-name = "echomind-api-dev" 
+name = "echomind-api-dev"
+[env.development.vars]
+R2_ENDPOINT = "example-bucket.your-subdomain.r2.dev"
+PINECONE_ENVIRONMENT = "us-east-1"
+PINECONE_INDEX = "echomind2" 

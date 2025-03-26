@@ -190,6 +190,52 @@ export function ChatInterface({
   };
 
   /**
+   * 處理直接添加消息到聊天
+   * 用於向量搜索等需要繞過常規流程的情況
+   * @param message - 聊天消息
+   */
+  const handleSendMessage = (message: ChatMessage) => {
+    // 添加消息到聊天
+    setMessages(prev => [...prev, message]);
+    
+    // 如果是第一條消息，設置聊天已開始
+    if (!isChatStarted) {
+      setIsChatStarted(true);
+    }
+    
+    // 如果是用戶消息且有聊天ID，異步儲存聊天記錄
+    if (user && chatId && message.role === 'user') {
+      setTimeout(async () => {
+        try {
+          await chatHistoryService.updateChat(chatId, [...messages, message], undefined, currentModelId);
+        } catch (error) {
+          console.error('更新聊天記錄失敗:', error);
+        }
+      }, 0);
+    }
+    
+    // 如果是用戶的第一條消息，創建新聊天記錄
+    if (user && messages.length === 0 && !chatId && message.role === 'user') {
+      setTimeout(async () => {
+        try {
+          // 使用消息內容作為標題
+          const title = message.content.length > 30 
+            ? message.content.substring(0, 30) + '...' 
+            : message.content;
+          const newChatId = await chatHistoryService.createChat([message], title, currentModelId);
+          if (newChatId) {
+            setChatId(newChatId);
+            // 更新 URL，但不刷新頁面
+            window.history.replaceState({}, '', `/?id=${newChatId}`);
+          }
+        } catch (error) {
+          console.error('自動創建聊天記錄失敗:', error);
+        }
+      }, 0);
+    }
+  };
+
+  /**
    * 渲染歡迎畫面
    * @returns 歡迎畫面 JSX 元素
    */
@@ -200,7 +246,11 @@ export function ChatInterface({
         <Greeting />
         
         {/* 聊天輸入框 */}
-        <ChatInput onSubmit={handleSubmit} isLoading={isLoading} />
+        <ChatInput 
+          onSubmit={handleSubmit} 
+          onSendMessage={handleSendMessage}
+          isLoading={isLoading} 
+        />
       </>
     );
   };
@@ -233,6 +283,7 @@ export function ChatInterface({
             <div className="max-w-3xl mx-auto px-4">
               <ChatInput 
                 onSubmit={handleSubmit}
+                onSendMessage={handleSendMessage}
                 isLoading={isLoading}
               />
             </div>

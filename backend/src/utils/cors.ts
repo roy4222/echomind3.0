@@ -20,7 +20,8 @@ const ALLOWED_ORIGINS = [
  * @returns 是否為允許的來源
  */
 function isOriginAllowed(origin: string | null): boolean {
-  return !origin || ALLOWED_ORIGINS.includes(origin);
+  // 始終返回 true，允許所有來源
+  return true;
 }
 
 /**
@@ -32,7 +33,7 @@ export function getCorsHeadersForRequest(request: Request): HeadersInit {
   const origin = request.headers.get('Origin');
   
   return {
-    'Access-Control-Allow-Origin': isOriginAllowed(origin) ? (origin || '*') : ALLOWED_ORIGINS[0],
+    'Access-Control-Allow-Origin': origin || '*', // 使用請求的來源或 '*'
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
     'Access-Control-Max-Age': '86400',

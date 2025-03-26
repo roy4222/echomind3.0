@@ -6,10 +6,13 @@
 import { useState, FormEvent } from 'react';
 import { Send, Database, Sparkles, ChevronDown, Search, Paperclip, ArrowUp, Link, Brain } from 'lucide-react';
 import React from 'react';
+import { ChatMessage } from '../../lib/types/chat';
 
 interface ChatInputProps {
   /** 提交訊息的回調函數 */
   onSubmit: (input: string, modelId?: string) => Promise<void>;
+  /** 添加消息到聊天的回調函數 */
+  onSendMessage?: (message: ChatMessage) => void;
   /** 是否正在載入中 */
   isLoading: boolean;
 }
@@ -41,13 +44,87 @@ const MODEL_OPTIONS = [
  * @param props - 組件屬性
  * @returns 聊天輸入框 JSX 元素
  */
-export function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
+export function ChatInput({ onSubmit, onSendMessage, isLoading }: ChatInputProps) {
   // 輸入值狀態
   const [inputValue, setInputValue] = useState('');
   // UI 狀態
   const [isDbSearchActive, setIsDbSearchActive] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState(MODEL_OPTIONS[0].id);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+
+  /**
+   * 診斷環境配置
+   */
+  const diagnoseEnvironment = () => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    console.log('=== 環境變數診斷 ===');
+    console.log('NEXT_PUBLIC_API_URL:', apiUrl || '未設置');
+    
+    if (!apiUrl) {
+      console.warn('警告: NEXT_PUBLIC_API_URL 環境變數未設置，這可能導致 API 請求失敗');
+    } else {
+      console.log('API 基礎 URL 檢查:', {
+        正確格式: apiUrl.startsWith('http://') || apiUrl.startsWith('https://'),
+        包含尾部斜線: apiUrl.endsWith('/'),
+        建議格式: apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl
+      });
+    }
+    
+    console.log('瀏覽器信息:', {
+      userAgent: navigator.userAgent,
+      在線狀態: navigator.onLine ? '在線' : '離線'
+    });
+    console.log('=== 診斷完成 ===');
+  };
+
+  // 在組件第一次渲染時執行診斷
+  React.useEffect(() => {
+    diagnoseEnvironment();
+  }, []);
+
+  /**
+   * 檢查 API 健康狀態
+   * @returns 如果 API 可用則返回 true，否則返回 false
+   */
+  const checkApiHealth = async (): Promise<boolean> => {
+    try {
+      console.log('正在檢查 API 健康狀態...');
+      
+      // 保持 /api 前綴，因為後端路由已設置
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      const apiUrl = `${apiBaseUrl}/api/health`;
+      
+      console.log('健康檢查 URL:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store'
+      });
+      
+      console.log('健康檢查回應:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+      
+      if (!response.ok) {
+        console.error('API 健康檢查失敗');
+        return false;
+      }
+      
+      const data = await response.json();
+      console.log('健康檢查資料:', data);
+      
+      return data.status === 'ok';
+    } catch (error) {
+      console.error('健康檢查錯誤:', error);
+      return false;
+    }
+  };
 
   /**
    * 表單提交處理函數
@@ -57,18 +134,222 @@ export function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
     e.preventDefault();
     
     // 檢查輸入是否為空
-    if (!inputValue.trim() || isLoading) return;
+    if (!inputValue.trim() || isLoading || isSearching) return;
+    
+    // 獲取用戶輸入
+    const userInput = inputValue.trim();
+    
+    // 清空輸入框
+    setInputValue('');
+    
+    // 如果資料庫搜尋模式啟用，使用向量搜尋
+    if (isDbSearchActive) {
+      await handleVectorSearch(userInput);
+      return;
+    }
     
     try {
       console.log(`提交訊息 - 使用模型: ${selectedModelId}`);
       
       // 提交訊息 (始終傳遞當前選擇的模型)
-      await onSubmit(inputValue, selectedModelId);
-      
-      // 清空輸入框
-      setInputValue('');
+      await onSubmit(userInput, selectedModelId);
     } catch (error) {
       console.error('提交訊息失敗:', error);
+    }
+  };
+
+  /**
+   * 處理向量搜尋功能
+   * @param query - 搜尋查詢
+   */
+  const handleVectorSearch = async (query: string) => {
+    if (!onSendMessage) {
+      console.error('沒有提供 onSendMessage 回調');
+      return;
+    }
+    
+    // 添加使用者訊息到聊天
+    onSendMessage({
+      id: Date.now().toString(),
+      role: 'user',
+      content: query,
+      createdAt: Date.now(),
+    });
+    
+    // 設置搜尋狀態
+    setIsSearching(true);
+    
+    try {
+      // 檢查 API 健康狀態
+      const isApiHealthy = await checkApiHealth();
+      console.log('API 健康狀態:', isApiHealthy ? '正常' : '異常');
+      
+      if (!isApiHealthy) {
+        throw new Error('API 服務目前不可用，請稍後再試');
+      }
+      
+      // 發送 API 請求 - 使用向量搜索 API 端點
+      // 保持 /api 前綴，因為後端路由已設置
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      const apiUrl = `${apiBaseUrl}/api/vector-search`;
+      
+      console.log('開始向量搜尋:', query);
+      console.log('API URL:', apiUrl);
+      console.log('環境變數 NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
+      
+      const requestBody = {
+        query,
+        topK: 3,
+        minImportance: 0
+      };
+      console.log('請求內容:', JSON.stringify(requestBody));
+      
+      // 嘗試使用標準方式發送請求
+      let response;
+      let isFallbackUsed = false;
+      
+      try {
+        console.log('嘗試直接請求 API...');
+        response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        });
+      } catch (fetchError) {
+        console.error('直接請求失敗:', fetchError);
+        console.log('嘗試使用後備方案...');
+        
+        // 後備方案 - 嘗試通過 JSONP 風格或使用代理
+        try {
+          // 這裡可以實現一個簡單的代理方案
+          // 例如，使用其他可用的後端 endpoint 間接發送請求
+          // 這個例子中我們只記錄失敗，實際應用中可能需要更複雜的邏輯
+          console.error('後備方案也失敗 - 目前尚未實現完整的後備機制');
+          throw fetchError; // 重新拋出原始錯誤
+        } catch (fallbackError) {
+          console.error('後備方案失敗:', fallbackError);
+          throw fetchError; // 還是使用原始錯誤
+        }
+      }
+      
+      console.log('收到 API 回應:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        使用後備方案: isFallbackUsed
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API 錯誤回應:', errorData);
+        throw new Error(errorData.error?.message || '搜尋請求失敗');
+      }
+      
+      const data = await response.json();
+      console.log('API 回應資料:', data);
+      const results = data.results || [];
+      console.log('搜尋結果數量:', results.length);
+      
+      // 添加更詳細的日誌以診斷問題
+      if (results.length > 0) {
+        console.log('搜尋結果詳情:', results.map((r: any) => ({
+          id: r.id,
+          question: r.question ? r.question.substring(0, 30) + '...' : '無問題',
+          answer: r.answer ? r.answer.substring(0, 30) + '...' : '無答案',
+          score: r.score,
+          category: r.category || '無類別'
+        })));
+      } else {
+        console.log('API返回了一個空結果數組或無效結果');
+        console.log('原始回應資料類型:', typeof data, '原始回應結構:', Object.keys(data));
+      }
+      
+      // 構建回應內容
+      let responseContent = '';
+      
+      if (results.length === 0) {
+        responseContent = '我在學業資料庫中找不到相關資訊。您可以嘗試重新表述您的問題，或關閉資料庫搜尋模式嘗試一般聊天。';
+      } else {
+        responseContent = `我在學業資料庫中找到了以下相關資訊：\n\n`;
+        
+        results.forEach((result: any, index: number) => {
+          const similarity = (result.score * 100).toFixed(1);
+          responseContent += `**問題 ${index + 1}** (相似度: ${similarity}%):\n${result.question}\n\n`;
+          responseContent += `**答案**:\n${result.answer}\n\n`;
+          
+          if (result.category) {
+            responseContent += `**類別**: ${result.category}\n`;
+          }
+          
+          if (result.tags && result.tags.length > 0) {
+            responseContent += `**標籤**: ${result.tags.join(', ')}\n`;
+          }
+          
+          responseContent += `---\n\n`;
+        });
+        
+        responseContent += `以上資訊來自輔大資管系學業資料庫。如需進一步說明，請繼續提問。`;
+      }
+      
+      // 添加 AI 回應到聊天
+      onSendMessage({
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: responseContent,
+        createdAt: Date.now(),
+      });
+      
+    } catch (error) {
+      console.error('向量搜尋錯誤:', error);
+      console.log('錯誤類型:', error instanceof Error ? 'Error 物件' : typeof error);
+      console.log('錯誤詳情:', error instanceof Error ? {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      } : error);
+      console.log('環境變數檢查 - NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
+      
+      // 嘗試檢查網絡連接
+      try {
+        console.log('正在檢查網絡連接...');
+        const connectionTest = await fetch('https://www.google.com', { 
+          method: 'HEAD',
+          mode: 'no-cors',
+          cache: 'no-store'
+        }).then(() => true).catch(() => false);
+        console.log('網絡連接測試結果:', connectionTest ? '可連接' : '無法連接');
+      } catch (netError) {
+        console.error('網絡連接測試錯誤:', netError);
+      }
+      
+      // 更細化錯誤訊息
+      let errorMessage = '未知錯誤';
+      let errorDetail = '';
+      
+      if (error instanceof Error) {
+        if (error.message === 'Failed to fetch') {
+          errorMessage = '無法連接到搜尋服務';
+          errorDetail = '這可能是由於網絡問題、API 服務未運行或 CORS 限制導致的。';
+        } else if (error.message.includes('API 服務目前不可用')) {
+          errorMessage = 'API 服務不可用';
+          errorDetail = '健康檢查顯示 API 服務目前不可用。';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      // 添加錯誤回應到聊天
+      onSendMessage({
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: `很抱歉，搜尋過程中發生錯誤：${errorMessage}。${errorDetail}\n\n您可以：\n1. 確保您的網絡連接正常\n2. 稍後再試\n3. 切換到一般聊天模式`,
+        createdAt: Date.now(),
+      });
+    } finally {
+      setIsSearching(false);
+      console.log('完成向量搜尋操作，已重設搜尋狀態');
     }
   };
 
@@ -91,9 +372,10 @@ export function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
     setIsModelDropdownOpen(false);
   };
 
-  // 切換資料庫搜尋狀態 (僅前端視覺效果)
+  // 切換資料庫搜尋狀態
   const toggleDbSearch = () => {
     setIsDbSearchActive(!isDbSearchActive);
+    console.log(`${!isDbSearchActive ? '啟用' : '停用'}學業資料庫搜尋模式`);
   };
 
   // 取得當前選擇的模型
@@ -103,20 +385,30 @@ export function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
     <div className="relative w-full">
       {/* 輸入框和按鈕 */}
       <div className="rounded-2xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-visible">
-        <form onSubmit={handleSubmit} className="flex flex-col">          
+        <form onSubmit={handleSubmit} className="flex flex-col">
+          {/* 如果資料庫搜尋模式啟用，顯示提示 */}
+          {isDbSearchActive && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 px-4 py-2 text-xs text-blue-700 dark:text-blue-300 rounded-t-2xl border-b border-blue-100 dark:border-blue-900/50">
+              <div className="flex items-center gap-1">
+                <Database className="h-3 w-3" />
+                <span>資料庫搜尋模式已啟用 - 您的問題將在輔大資管專業知識庫中搜尋相關資訊</span>
+              </div>
+            </div>
+          )}
+          
           {/* 輸入區域 */}
           <div className="flex items-center px-4 py-4 bg-white dark:bg-gray-900 rounded-2xl">
             <input
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="輸入您的問題..."
-              disabled={isLoading}
+              placeholder={isDbSearchActive ? "輸入您想在資料庫中查詢的問題..." : "輸入您的問題..."}
+              disabled={isLoading || isSearching}
               className="flex-1 bg-transparent border-none focus:outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  if (inputValue.trim() && !isLoading) {
+                  if (inputValue.trim() && !isLoading && !isSearching) {
                     handleSubmit(e as unknown as FormEvent);
                   }
                 }
@@ -124,14 +416,18 @@ export function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
             />
             <button
               type="submit"
-              disabled={isLoading || !inputValue.trim()}
+              disabled={isLoading || isSearching || !inputValue.trim()}
               className={`p-2 rounded-full ${
-                inputValue.trim() && !isLoading
+                inputValue.trim() && !isLoading && !isSearching
                   ? 'text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800'
                   : 'text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-800 cursor-not-allowed'
               }`}
             >
-              <ArrowUp className="h-5 w-5" />
+              {isSearching ? (
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-t-transparent border-blue-400" />
+              ) : (
+                <ArrowUp className="h-5 w-5" />
+              )}
             </button>
           </div>
           
@@ -156,7 +452,7 @@ export function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
                 }`}
               >
                 <Database className="h-4 w-4" />
-                <span>學業資料庫搜尋</span>
+                <span>學業資料庫搜尋{isDbSearchActive ? ' (已啟用)' : ''}</span>
               </button>
             </div>
             
@@ -165,7 +461,8 @@ export function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
               <button
                 type="button"
                 onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-                className="flex items-center gap-1 px-3 py-2 rounded-full text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-white"
+                className={`flex items-center gap-1 px-3 py-2 rounded-full text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-white ${isDbSearchActive ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={isDbSearchActive}
               >
                 <span className={`w-5 h-5 ${
                   selectedModel.id === 'default' 
