@@ -1,40 +1,50 @@
+/* 引入 Tailwind CSS 的基礎樣式 */
 @tailwind base;
+/* 引入 Tailwind CSS 的元件樣式 */
 @tailwind components;
+/* 引入 Tailwind CSS 的工具類樣式 */
 @tailwind utilities;
 
+/* 設定全域背景顏色,支援深色模式 */
 body {
   @apply bg-gray-50 dark:bg-gray-900;
 }
 
+/* 自定義工具類 */
 @layer utilities {
+  /* 淺色主題的點狀背景圖案 */
   .bg-dot-pattern {
     background-image: radial-gradient(circle at 1px 1px, rgb(226 232 240 / 0.3) 1px, transparent 0);
     background-size: 24px 24px;
   }
 
+  /* 深色主題的點狀背景圖案 */
   .bg-dot-pattern-dark {
     background-image: radial-gradient(circle at 1px 1px, rgb(51 65 85 / 0.3) 1px, transparent 0);
     background-size: 24px 24px;
   }
 
-  /* 新增打字機效果的動畫 */
+  /* 打字機游標閃爍動畫 */
   @keyframes blink {
     0% { opacity: 0; }
     50% { opacity: 1; }
     100% { opacity: 0; }
   }
   
+  /* 應用閃爍動畫的類別 */
   .animate-blink {
     animation: blink 0.8s infinite;
   }
 }
 
+/* CSS 變數定義 - 淺色主題 */
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
 }
 
+/* 深色模式的 CSS 變數覆寫 */
 @media (prefers-color-scheme: dark) {
   :root {
     --foreground-rgb: 255, 255, 255;

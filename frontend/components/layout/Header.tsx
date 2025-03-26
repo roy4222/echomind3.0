@@ -99,15 +99,15 @@ const Header: FC<HeaderProps> = ({ isSidebarOpen, onToggleSidebar }) => {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 h-20 border-b border-gray-200 bg-white/80 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-900/80">
+    <header className="fixed top-0 left-0 right-0 z-50 h-20 bg-white/30 dark:bg-gray-900/30 backdrop-blur-md border-2 border-gray-200/50 dark:border-gray-700/50 shadow-sm rounded-b-2xl mx-2">
       <div className="flex h-full items-center justify-between px-4 lg:px-6">
         {/* 左側區域 */}
         <div className="flex items-center gap-4">
           <button
             onClick={handleClick}
             className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition-colors",
-              isActive ? "bg-gray-100 dark:bg-gray-800" : "hover:bg-gray-100 dark:hover:bg-gray-800"
+              "flex h-10 w-10 items-center justify-center rounded-xl text-gray-600 transition-colors border border-gray-200/50 dark:border-gray-700/50",
+              isActive ? "bg-gray-100/80 dark:bg-gray-800/80" : "hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
             )}
             aria-label="切換側邊欄"
           >
@@ -127,19 +127,21 @@ const Header: FC<HeaderProps> = ({ isSidebarOpen, onToggleSidebar }) => {
           {/* 主題切換按鈕 */}
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-gray-600 transition-colors hover:bg-gray-100/50 dark:text-gray-300 dark:hover:bg-gray-800/50 border border-gray-200/50 dark:border-gray-700/50"
           >
             <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
             <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           </button>
 
-          {/* 用戶頭像或登入按鈕 */}
+          {/* 用戶頭像或登入按鈕區塊 */}
           {user ? (
             <div className="relative">
+              {/* 頭像按鈕 - 點擊時切換下拉選單顯示狀態 */}
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border-2 border-gray-200 hover:border-blue-500 dark:border-gray-700 dark:hover:border-blue-400"
+                className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border-2 border-gray-300/80 hover:border-blue-500 dark:border-gray-600/80 dark:hover:border-blue-400"
               >
+                {/* 如果用戶有頭像照片則顯示照片,否則顯示預設圖示 */}
                 {user.photoURL ? (
                   <Image
                     src={user.photoURL}
@@ -149,7 +151,9 @@ const Header: FC<HeaderProps> = ({ isSidebarOpen, onToggleSidebar }) => {
                     className="h-full w-full object-cover"
                   />
                 ) : (
+                  // 預設頭像圖示容器
                   <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                    {/* 預設頭像 SVG 圖示 */}
                     <svg 
                       xmlns="http://www.w3.org/2000/svg" 
                       width="24" 
@@ -218,15 +222,15 @@ const Header: FC<HeaderProps> = ({ isSidebarOpen, onToggleSidebar }) => {
               className={cn(
                 "flex items-center gap-2",
                 "px-4 py-2 lg:px-6 lg:py-2.5",
-                "bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500",
-                "hover:from-amber-600 hover:via-orange-600 hover:to-rose-600",
-                "dark:from-amber-400 dark:via-orange-400 dark:to-rose-400",
-                "dark:hover:from-amber-500 dark:hover:via-orange-500 dark:hover:to-rose-500",
-                "text-white rounded-lg",
+                "bg-white/10 dark:bg-gray-800/30",
+                "hover:bg-white/20 dark:hover:bg-gray-800/50",
+                "border-2 border-gray-300/80 dark:border-gray-600/80",
+                "hover:border-blue-500/80 dark:hover:border-blue-400/80",
+                "text-gray-800 dark:text-gray-200",
+                "rounded-xl backdrop-blur-sm",
                 "transition-all duration-300 ease-in-out",
                 "transform hover:scale-105 active:scale-95",
-                "shadow-md hover:shadow-lg",
-                "hover:shadow-orange-500/20 dark:hover:shadow-orange-400/20"
+                "shadow-sm hover:shadow-md"
               )}
             >
               <LoginIcon className="h-5 w-5 lg:h-6 lg:w-6" />
