@@ -323,6 +323,85 @@ EchoMind2 正在持續開發中，以下是我們的開發路線圖：
 
 [MIT](LICENSE)
 
+# 前後端搜尋交互機制
+
+EchoMind2 系統實現了雙模式交互方式，為用戶提供靈活的信息檢索體驗：
+
+## 向量語意搜尋模式
+
+透過直接查詢輔大資管專業知識庫，提供精確的答案。
+
+### 運作流程
+
+```
+用戶提問 → 前端切換至「學業資料庫搜尋」模式 → 
+請求發送至 /api/vector-search 端點 → Cloudflare Worker 處理 → 
+Python API 服務進行向量檢索 → Pinecone 查詢相關結果 → 
+結果返回並按相關性排序呈現
+```
+
+### 技術實現
+
+前端透過 `ChatInput` 組件提供切換功能：
+
+```typescript
+// 切換資料庫搜尋按鈕
+<button onClick={toggleDbSearch} className={/* ... */}>
+  <Database className="h-4 w-4" />
+  <span>學業資料庫搜尋{isDbSearchActive ? ' (已啟用)' : ''}</span>
+</button>
+```
+
+請求參數格式：
+```json
+{
+  "query": "用戶問題",
+  "topK": 3,
+  "minImportance": 0
+}
+```
+
+## AI 對話模式
+
+使用大型語言模型生成回答，適合複雜問題和開放性討論。
+
+### 運作流程
+
+```
+用戶提問 → 選擇 AI 模型 → chatClient 服務處理請求 → 
+模型生成回應 → 結果顯示 → 儲存到聊天歷史
+```
+
+### 可選模型
+
+- Llama 3.1 8B Instant (預設)
+- Deepseek R1 Distill Llama 70B
+- Qwen 2.5 32B
+
+### 錯誤處理機制
+
+系統實現了多層次的錯誤處理和診斷：
+
+1. API 健康檢查：向量搜尋前先確認服務可用性
+2. 網絡連線診斷：錯誤發生時測試基本連接狀態
+3. 詳細日誌記錄：追蹤請求流程和回應內容
+4. 友好錯誤提示：針對不同類型的錯誤提供具體說明
+
+## 聊天歷史管理
+
+系統使用非阻塞方式處理聊天記錄：
+
+```typescript
+// 使用 setTimeout 將儲存操作移到下一個事件循環
+setTimeout(async () => {
+  try {
+    await chatHistoryService.updateChat(chatId, finalMessages);
+  } catch (error) {
+    console.error('更新聊天記錄失敗:', error);
+  }
+}, 0);
+```
+
 # EchoMind 問題排解與解決方案
 
 ## 向量搜尋功能問題排解
