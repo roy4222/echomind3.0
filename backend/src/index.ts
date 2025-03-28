@@ -38,14 +38,6 @@ export interface Env {
   PYTHON_API_URL?: string;
 }
 
-// 處理 CORS 預檢請求
-function handleCors(request: Request): Response {
-  return new Response(null, {
-    status: 204,
-    headers: getCorsHeadersForRequest(request)
-  });
-}
-
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     // 記錄請求基本資訊
