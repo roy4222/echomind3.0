@@ -1,4 +1,4 @@
-import { ChatMessage } from '@/lib/types/chat';
+ import { ChatMessage } from '@/lib/types/chat';
 import { motion } from 'framer-motion';
 import { UserCircle, Bot } from 'lucide-react';
 import { useTheme } from 'next-themes';
