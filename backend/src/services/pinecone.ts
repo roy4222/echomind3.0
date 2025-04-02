@@ -1,3 +1,6 @@
+/**
+ * 導入必要的模組和類型
+ */
 import { generateEmbedding } from './../services/embedding';
 import type { FaqSearchResult } from './../types/chat';
 import { Env } from '../index';
@@ -7,11 +10,30 @@ import { Env } from '../index';
  * 用於處理 FAQ 向量檢索
  */
 export class PineconeClient {
+  /**
+   * Pinecone API 金鑰
+   */
   private apiKey: string;
+  
+  /**
+   * Pinecone 環境名稱
+   */
   private environment: string;
+  
+  /**
+   * Pinecone 索引名稱
+   */
   private indexName: string;
+  
+  /**
+   * 環境變數配置
+   */
   private env?: Env;
-  private fullApiUrl?: string; // 新增：完整 API URL
+  
+  /**
+   * 完整 API URL (可選)
+   */
+  private fullApiUrl?: string;
   
   /**
    * 建立 Pinecone 客戶端
@@ -22,6 +44,7 @@ export class PineconeClient {
    * @param fullApiUrl 完整的 Pinecone API URL (可選)
    */
   constructor(apiKey: string, environment: string, indexName: string, env?: Env, fullApiUrl?: string) {
+    // 驗證 API 金鑰是否存在
     if (!apiKey) {
       throw new Error('未設置 Pinecone API 金鑰');
     }
@@ -31,9 +54,12 @@ export class PineconeClient {
     
     // 如果未提供完整 URL，仍需檢查必要的環境參數
     if (!this.fullApiUrl) {
+      // 檢查環境參數是否存在
       if (!environment) {
         throw new Error('未設置 Pinecone 環境');
       }
+      
+      // 檢查索引名稱，嘗試從環境變數中獲取
       if (!indexName) {
         // 嘗試從 env 獲取索引名稱
         if (env?.PINECONE_INDEX) {
@@ -46,6 +72,7 @@ export class PineconeClient {
       }
     }
     
+    // 設置實例屬性
     this.apiKey = apiKey;
     this.environment = environment;
     this.indexName = indexName;
@@ -118,10 +145,11 @@ export class PineconeClient {
         })
       });
       
-      // 檢查回應
+      // 檢查回應狀態
       if (!response.ok) {
         let errorMessage = `Pinecone API 錯誤: HTTP ${response.status}`;
         try {
+          // 嘗試解析錯誤回應為 JSON
           const errorData = await response.json();
           errorMessage += ` - ${JSON.stringify(errorData)}`;
         } catch (e) {
@@ -131,7 +159,7 @@ export class PineconeClient {
         throw new Error(errorMessage);
       }
       
-      // 解析回應
+      // 解析回應為 JSON
       const data = await response.json();
       
       // 記錄原始回應
@@ -140,6 +168,7 @@ export class PineconeClient {
         命名空間: data.namespace
       });
       
+      // 記錄第一個結果的詳細資訊（如果有）
       if (data.matches?.length > 0) {
         console.log(`第一個結果:`, {
           id: data.matches[0].id,
@@ -150,7 +179,7 @@ export class PineconeClient {
         console.log(`沒有找到匹配的結果`);
       }
       
-      // 過濾並映射結果
+      // 過濾並映射結果，只保留相似度高於閾值的結果
       const results = data.matches
         .filter((match: any) => match.score >= threshold)
         .map((match: any) => ({
@@ -166,6 +195,7 @@ export class PineconeClient {
       
       return results;
     } catch (error) {
+      // 記錄並重新拋出錯誤
       console.error('Pinecone 搜尋錯誤:', error);
       throw error;
     }
@@ -219,7 +249,7 @@ export class PineconeClient {
         })
       });
       
-      // 檢查回應
+      // 檢查回應狀態
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(`Pinecone API 錯誤: ${JSON.stringify(errorData)}`);
@@ -227,6 +257,7 @@ export class PineconeClient {
       
       return true;
     } catch (error) {
+      // 記錄並重新拋出錯誤
       console.error('添加 FAQ 錯誤:', error);
       throw error;
     }

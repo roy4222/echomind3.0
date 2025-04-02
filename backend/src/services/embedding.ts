@@ -11,63 +11,71 @@ export async function generateEmbedding(text: string, env?: Env): Promise<number
   // 從 env 對象獲取 API 金鑰
   const cohereApiKey = env?.COHERE_API_KEY;
   
-  // 檢查 API 金鑰
+  // 檢查 API 金鑰是否存在
   if (!cohereApiKey) {
+    // 如果沒有 API 金鑰，記錄警告並返回隨機生成的模擬嵌入向量
     console.warn('未設定 Cohere API 金鑰，將使用模擬嵌入');
+    // 生成 1024 維的隨機向量，值在 -0.05 到 0.05 之間
     return Array(1024).fill(0).map(() => (Math.random() - 0.5) * 0.1);
   }
   
   try {
+    // 記錄正在處理的文本（顯示前 50 個字符，超過則顯示省略號）
     console.log(`正在生成嵌入向量: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
     
-    // 調用 Cohere API 生成嵌入
+    // 調用 Cohere API 生成嵌入向量
     const response = await fetch('https://api.cohere.ai/v1/embed', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${cohereApiKey}`,
-        'Accept': 'application/json'
+        'Content-Type': 'application/json', // 設置內容類型為 JSON
+        'Authorization': `Bearer ${cohereApiKey}`, // 設置 API 認證
+        'Accept': 'application/json' // 指定接受 JSON 格式的回應
       },
       body: JSON.stringify({
-        texts: [text],
-        model: 'embed-multilingual-v3.0',
-        truncate: 'END',
-        input_type: 'search_document',
-        embedding_types: ["float"]
+        texts: [text], // 要嵌入的文本數組
+        model: 'embed-multilingual-v3.0', // 使用多語言嵌入模型
+        truncate: 'END', // 如果文本過長，從末尾截斷
+        input_type: 'search_document', // 指定輸入類型為搜索文檔
+        embedding_types: ["float"] // 指定嵌入類型為浮點數
       })
     });
     
-    // 檢查回應
+    // 檢查 API 回應是否成功
     if (!response.ok) {
+      // 如果回應不成功，解析錯誤信息並拋出異常
       const errorData = await response.json();
       console.error('Cohere API 返回錯誤:', errorData);
       throw new Error(`Cohere API 錯誤: ${JSON.stringify(errorData)}`);
     }
     
-    // 解析回應
+    // 解析 API 回應
     const data = await response.json();
+    // 記錄回應中包含的字段，用於調試
     console.log(`Cohere API 響應成功，包含的字段:`, Object.keys(data));
     
     // 處理不同版本 API 的回應格式
     let embedding;
     if (data.embeddings && Array.isArray(data.embeddings)) {
-      // 舊版 API 格式
+      // 處理舊版 API 格式（直接數組）
       console.log(`使用舊版 API 格式 (embeddings[])，向量維度: ${data.embeddings[0].length}`);
       embedding = data.embeddings[0];
     } else if (data.embeddings && data.embeddings.float) {
-      // 新版 API V2 格式
+      // 處理新版 API V2 格式（嵌套在 float 屬性中）
       console.log(`使用新版 API V2 格式 (embeddings.float)，向量維度: ${data.embeddings.float[0].length}`);
       embedding = data.embeddings.float[0];
     } else {
+      // 如果無法識別回應格式，拋出錯誤
       console.error('無法從回應中獲取嵌入向量:', data);
       throw new Error('無法解析 Cohere API 回應中的嵌入向量');
     }
     
+    // 返回生成的嵌入向量
     return embedding;
   } catch (error) {
+    // 捕獲並記錄任何錯誤
     console.error('生成嵌入錯誤:', error);
     
-    // 發生錯誤時返回一個模擬嵌入
+    // 發生錯誤時返回一個模擬嵌入（1024 維隨機向量）
     console.log('返回模擬嵌入');
     return Array(1024).fill(0).map(() => (Math.random() - 0.5) * 0.1);
   }
