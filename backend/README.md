@@ -2,7 +2,7 @@
 
 ## 系統架構概述
 
-EchoMind 後端系統採用雙重架構設計，結合 Cloudflare Workers 和可選的 Python API 服務，提供高效且靈活的向量搜索和問答功能。
+EchoMind 後端系統**主要基於 Cloudflare Workers (TypeScript)** 提供 API 服務，並**計劃將原有的 Python 資料處理功能遷移至 TypeScript 腳本**，以實現技術棧統一和簡化架構。
 
 ### 1. 核心服務: Cloudflare Workers (TypeScript)
 
@@ -14,14 +14,14 @@ Cloudflare Workers 作為主要 API 層，負責處理客戶端請求、路由�
   - `src/services/pinecone.ts` - 封裝與 Pinecone 的互動邏輯 (包括調用嵌入服務)
   - `src/services/embedding.ts` - 通過 Cohere API 處理文本嵌入
 
-### 2. 輔助服務: Python API (FastAPI)
+### 2. 輔助服務: Python API (FastAPI) (**計劃移除**)
 
-位於 `llama_index/` 目錄的 Python API 服務，目前主要提供資料處理和上傳功能，而不是處理即時的向量搜尋請求。
+位於 `llama_index/` 目錄的 Python API 服務（**計劃移除**），其主要功能（資料處理和上傳 `process_qa_data.py`）將被遷移至 **TypeScript 腳本 (`backend/scripts/`)**。
 
 - **入口點**: `api_server.py` - FastAPI 伺服器
 - **核心功能**:
   - `query_qa.py` - (備註：此模組存在，但目前未被 `/api/vector-search` 調用)
-  - `process_qa_data.py` - 資料處理和上傳至 Pinecone
+  - `process_qa_data.py` - 資料處理和上傳至 Pinecone (**將由 TypeScript 腳本替代**)
 
 ## 技術整合
 
@@ -54,8 +54,9 @@ Cloudflare Workers 作為主要 API 層，負責處理客戶端請求、路由�
 
 1. **資料流程**:
    - 客戶端發送請求至 Cloudflare Worker
-   - Worker 直接處理請求 (例如向量搜尋) 或調用其他服務 (如 Groq)。對於資料上傳等任務，可能會間接觸發 Python API。
-   - Worker 返回處理後的結果給客戶端
+   - Worker 直接處理請求 (例如向量搜尋) 或調用其他服務 (如 Groq)。
+   - **資料處理與上傳**任務由**獨立的 TypeScript 腳本 (`backend/scripts/`)** 執行（例如手動或 CI/CD 觸發），直接與 Cohere 和 Pinecone 互動。
+   - Worker 返回 API 處理後的結果給客戶端
 
 2. **向量搜尋流程 (由 Cloudflare Worker 處理)**:
    - Worker 接收用戶查詢 (`/api/vector-search`)
@@ -117,12 +118,12 @@ Cloudflare Workers 作為主要 API 層，負責處理客戶端請求、路由�
 ### 短期改進計劃
 
 1. **解決命名空間混淆**:
-   - 將 `llama_index` 目錄重命名為更合適的名稱，如 `vector_api` 或 `qa_service`
-   - 避免與實際 LlamaIndex 包混淆
+   - 將 `llama_index` 目錄重命名為更合適的名稱（例如 `legacy_python_api` 或直接在遷移完成後移除）。
+   - 避免與實際 LlamaIndex 包混淆。
 
 2. **技術統一**:
-   - 考慮將 Python API 服務遷移到 Node.js/TypeScript
-   - 使用 LangChainJS 或 LlamaIndex.js 替代當前實現
+   - **將 Python API 的資料處理功能 (`process_qa_data.py`) 遷移到獨立的 TypeScript 腳本**（例如 `backend/scripts/upload_vectors.ts`），調用 Cohere 和 Pinecone 服務，實現技術棧統一並**移除 Python 依賴**。
+   - 若未來需要更複雜的 RAG 功能，優先考慮使用 LangChainJS 或 LlamaIndex.js 在 Worker 或獨立 TS 服務中實現。
 
 3. **架構優化**:
    - 明確 Cloudflare Worker 和後端 API 的職責分工
@@ -208,13 +209,14 @@ Cloudflare Workers 作為主要 API 層，負責處理客戶端請求、路由�
 - `COHERE_API_KEY`: Cohere API 金鑰
 - `PYTHON_API_URL`: Python API 服務的基礎 URL (可選)
 
-### Python API 環境變數
+### Python API 環境變數 (**遷移後移除**)
 - `PINECONE_API_KEY`: Pinecone API 金鑰
 - `PINECONE_ENVIRONMENT`: Pinecone 環境設定
 - `PINECONE_INDEX`: Pinecone 索引名稱
 - `COHERE_API_KEY`: Cohere API 金鑰
 - `API_PORT`: API 服務監聽端口
 - `API_HOST`: API 服務監聽地址
+**(註：若 Python API 被移除，此部分環境變數將不再需要)**
 
 ## 開發指南
 
@@ -227,17 +229,26 @@ Cloudflare Workers 作為主要 API 層，負責處理客戶端請求、路由�
    npm run dev
    ```
 
-2. **Python API 開發**:
+2. **Python API 開發 (**遷移後移除**)**:
    ```bash
    cd backend/llama_index
    pip install -r requirements.txt
    python api_server.py
    ```
+   **(註：此步驟將在遷移完成後移除)**
+
+3. **資料處理與上傳 (使用 TypeScript 腳本)**:
+   ```bash
+   cd backend
+   # 假設腳本名稱為 upload_vectors.ts
+   # 需要確保環境變數已正確設置 (例如使用 .env 文件和 dotenv)
+   npx ts-node scripts/upload_vectors.ts path/to/your/qa_data.json
+   ```
 
 ### 資料處理流程
 
 1. 準備問答資料 JSON 檔案
-2. 使用 `process_qa_data.py` 處理資料並上傳到 Pinecone
+2. **使用 `backend/scripts/upload_vectors.ts` (或其他指定腳本名稱) 處理資料（調用 Cohere 生成嵌入）並上傳向量及元數據到 Pinecone**
 3. 通過 API 端點查詢和檢索資料
 
 ## 運維說明
