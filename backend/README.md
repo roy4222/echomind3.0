@@ -6,22 +6,22 @@ EchoMind 後端系統採用雙重架構設計，結合 Cloudflare Workers 和可
 
 ### 1. 核心服務: Cloudflare Workers (TypeScript)
 
-Cloudflare Workers 作為主要 API 層，負責處理客戶端請求、路由和基本業務邏輯。
+Cloudflare Workers 作為主要 API 層，負責處理客戶端請求、路由和主要業務邏輯，包括直接處理向量搜尋請求。
 
 - **入口點**: `src/index.ts` - 處理請求路由和錯誤處理
 - **核心處理器**: `src/handlers/` - 包含各端點處理邏輯
 - **服務組件**: 
-  - `src/services/pinecone.ts` - 直接與 Pinecone 向量資料庫互動
+  - `src/services/pinecone.ts` - 封裝與 Pinecone 的互動邏輯 (包括調用嵌入服務)
   - `src/services/embedding.ts` - 通過 Cohere API 處理文本嵌入
 
 ### 2. 輔助服務: Python API (FastAPI)
 
-位於 `llama_index/` 目錄的 Python API 服務，提供高級向量搜尋和資料處理功能。
+位於 `llama_index/` 目錄的 Python API 服務，目前主要提供資料處理和上傳功能，而不是處理即時的向量搜尋請求。
 
 - **入口點**: `api_server.py` - FastAPI 伺服器
 - **核心功能**:
-  - `query_qa.py` - 向量查詢功能
-  - `process_qa_data.py` - 資料處理和上傳
+  - `query_qa.py` - (備註：此模組存在，但目前未被 `/api/vector-search` 調用)
+  - `process_qa_data.py` - 資料處理和上傳至 Pinecone
 
 ## 技術整合
 
@@ -54,16 +54,15 @@ Cloudflare Workers 作為主要 API 層，負責處理客戶端請求、路由�
 
 1. **資料流程**:
    - 客戶端發送請求至 Cloudflare Worker
-   - Worker 可選擇直接處理或轉發至 Python API
-   - Python API 處理後返回結果給 Worker
+   - Worker 直接處理請求 (例如向量搜尋) 或調用其他服務 (如 Groq)。對於資料上傳等任務，可能會間接觸發 Python API。
    - Worker 返回處理後的結果給客戶端
 
-2. **向量搜尋流程**:
-   - 接收用戶查詢
-   - 通過 Cohere 生成查詢嵌入
-   - 在 Pinecone 中搜尋相似向量
-   - 過濾、排序結果
-   - 返回相關問答對
+2. **向量搜尋流程 (由 Cloudflare Worker 處理)**:
+   - Worker 接收用戶查詢 (`/api/vector-search`)
+   - Worker 調用嵌入服務 (`src/services/embedding.ts`) 通過 Cohere 生成查詢嵌入
+   - Worker 調用 Pinecone 服務 (`src/services/pinecone.ts`) 在 Pinecone 中搜尋相似向量
+   - Worker 過濾、排序結果
+   - Worker 返回相關問答對給客戶端
 
 ## 未來引入 LlamaIndex 的好處
 
