@@ -92,9 +92,11 @@ export function ChatInterface({
    * 處理訊息提交
    * @param input - 使用者輸入的訊息
    * @param modelId - 選擇的模型 ID
+   * @param image - 上傳的圖片 (base64 格式)
    */
-  const handleSubmit = async (input: string, modelId?: string) => {
-    if (!input.trim() || isLoading) return;
+  const handleSubmit = async (input: string, modelId?: string, image?: string) => {
+    if (!input.trim() && !image) return;
+    if (isLoading) return;
 
     try {
       // 更新當前選擇的模型 ID (如果提供了新的模型 ID)
@@ -116,6 +118,7 @@ export function ChatInterface({
         content: input.trim(),
         id: Date.now().toString(),
         createdAt: Date.now(),
+        image: image, // 添加圖片屬性
       };
       
       // 更新訊息列表
@@ -131,8 +134,8 @@ export function ChatInterface({
         content
       }));
       
-      // 呼叫API (傳遞選擇的模型 ID)
-      const response = await chatClient.sendMessage(apiMessages, useModelId);
+      // 呼叫API (傳遞選擇的模型 ID 和圖片)
+      const response = await chatClient.sendMessage(apiMessages, useModelId, image);
       
       // 從回應中提取助手訊息
       const assistantMessage: ChatMessage = {

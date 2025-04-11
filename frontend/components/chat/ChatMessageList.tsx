@@ -231,13 +231,28 @@ export const ChatMessageList = ({
             {/* 根據角色使用不同的格式化方法 */}
             {message.role === 'assistant' 
               ? formatAssistantMessage(message.content)
-              : message.content.split('\n').map((line, i) => (
-                  <p key={i} className={i > 0 ? 'mt-2' : ''}>
-                    {typeof formatUserMessage(line) === 'string' 
-                      ? line 
-                      : formatUserMessage(line)}
-                  </p>
-                ))
+              : (
+                <>
+                  {/* 如果有圖片，顯示圖片 */}
+                  {message.image && (
+                    <div className="mb-3">
+                      <img 
+                        src={message.image} 
+                        alt="用戶上傳圖片" 
+                        className="max-h-64 w-auto rounded-lg object-contain"
+                      />
+                    </div>
+                  )}
+                  {/* 顯示文字內容 */}
+                  {message.content.split('\n').map((line, i) => (
+                    <p key={i} className={i > 0 ? 'mt-2' : ''}>
+                      {typeof formatUserMessage(line) === 'string' 
+                        ? line 
+                        : formatUserMessage(line)}
+                    </p>
+                  ))}
+                </>
+              )
             }
           </div>
         </motion.div>

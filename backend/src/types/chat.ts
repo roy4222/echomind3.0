@@ -21,16 +21,18 @@ export interface ChatMessage {
  * 聊天完成選項
  */
 export interface ChatCompletionOptions {
-  /** 聊天訊息歷史 */
+  /** 聊天訊息 */
   messages: ChatMessage[];
-  /** 使用的語言模型 */
+  /** 語言模型名稱 */
   model?: string;
   /** 溫度參數 */
   temperature?: number;
-  /** 最大生成的 token 數量 */
+  /** 最大生成token數 */
   maxTokens?: number;
-  /** 是否使用串流回應 */
+  /** 是否使用串流模式 */
   stream?: boolean;
+  /** 圖片 (base64 格式) */
+  image?: string;
 }
 
 /**
@@ -106,4 +108,4 @@ export interface FaqSearchResult {
   tags?: string[];
   /** 重要程度 (1-5) */
   importance?: number;
-} 
+}

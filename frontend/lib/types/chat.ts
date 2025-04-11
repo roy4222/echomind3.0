@@ -15,6 +15,8 @@ export interface ChatMessage {
   id?: string;
   /** 創建時間戳 */
   createdAt?: number;
+  /** 圖片 (base64 格式) */
+  image?: string;
 }
 
 /**
@@ -31,6 +33,8 @@ export interface ChatCompletionOptions {
   maxTokens?: number;
   /** 是否使用串流模式 */
   stream?: boolean;
+  /** 圖片 (base64 格式) */
+  image?: string;
 }
 
 /**

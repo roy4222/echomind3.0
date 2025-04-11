@@ -48,6 +48,12 @@ const MODEL_MAPPING = {
     displayName: 'Qwen 2.5 32B',
     temperature: 0.9,
     maxTokens: 3072
+  },
+  maverick: {
+    name: 'meta-llama/llama-4-maverick-17b-128e-instruct',
+    displayName: 'Llama 4 Maverick 17B',
+    temperature: 0.7,
+    maxTokens: 4096
   }
 };
 
@@ -153,7 +159,7 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
  * @returns Groq API 回應
  */
 async function callGroqApi(
-  { messages, model = DEFAULT_MODEL, temperature = DEFAULT_TEMPERATURE, maxTokens = DEFAULT_MAX_TOKENS }: ChatCompletionOptions,
+  { messages, model = DEFAULT_MODEL, temperature = DEFAULT_TEMPERATURE, maxTokens = DEFAULT_MAX_TOKENS, image }: ChatCompletionOptions,
   env: Env
 ): Promise<GroqChatResponse> {
   try {
@@ -196,7 +202,8 @@ async function callGroqApi(
       modelName: modelDisplayName,
       messagesCount: messages.length,
       temperature: actualTemperature,
-      maxTokens: actualMaxTokens
+      maxTokens: actualMaxTokens,
+      hasImage: !!image
     });
     
     // 檢查 API 金鑰
@@ -209,6 +216,46 @@ async function callGroqApi(
     const messagesWithSystemPrompt = [SYSTEM_PROMPT, ...messages];
     console.log('🔄 添加系統提示詞，最終訊息數量:', messagesWithSystemPrompt.length);
     
+    // 準備請求體
+    const requestBody: any = {
+      model: actualModel,  // 使用映射後的模型名稱
+      messages: messagesWithSystemPrompt,
+      temperature: actualTemperature,
+      max_tokens: actualMaxTokens
+    };
+
+    // 如果是 maverick 模型且有圖片，添加圖片到請求中
+    if (model === 'maverick' && image) {
+      console.log('🖼️ 檢測到圖片上傳，添加到 maverick 模型請求中');
+      
+      // 修改最後一條用戶訊息，添加圖片
+      const lastUserMessageIndex = requestBody.messages.findIndex(
+        (msg: ChatMessage) => msg.role === 'user'
+      );
+      
+      if (lastUserMessageIndex !== -1) {
+        const lastUserMessage = requestBody.messages[lastUserMessageIndex];
+        
+        // 將最後一條用戶訊息轉換為多模態格式
+        requestBody.messages[lastUserMessageIndex] = {
+          role: 'user',
+          content: [
+            { type: 'text', text: lastUserMessage.content },
+            { 
+              type: 'image_url', 
+              image_url: {
+                url: image
+              }
+            }
+          ]
+        };
+        
+        console.log('✅ 已將圖片添加到用戶訊息中');
+      } else {
+        console.log('⚠️ 未找到用戶訊息，無法添加圖片');
+      }
+    }
+    
     // 發送請求到 Groq API
     console.log(`🌐 發送請求到 Groq API (模型: ${modelDisplayName})...`);
     const startTime = Date.now();
@@ -218,12 +265,7 @@ async function callGroqApi(
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${env.GROQ_API_KEY}`
       },
-      body: JSON.stringify({
-        model: actualModel,  // 使用映射後的模型名稱
-        messages: messagesWithSystemPrompt,
-        temperature: actualTemperature,
-        max_tokens: actualMaxTokens
-      })
+      body: JSON.stringify(requestBody)
     });
     const endTime = Date.now();
     console.log(`⏱️ Groq API 請求耗時: ${endTime - startTime}ms (模型: ${modelDisplayName})`);

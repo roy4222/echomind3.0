@@ -105,16 +105,19 @@ export class ChatClientService {
    * 發送聊天訊息到後端 API
    * @param messages 聊天訊息列表
    * @param modelId 選擇的模型 ID（可選）
+   * @param image 上傳的圖片 (base64 格式)
    */
   async sendMessage(
     messages: { role: string; content: string }[],
-    modelId?: string
+    modelId?: string,
+    image?: string
   ): Promise<SimpleChatResponse> {
     try {
       console.log(`===== 發送聊天訊息 =====`);
       console.log(`訊息數量: ${messages.length}`);
       console.log(`選擇的模型 ID: "${modelId || 'default'}"`);
       console.log(`最後一條訊息: ${messages[messages.length - 1].content.substring(0, 50)}...`);
+      console.log(`是否包含圖片: ${image ? '是' : '否'}`);
 
       // 將消息轉換為符合 ChatMessage 類型的格式
       const chatMessages: ChatMessage[] = messages.map(msg => ({
@@ -131,6 +134,12 @@ export class ChatClientService {
         messages: chatMessages,
         model: actualModelId  // 使用確認過的模型 ID
       };
+
+      // 如果有圖片，添加到請求中
+      if (image) {
+        requestBody.image = image;
+        console.log('已添加圖片到請求中');
+      }
 
       console.log(`準備發送模型 ID: "${requestBody.model}"`);
       console.log(`請求對象類型: ${typeof requestBody}, model 欄位類型: ${typeof requestBody.model}`);

@@ -3,14 +3,14 @@
  * 提供使用者輸入訊息並發送的介面
  */
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useRef } from 'react';
 import { Send, Database, Sparkles, ChevronDown, Search, Paperclip, ArrowUp, Link, Brain } from 'lucide-react';
 import React from 'react';
 import { ChatMessage } from '../../lib/types/chat';
 
 interface ChatInputProps {
   /** 提交訊息的回調函數 */
-  onSubmit: (input: string, modelId?: string) => Promise<void>;
+  onSubmit: (input: string, modelId?: string, image?: string) => Promise<void>;
   /** 添加消息到聊天的回調函數 */
   onSendMessage?: (message: ChatMessage) => void;
   /** 是否正在載入中 */
@@ -37,6 +37,12 @@ const MODEL_OPTIONS = [
     icon: '💎', 
     description: '平衡效能與資源，優秀的跨語言能力'
   },
+  { 
+    id: 'maverick', 
+    name: 'Llama 4 Maverick 17B', 
+    icon: <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12S6.477 2 12 2m0 2a8 8 0 1 0 0 16a8 8 0 0 0 0-16m0 7c.2 0 .4.12.47.3l1.96 5.16a.5.5 0 0 1-.93.36l-1-2.62h-1l-1 2.62a.5.5 0 0 1-.93-.36l1.96-5.16c.08-.18.27-.3.47-.3m0-4a1 1 0 1 1 0 2a1 1 0 0 1 0-2"/></svg>, 
+    description: '大型多功能模型，適合複雜任務與創意生成'
+  },
 ];
 
 /**
@@ -52,6 +58,9 @@ export function ChatInput({ onSubmit, onSendMessage, isLoading }: ChatInputProps
   const [selectedModelId, setSelectedModelId] = useState(MODEL_OPTIONS[0].id);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  // 圖片上傳狀態
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   /**
    * 診斷環境配置
@@ -127,34 +136,94 @@ export function ChatInput({ onSubmit, onSendMessage, isLoading }: ChatInputProps
   };
 
   /**
+   * 處理圖片上傳
+   */
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // 檢查檔案類型
+    if (!file.type.startsWith('image/')) {
+      alert('請上傳圖片檔案');
+      return;
+    }
+
+    // 檢查檔案大小 (限制為 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('圖片大小不能超過 5MB');
+      return;
+    }
+
+    // 轉換為 base64
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64Image = e.target?.result as string;
+      setUploadedImage(base64Image);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  /**
+   * 移除已上傳的圖片
+   */
+  const removeUploadedImage = () => {
+    setUploadedImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  /**
    * 表單提交處理函數
    * @param e - 表單事件
    */
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 檢查輸入是否為空
     if (!inputValue.trim() || isLoading || isSearching) return;
     
-    // 獲取用戶輸入
-    const userInput = inputValue.trim();
-    
-    // 清空輸入框
-    setInputValue('');
-    
-    // 如果資料庫搜尋模式啟用，使用向量搜尋
-    if (isDbSearchActive) {
-      await handleVectorSearch(userInput);
-      return;
-    }
-    
     try {
-      console.log(`提交訊息 - 使用模型: ${selectedModelId}`);
-      
-      // 提交訊息 (始終傳遞當前選擇的模型)
-      await onSubmit(userInput, selectedModelId);
+      // 如果有上傳圖片且選擇的是 Maverick 模型
+      if (uploadedImage && selectedModelId === 'maverick') {
+        // 發送包含圖片的訊息
+        if (onSendMessage) {
+          // 添加用戶訊息到聊天界面
+          onSendMessage({
+            role: 'user',
+            content: inputValue,
+            id: Date.now().toString(),
+            createdAt: Date.now()
+          });
+        }
+        
+        // 清空輸入框和圖片
+        setInputValue('');
+        setIsSearching(true);
+        
+        // 調用提交函數，傳遞文字和圖片
+        await onSubmit(inputValue, selectedModelId, uploadedImage);
+        
+        // 清除上傳的圖片
+        removeUploadedImage();
+      } else {
+        // 正常發送文字訊息
+        if (onSendMessage) {
+          onSendMessage({
+            role: 'user',
+            content: inputValue,
+            id: Date.now().toString(),
+            createdAt: Date.now()
+          });
+        }
+        
+        setInputValue('');
+        setIsSearching(true);
+        await onSubmit(inputValue, selectedModelId);
+      }
     } catch (error) {
-      console.error('提交訊息失敗:', error);
+      console.error('發送訊息錯誤:', error);
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -396,6 +465,33 @@ export function ChatInput({ onSubmit, onSendMessage, isLoading }: ChatInputProps
             </div>
           )}
           
+          {/* 已上傳圖片顯示區域 - Grok 風格 */}
+          {uploadedImage && (
+            <div className="px-4 pt-3">
+              <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-md p-2 pr-3">
+                <div className="flex-shrink-0 w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
+                  <img 
+                    src={uploadedImage} 
+                    alt="縮圖" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 truncate text-sm text-gray-700 dark:text-gray-300">
+                  {fileInputRef.current?.files?.[0]?.name || '已上傳圖片'}
+                </div>
+                <button 
+                  type="button" 
+                  onClick={removeUploadedImage}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+          
           {/* 輸入區域 */}
           <div className="flex items-center px-4 py-4 bg-white dark:bg-gray-900 rounded-2xl">
             <input
@@ -431,17 +527,34 @@ export function ChatInput({ onSubmit, onSendMessage, isLoading }: ChatInputProps
             </button>
           </div>
           
-          {/* 功能按鈕區域 */}
+          {/* 功能按鈕區域 - 提供附加功能如上傳文件和資料庫搜尋 */}
           <div className="flex items-center justify-between px-3 py-2 gap-2 border-t border-gray-200 dark:border-gray-800">
-            {/* 左側功能 */}
+            {/* 左側功能按鈕群組 */}
             <div className="flex items-center gap-2">
+              {/* 附件上傳按鈕 - 只有選擇 Maverick 模型時才可用 */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageUpload}
+                accept="image/*"
+                className="hidden"
+                id="image-upload"
+              />
               <button
                 type="button"
-                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                onClick={() => fileInputRef.current?.click()}
+                className={`p-2 rounded-md ${
+                  selectedModelId === 'maverick'
+                    ? 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800'
+                    : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                }`}
+                disabled={selectedModelId !== 'maverick'}
+                title={selectedModelId === 'maverick' ? '上傳圖片' : '只有 Llama 4 Maverick 模型支援圖片上傳'}
               >
                 <Paperclip className="h-5 w-5" />
               </button>
               
+              {/* 資料庫搜尋切換按鈕 - 切換是否啟用學業資料庫搜尋功能 */}
               <button
                 type="button"
                 onClick={toggleDbSearch}
@@ -469,7 +582,9 @@ export function ChatInput({ onSubmit, onSendMessage, isLoading }: ChatInputProps
                     ? 'text-orange-500 dark:text-orange-400' 
                     : selectedModel.id === 'advanced'
                       ? 'text-blue-800 dark:text-blue-600'
-                      : 'text-blue-600 dark:text-blue-400'
+                      : selectedModel.id === 'maverick'
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : 'text-blue-600 dark:text-blue-400'
                 }`}>
                   {typeof selectedModel.icon === 'string' 
                     ? selectedModel.icon 
@@ -501,7 +616,9 @@ export function ChatInput({ onSubmit, onSendMessage, isLoading }: ChatInputProps
                             ? 'text-orange-500 dark:text-orange-400' 
                             : model.id === 'advanced'
                               ? 'text-blue-800 dark:text-blue-600'
-                              : 'text-blue-600 dark:text-blue-400'
+                              : model.id === 'maverick'
+                                ? 'text-blue-600 dark:text-blue-400'
+                                : 'text-blue-600 dark:text-blue-400'
                         }`}>
                           {typeof model.icon === 'string' 
                             ? model.icon 
@@ -522,7 +639,9 @@ export function ChatInput({ onSubmit, onSendMessage, isLoading }: ChatInputProps
                               ? 'text-orange-500 dark:text-orange-400' 
                               : model.id === 'advanced'
                                 ? 'text-blue-800 dark:text-blue-600'
-                                : 'text-blue-600 dark:text-blue-400'
+                                : model.id === 'maverick'
+                                  ? 'text-blue-600 dark:text-blue-400'
+                                  : 'text-blue-600 dark:text-blue-400'
                           }`}>✓</span>
                         )}
                       </button>
