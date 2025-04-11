@@ -30,7 +30,7 @@ export function ChatInterface({
   const [isLoading, setIsLoading] = useState(false); // 載入狀態
   const [isChatStarted, setIsChatStarted] = useState(false); // 是否開始聊天
   const [error, setError] = useState<string | null>(null); // 錯誤訊息
-  const [currentModelId, setCurrentModelId] = useState<string>('default'); // 當前使用的模型
+  const [currentModelId, setCurrentModelId] = useState<string>('maverick'); // 當前使用的模型
   const [chatId, setChatId] = useState<string | null>(initialChatId); // 聊天ID
   
   // 取得當前使用者
@@ -69,7 +69,7 @@ export function ChatInterface({
           const chat = await chatHistoryService.getChat(initialChatId);
           if (chat) {
             setMessages(chat.messages);
-            setCurrentModelId(chat.modelId || 'default');
+            setCurrentModelId(chat.modelId || 'maverick');
             setChatId(initialChatId);
             if (chat.messages.length > 0) {
               setIsChatStarted(true);

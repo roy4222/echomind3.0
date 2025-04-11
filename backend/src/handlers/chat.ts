@@ -22,7 +22,7 @@ const SYSTEM_PROMPT: ChatMessage = {
 /**
  * 預設配置參數
  */
-const DEFAULT_MODEL = 'llama-3.1-8b-instant';  // 預設使用的語言模型
+const DEFAULT_MODEL = 'meta-llama/llama-4-maverick-17b-128e-instruct';  // 預設使用的語言模型
 const DEFAULT_TEMPERATURE = 0.7;                // 預設的溫度參數
 const DEFAULT_MAX_TOKENS = 2048;               // 預設的最大 token 數
 
