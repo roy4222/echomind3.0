@@ -204,6 +204,8 @@ export function ChatInterface({
         content: input.trim(),
         id: Date.now().toString(),
         createdAt: Date.now(),
+        // 保存原始圖片數據
+        image: image
       };
       
       // 如果有圖片，先上傳到 R2
@@ -283,6 +285,9 @@ export function ChatInterface({
         content: response.text,
         id: (Date.now() + 1).toString(),
         createdAt: Date.now(),
+        // 將用戶訊息中的圖片附加到助手訊息中
+        image: userMessage.image,
+        imageUrl: userMessage.imageUrl
       };
       
       // 更新訊息列表，包含AI回應

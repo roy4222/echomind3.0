@@ -281,14 +281,20 @@ export const ChatMessageList = ({
             
             {/* 根據角色使用不同的格式化方法顯示訊息內容 */}
             {message.role === 'assistant' 
-              ? formatAssistantMessage(message.content) // 處理AI助手訊息
+              ? (
+                <>
+                  {formatAssistantMessage(message.content)}
+                </>
+              ) // 處理AI助手訊息
               : (
                 <>
                   {/* 如果用戶訊息包含圖片，顯示圖片 */}
-                  {(message.imageUrl || message.image) && (
+                  {(message.role === 'user' && (message.imageUrl || message.image)) && (
                     <div className="mb-3">
                       <img 
-                        src={message.imageUrl || message.image} 
+                        src={typeof message.image === 'string' && message.image.startsWith('data:') 
+                          ? message.image 
+                          : message.imageUrl} 
                         alt="用戶上傳圖片" 
                         className="max-h-64 w-auto rounded-lg object-contain"
                       />
