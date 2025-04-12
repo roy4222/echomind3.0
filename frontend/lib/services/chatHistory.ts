@@ -27,6 +27,47 @@ export class ChatHistoryService {
   }
 
   /**
+   * 清理物件，移除所有 undefined 值
+   * 這對 Firestore 尤其重要，因為它不接受 undefined 值
+   * @param obj 要清理的物件
+   * @returns 清理後的物件，不包含 undefined 值
+   */
+  private cleanObject<T>(obj: any): T {
+    const cleanedObj = { ...obj };
+    
+    // 遍歷物件屬性
+    Object.keys(cleanedObj).forEach(key => {
+      const value = cleanedObj[key];
+      
+      // 如果值是 undefined，刪除該屬性
+      if (value === undefined) {
+        delete cleanedObj[key];
+      } 
+      // 如果值是物件，遞迴清理
+      else if (value && typeof value === 'object' && !Array.isArray(value)) {
+        cleanedObj[key] = this.cleanObject(value);
+      }
+      // 如果值是陣列，清理陣列中的每個物件
+      else if (Array.isArray(value)) {
+        cleanedObj[key] = value.map(item => 
+          item && typeof item === 'object' ? this.cleanObject(item) : item
+        );
+      }
+    });
+    
+    return cleanedObj as T;
+  }
+
+  /**
+   * 清理訊息陣列，移除所有 undefined 值
+   * @param messages 訊息陣列
+   * @returns 清理後的訊息陣列
+   */
+  private cleanMessages(messages: ChatMessage[]): ChatMessage[] {
+    return messages.map(message => this.cleanObject<ChatMessage>(message));
+  }
+
+  /**
    * 建立新的聊天記錄
    * @param messages 聊天訊息
    * @param title 聊天標題
@@ -47,10 +88,13 @@ export class ChatHistoryService {
       const chatId = doc(collection(this.db, 'chats')).id;
       const now = Date.now();
       
+      // 清理訊息中的 undefined 值
+      const cleanedMessages = this.cleanMessages(messages);
+      
       const chatData: ChatHistory = {
         id: chatId,
         title,
-        messages,
+        messages: cleanedMessages, 
         modelId,
         lastUpdated: now,
         createdAt: now
@@ -95,8 +139,11 @@ export class ChatHistoryService {
         return false;
       }
       
+      // 清理訊息中的 undefined 值
+      const cleanedMessages = this.cleanMessages(messages);
+      
       const updateData: Partial<ChatHistory> = {
-        messages,
+        messages: cleanedMessages,
         lastUpdated: Date.now()
       };
 

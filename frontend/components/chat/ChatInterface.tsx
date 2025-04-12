@@ -238,8 +238,12 @@ export function ChatInterface({
           
           if (result) {
             imageUrl = result;
-            userMessage.imageUrl = imageUrl; // 使用 imageUrl 而非 image
             console.log('圖片已上傳到 R2:', imageUrl);
+            
+            // 只有當 imageUrl 有值時才設置到 userMessage
+            if (imageUrl) {
+              userMessage.imageUrl = imageUrl;
+            }
           }
         } catch (uploadError) {
           console.error('圖片上傳失敗:', uploadError);
@@ -287,7 +291,8 @@ export function ChatInterface({
         createdAt: Date.now(),
         // 將用戶訊息中的圖片附加到助手訊息中
         image: userMessage.image,
-        imageUrl: userMessage.imageUrl
+        // 只有當 imageUrl 有值時才設置
+        ...(userMessage.imageUrl ? { imageUrl: userMessage.imageUrl } : {})
       };
       
       // 更新訊息列表，包含AI回應
