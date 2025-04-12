@@ -1,4 +1,4 @@
-import { ChatInput } from './ChatInput';
+import { ChatInput } from './input';
 import { Greeting } from './Greeting';
 
 interface WelcomeScreenProps {

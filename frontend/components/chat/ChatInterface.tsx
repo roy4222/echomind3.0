@@ -5,7 +5,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { ChatMessageList } from './ChatMessageList';
-import { ChatInput } from './ChatInput';
+import { ChatInput } from './input';
 import { Greeting } from "@/components/chat/Greeting";
 import { Sparkles, Search, Lightbulb } from 'lucide-react';
 import { type ChatMessage } from '@/lib/types/chat';
