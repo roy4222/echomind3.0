@@ -2,7 +2,7 @@
  * 功能按鈕組件 - 包含圖片上傳和資料庫搜尋功能
  */
 import { Database, Paperclip } from 'lucide-react';
-import { ActionButtonsProps } from './types';
+import { ActionButtonsProps } from '@/lib/types/chat';
 
 /**
  * 功能按鈕組件

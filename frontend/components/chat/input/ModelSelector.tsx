@@ -3,7 +3,7 @@
  * 提供用戶選擇不同AI模型的下拉選單界面
  */
 import { ChevronDown, Check } from 'lucide-react';
-import { ModelSelectorProps } from './types';
+import { ModelSelectorProps } from '@/lib/types/model';
 import { MODEL_OPTIONS } from './constants';
 
 /**

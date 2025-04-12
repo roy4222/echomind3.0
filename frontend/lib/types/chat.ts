@@ -136,4 +136,44 @@ export interface ChatHistory {
   lastUpdated: number;
   /** 建立時間戳 */
   createdAt: number;
-} 
+}
+
+/**
+ * 聊天輸入 Props 介面
+ */
+export interface ChatInputProps {
+  /** 提交訊息的回調函數 */
+  onSubmit: (input: string, modelId?: string, image?: string) => Promise<void>;
+  /** 添加消息到聊天的回調函數 */
+  onSendMessage?: (message: ChatMessage) => void;
+  /** 是否正在載入中 */
+  isLoading: boolean;
+}
+
+/**
+ * 圖片預覽 Props 介面
+ */
+export interface ImagePreviewProps {
+  /** 上傳的圖片 (base64 格式) */
+  image: string;
+  /** 移除圖片的回調函數 */
+  onRemove: () => void;
+  /** 獲取檔案名稱的函數 */
+  getFileName: () => string | undefined;
+}
+
+/**
+ * 功能按鈕 Props 介面
+ */
+export interface ActionButtonsProps {
+  /** 資料庫搜尋是否啟用 */
+  isDbSearchActive: boolean;
+  /** 切換資料庫搜尋的函數 */
+  toggleDbSearch: () => void;
+  /** 處理圖片上傳的函數 */
+  handleImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  /** 當前選擇的模型 ID */
+  selectedModelId: string;
+  /** 檔案輸入參考 */
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+}

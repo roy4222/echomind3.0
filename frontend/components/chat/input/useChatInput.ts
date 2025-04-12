@@ -2,13 +2,13 @@
  * 聊天輸入自定義 Hook
  */
 import { useState, useRef, FormEvent } from 'react';
-import { ChatMessage } from '../../../lib/types/chat';
+import { ChatMessage, ChatInputProps } from '@/lib/types/chat';
 import { DEFAULT_MODEL_ID, MAX_IMAGE_SIZE, IMAGE_ERROR_MESSAGE } from './constants';
 
 /**
  * 聊天輸入 Hook 參數介面
  */
-interface UseChatInputProps {
+interface UseChatInputProps extends ChatInputProps {
   /** 提交訊息的回調函數 */
   onSubmit: (input: string, modelId?: string, image?: string) => Promise<void>;
   /** 添加消息到聊天的回調函數 */

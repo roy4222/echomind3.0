@@ -3,7 +3,7 @@
  * 提供使用者輸入訊息並發送的介面
  */
 import { ArrowUp } from 'lucide-react';
-import { ChatInputProps } from './types';
+import { ChatInputProps } from '@/lib/types/chat';
 import { useChatInput } from './useChatInput';
 import { ModelSelector } from './ModelSelector';
 import { ImagePreview } from './ImagePreview';
@@ -50,9 +50,9 @@ export function ChatInput({ onSubmit, onSendMessage, isLoading }: ChatInputProps
           {/* 已上傳圖片顯示區域 - Grok 風格 */}
           {uploadedImage && selectedModelId === 'maverick' && (
             <ImagePreview 
-              uploadedImage={uploadedImage} 
-              removeUploadedImage={removeUploadedImage} 
-              fileName={getFileName()}
+              image={uploadedImage} 
+              onRemove={removeUploadedImage} 
+              getFileName={getFileName}
             />
           )}
           

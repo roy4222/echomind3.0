@@ -1,7 +1,7 @@
 /**
  * 聊天輸入相關常數
  */
-import { ModelOption } from './types';
+import { ModelOption } from '@/lib/types/model';
 
 /**
  * 圖片上傳相關常數

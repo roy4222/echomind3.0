@@ -1,15 +1,17 @@
 /**
  * 圖片預覽組件
  */
-import { ImagePreviewProps } from './types';
+import { ImagePreviewProps } from '@/lib/types/chat';
 
 /**
  * 圖片預覽組件 - 類似 Grok 的內嵌式縮圖設計
  * @param props - 組件屬性
  * @returns 圖片預覽 JSX 元素
  */
-export function ImagePreview({ uploadedImage, removeUploadedImage, fileName }: ImagePreviewProps) {
-  if (!uploadedImage) return null;
+export function ImagePreview({ image, onRemove, getFileName }: ImagePreviewProps) {
+  if (!image) return null;
+  
+  const fileName = getFileName();
 
   return (
     <div className="px-4 pt-3">
@@ -17,7 +19,7 @@ export function ImagePreview({ uploadedImage, removeUploadedImage, fileName }: I
         {/* 縮圖 */}
         <div className="flex-shrink-0 w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
           <img 
-            src={uploadedImage} 
+            src={image} 
             alt="縮圖" 
             className="w-full h-full object-cover"
           />
@@ -29,14 +31,15 @@ export function ImagePreview({ uploadedImage, removeUploadedImage, fileName }: I
         </div>
         
         {/* 關閉按鈕 */}
-        <button 
-          type="button" 
-          onClick={removeUploadedImage}
+        <button
+          type="button"
+          onClick={onRemove}
           className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
           aria-label="移除圖片"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
         </button>
       </div>
