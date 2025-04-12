@@ -293,11 +293,19 @@ export const ChatMessageList = ({
             <div className="relative rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 px-5 py-3 border border-gray-200 dark:border-gray-700">
               {/* 氣泡尖角 */}
               <div className="absolute top-3 left-[-6px] w-3 h-3 rotate-45 bg-gray-50 dark:bg-gray-800" />
-              {/* 三點載入動畫 */}
-              <div className="flex space-x-2">
-                <div className="h-2.5 w-2.5 animate-bounce rounded-full bg-gray-400 dark:bg-gray-500 [animation-delay:-0.3s]"></div>
-                <div className="h-2.5 w-2.5 animate-bounce rounded-full bg-gray-400 dark:bg-gray-500 [animation-delay:-0.15s]"></div>
-                <div className="h-2.5 w-2.5 animate-bounce rounded-full bg-gray-400 dark:bg-gray-500"></div>
+              {/* 脈動圓點載入動畫 */}
+              <div className="flex justify-center items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" className="text-gray-400 dark:text-gray-500">
+                  <circle cx="4" cy="12" r="1.5" fill="currentColor">
+                    <animate attributeName="r" dur="0.75s" repeatCount="indefinite" values="1.5;3;1.5"/>
+                  </circle>
+                  <circle cx="12" cy="12" r="3" fill="currentColor">
+                    <animate attributeName="r" dur="0.75s" repeatCount="indefinite" values="3;1.5;3"/>
+                  </circle>
+                  <circle cx="20" cy="12" r="1.5" fill="currentColor">
+                    <animate attributeName="r" dur="0.75s" repeatCount="indefinite" values="1.5;3;1.5"/>
+                  </circle>
+                </svg>
               </div>
             </div>
           </div>
