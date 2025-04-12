@@ -4,13 +4,14 @@
 import { useState, useRef, FormEvent } from 'react';
 import { ChatMessage, ChatInputProps } from '@/lib/types/chat';
 import { DEFAULT_MODEL_ID, MAX_IMAGE_SIZE, IMAGE_ERROR_MESSAGE } from './constants';
+import { chatClient } from '@/lib/services/chatClient';
 
 /**
  * 聊天輸入 Hook 參數介面
  */
 interface UseChatInputProps extends ChatInputProps {
   /** 提交訊息的回調函數 */
-  onSubmit: (input: string, modelId?: string, image?: string) => Promise<void>;
+  onSubmit: (input: string, modelId?: string, image?: string, startChat?: boolean) => Promise<void>;
   /** 添加消息到聊天的回調函數 */
   onSendMessage?: (message: ChatMessage) => void;
   /** 是否正在載入中 */
@@ -71,6 +72,7 @@ export function useChatInput({ onSubmit, onSendMessage, isLoading }: UseChatInpu
   // 圖片上傳狀態
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isChatStarted, setIsChatStarted] = useState(false);
 
   /**
    * 獲取上傳的檔案名稱
@@ -129,7 +131,19 @@ export function useChatInput({ onSubmit, onSendMessage, isLoading }: UseChatInpu
     if (!inputValue.trim() || isLoading || isSearching) return;
     
     try {
-      // 添加用戶訊息到聊天界面 (無論是否有圖片都相同)
+      // 清空輸入框
+      setInputValue('');
+      
+      // 根據是否啟用資料庫搜尋模式決定處理方式
+      if (isDbSearchActive) {
+        // 資料庫搜尋模式 - 使用向量搜尋
+        setIsSearching(true);
+        await handleVectorSearch(inputValue);
+        // 在資料庫搜尋模式下，不需要發送 AI 請求
+        return;
+      } 
+      
+      // 一般聊天模式 - 添加用戶訊息到聊天界面
       if (onSendMessage) {
         onSendMessage({
           role: 'user',
@@ -140,15 +154,14 @@ export function useChatInput({ onSubmit, onSendMessage, isLoading }: UseChatInpu
         });
       }
       
-      // 清空輸入框
-      setInputValue('');
       setIsSearching(true);
       
-      // 根據是否有圖片調用不同的提交函數
       if (uploadedImage && selectedModelId === 'maverick') {
+        // 圖片上傳模式 - 使用多模態模型
         await onSubmit(inputValue, selectedModelId, uploadedImage);
         removeUploadedImage();
       } else {
+        // 普通聊天模式
         await onSubmit(inputValue, selectedModelId);
       }
     } catch (error) {
@@ -163,29 +176,18 @@ export function useChatInput({ onSubmit, onSendMessage, isLoading }: UseChatInpu
    * @param query - 搜尋查詢
    */
   const handleVectorSearch = async (query: string) => {
-    if (!onSendMessage) {
-      console.error('沒有提供 onSendMessage 回調');
+    // 檢查回調函數
+    if (!onSubmit) {
+      console.error('沒有提供回調函數');
       return;
     }
     
-    // 添加使用者訊息到聊天
-    onSendMessage({
-      id: Date.now().toString(),
-      role: 'user',
-      content: query,
-      createdAt: Date.now(),
-    });
-    
-    // 設置搜尋狀態
-    setIsSearching(true);
-    
     try {
-      // 調用提交函數
-      await onSubmit(query, selectedModelId);
+      // 使用 database 作為模型 ID 調用 onSubmit
+      // 這會觸發 ChatInterface 中的特殊處理邏輯
+      await onSubmit(query, "database", undefined, true);
     } catch (error) {
       console.error('向量搜尋錯誤:', error);
-    } finally {
-      setIsSearching(false);
     }
   };
 

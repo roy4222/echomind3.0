@@ -95,9 +95,94 @@ export function ChatInterface({
    * @param input 用戶輸入的文字
    * @param modelId 選擇的模型 ID (可選)
    * @param image 上傳的圖片 (base64 格式，可選)
+   * @param startChat 是否強制開始聊天，即使沒有輸入 (用於向量搜尋)
    */
-  const handleSubmit = async (input: string, modelId?: string, image?: string) => {
-    if (!input.trim() && !image) return;
+  const handleSubmit = async (input: string, modelId?: string, image?: string, startChat?: boolean) => {
+    if (!input.trim() && !image && !startChat) return;
+    
+    // 如果明確設置開始聊天狀態，直接設置為 true
+    if (startChat && !isChatStarted) {
+      setIsChatStarted(true);
+    }
+    
+    // 檢查是否為資料庫搜尋結果
+    if (modelId === 'database') {
+      // 確保聊天已開始
+      if (!isChatStarted) {
+        setIsChatStarted(true);
+      }
+      
+      try {
+        setIsLoading(true);
+        
+        // 創建用戶訊息
+        const userMessage: ChatMessage = {
+          role: 'user',
+          content: input.trim(),
+          id: Date.now().toString(),
+          createdAt: Date.now(),
+        };
+        
+        // 更新訊息列表
+        setMessages(prev => [...prev, userMessage]);
+        
+        // 呼叫向量搜尋 API
+        const response = await chatClient.searchFaq(input, 5);
+        
+        if (!response.success) {
+          throw new Error(response.error?.message || '向量搜尋失敗');
+        }
+        
+        // 取得結果陣列
+        const results = response.data?.results || response.results || [];
+        
+        // 如果有搜尋結果，將其格式化為助手訊息
+        let responseContent = '';
+        if (results && results.length > 0) {
+          // 創建回應訊息
+          responseContent = '📚 **資料庫搜尋結果**\n\n';
+          
+          // 添加搜尋結果
+          results.forEach((result: any, index: number) => {
+            responseContent += `### ${index + 1}. ${result.question}\n`;
+            responseContent += `${result.answer}\n\n`;
+            
+            // 如果有類別，添加類別信息
+            if (result.category) {
+              responseContent += `**類別**: ${result.category}\n`;
+            }
+            
+            // 如果有標籤，添加標籤信息
+            if (result.tags && result.tags.length > 0) {
+              responseContent += `**標籤**: ${result.tags.join(', ')}\n`;
+            }
+            
+            responseContent += `---\n\n`;
+          });
+        } else {
+          // 沒有搜尋結果
+          responseContent = '❓ 抱歉，在資料庫中沒有找到相關的資訊。請嘗試使用不同的關鍵詞，或者切換到一般聊天模式。';
+        }
+        
+        // 創建助手訊息
+        const assistantMessage: ChatMessage = {
+          role: 'assistant',
+          content: responseContent,
+          id: (Date.now() + 1).toString(),
+          createdAt: Date.now() + 1,
+        };
+        
+        // 更新訊息列表
+        setMessages(prev => [...prev, assistantMessage]);
+      } catch (error) {
+        console.error('向量搜尋錯誤:', error);
+        setError(error instanceof Error ? error.message : '發生未知錯誤');
+      } finally {
+        setIsLoading(false);
+      }
+      
+      return;
+    }
     
     try {
       // 更新當前選擇的模型 ID (如果提供了新的模型 ID)
@@ -158,6 +243,22 @@ export function ChatInterface({
           console.error('圖片上傳失敗:', uploadError);
           toast.error('圖片上傳失敗，但會繼續發送文字訊息');
         }
+      }
+      
+      // 檢查是否為資料庫搜尋結果
+      if (modelId === 'database') {
+        // 如果是資料庫搜尋結果，直接添加助手訊息
+        const assistantMessage: ChatMessage = {
+          role: 'assistant',
+          content: input,
+          id: (Date.now() + 1).toString(),
+          createdAt: Date.now(),
+        };
+        
+        // 更新訊息列表，但不包含用戶訊息
+        setMessages(prev => [...prev, assistantMessage]);
+        setIsLoading(false);
+        return;
       }
       
       // 更新訊息列表
@@ -232,12 +333,10 @@ export function ChatInterface({
   };
 
   /**
-   * 處理直接添加消息到聊天
-   * 用於向量搜索等需要繞過常規流程的情況
-   * @param message - 聊天消息
+   * 處理添加訊息到聊天界面
+   * @param message 要添加的訊息
    */
   const handleSendMessage = (message: ChatMessage) => {
-    // 添加消息到聊天
     setMessages(prev => [...prev, message]);
     
     // 如果是第一條消息，設置聊天已開始

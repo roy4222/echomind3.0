@@ -149,89 +149,80 @@ export class ApiService {
     message: string;
     details?: any;
   }> {
+    console.log('測試向量搜尋 API...');
+    const testQuery = "這是一個測試查詢";
+    
     try {
-      // 先測試健康檢查端點
-      const pingTest = await this.testConnection();
+      const searchUrl = `${this.baseUrl}/api/faq`;
+      console.log('向量搜尋測試 URL:', searchUrl);
       
-      if (!pingTest.success) {
-        return {
-          success: false,
-          pingSuccess: false,
-          message: `API 服務無法連接: ${pingTest.message}`,
-          details: pingTest
-        };
-      }
+      const response = await fetch(searchUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: testQuery,
+          topK: 1,
+        }),
+      });
       
-      // 測試向量搜尋端點
-      console.log('測試向量搜尋 API...');
-      const testQuery = "這是一個測試查詢";
-      
-      try {
-        const searchUrl = `${this.baseUrl}/api/vector-search`;
-        console.log('向量搜尋測試 URL:', searchUrl);
+      if (!response.ok) {
+        let errorMsg = `向量搜尋端點回應錯誤: ${response.status} ${response.statusText}`;
         
-        const response = await fetch(searchUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            query: testQuery,
-            topK: 1,
-          }),
-        });
-        
-        if (!response.ok) {
-          let errorMsg = `向量搜尋端點回應錯誤: ${response.status} ${response.statusText}`;
-          
-          try {
-            const errorData = await response.json();
-            return {
-              success: false,
-              pingSuccess: true,
-              searchSuccess: false,
-              message: errorMsg,
-              details: errorData
-            };
-          } catch (e) {
-            return {
-              success: false, 
-              pingSuccess: true,
-              searchSuccess: false,
-              message: errorMsg,
-              details: { status: response.status }
-            };
-          }
+        try {
+          const errorData = await response.json();
+          errorMsg += ` - ${JSON.stringify(errorData)}`;
+        } catch (e) {
+          // 解析 JSON 失敗，忽略
         }
         
-        const result = await response.json();
-        return {
-          success: true,
-          pingSuccess: true,
-          searchSuccess: true,
-          message: '向量搜尋 API 連接成功',
-          details: {
-            resultsCount: result.results?.length || 0,
-            responseData: result
-          }
-        };
-      } catch (error) {
+        console.error(errorMsg);
         return {
           success: false,
           pingSuccess: true,
           searchSuccess: false,
-          message: `向量搜尋請求失敗: ${error instanceof Error ? error.message : '未知錯誤'}`,
-          details: { error: String(error) }
+          message: errorMsg,
         };
       }
+      
+      const data = await response.json();
+      console.log('向量搜尋測試回應:', data);
+      
+      if (!data.success) {
+        return {
+          success: false,
+          pingSuccess: true,
+          searchSuccess: false,
+          message: `向量搜尋端點回應錯誤: ${data.error?.message || 'Unknown error'}`,
+          details: data.error,
+        };
+      }
+      
+      return {
+        success: true,
+        pingSuccess: true,
+        searchSuccess: true,
+        message: `向量搜尋測試成功，找到 ${data.results?.length || 0} 個結果`,
+        details: {
+          resultsCount: data.results?.length || 0,
+          firstResult: data.results?.[0] ? {
+            id: data.results[0].id,
+            score: data.results[0].score,
+          } : null,
+        },
+      };
     } catch (error) {
+      const errorMsg = `向量搜尋測試失敗: ${error instanceof Error ? error.message : String(error)}`;
+      console.error(errorMsg);
+      
       return {
         success: false,
-        message: `API 測試過程發生錯誤: ${error instanceof Error ? error.message : '未知錯誤'}`,
-        details: { error: String(error) }
+        message: errorMsg,
       };
     }
   }
+
 }
 
 // 建立並匯出默認的 API 服務實例

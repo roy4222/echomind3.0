@@ -2,6 +2,9 @@ import { Env } from '../index';
 import { corsHeaders, getCorsHeadersForRequest } from '../utils/cors';
 import { verifyAuth } from '../middlewares/auth';
 import type { ChatMessage, ChatCompletionOptions, GroqChatResponse } from './../types/chat';
+import { createSuccessResponse, createErrorResponse, handleError, ExternalApiError } from '../utils/errorHandler';
+import { createEnvironmentManager } from '../utils/environment';
+import { MODEL_MAPPING, getModelConfig, modelSupportsImages } from '../config/models';
 
 /**
  * 系統提示詞設定
@@ -22,40 +25,9 @@ const SYSTEM_PROMPT: ChatMessage = {
 /**
  * 預設配置參數
  */
-const DEFAULT_MODEL = 'meta-llama/llama-4-maverick-17b-128e-instruct';  // 預設使用的語言模型
-const DEFAULT_TEMPERATURE = 0.7;                // 預設的溫度參數
-const DEFAULT_MAX_TOKENS = 2048;               // 預設的最大 token 數
-
-/**
- * 模型參數映射表
- * 提供不同模型的配置參數和顯示名稱
- */
-const MODEL_MAPPING = {
-  default: {
-    name: 'llama-3.1-8b-instant',
-    displayName: 'Llama 3.1 8B Instant',
-    temperature: 0.7,
-    maxTokens: 2048
-  },
-  advanced: {
-    name: 'deepseek-r1-distill-llama-70b',
-    displayName: 'Deepseek R1 Distill Llama 70B',
-    temperature: 0.5,
-    maxTokens: 4096
-  },
-  creative: {
-    name: 'qwen-2.5-32b',
-    displayName: 'Qwen 2.5 32B',
-    temperature: 0.9,
-    maxTokens: 3072
-  },
-  maverick: {
-    name: 'meta-llama/llama-4-maverick-17b-128e-instruct',
-    displayName: 'Llama 4 Maverick 17B',
-    temperature: 0.7,
-    maxTokens: 4096
-  }
-};
+const DEFAULT_MODEL = getModelConfig('default').name;
+const DEFAULT_TEMPERATURE = getModelConfig('default').temperature;
+const DEFAULT_MAX_TOKENS = getModelConfig('default').maxTokens;
 
 /**
  * 處理聊天請求
@@ -73,25 +45,22 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
     apiKeyLength: env.GROQ_API_KEY ? env.GROQ_API_KEY.length : 0,
   });
   
-  // 添加 CORS 標頭
-  const headers = { ...getCorsHeadersForRequest(request), 'Content-Type': 'application/json' };
+  // 生成請求 ID 用於追蹤
+  const requestId = crypto.randomUUID();
   
   try {
     // 驗證請求方法
     if (request.method !== 'POST') {
-      console.log('❌ 請求失敗: 方法不允許 -', request.method);
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: '方法不允許' } 
-      }), { 
-        status: 405, 
-        headers 
+      console.log(`❌ [${requestId}] 請求失敗: 方法不允許 -`, request.method);
+      return createErrorResponse('方法不允許', 405, request, { 
+        code: 'method_not_allowed',
+        requestId 
       });
     }
     
     // 解析請求數據
     const data = await request.json() as ChatCompletionOptions;
-    console.log('📝 請求內容摘要:', {
+    console.log(`📝 [${requestId}] 請求內容摘要:`, {
       messagesCount: data.messages?.length || 0,
       requestedModel: data.model || DEFAULT_MODEL,
       temperature: data.temperature || DEFAULT_TEMPERATURE,
@@ -101,54 +70,54 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
     
     // 檢查必要參數
     if (!data.messages || !Array.isArray(data.messages) || data.messages.length === 0) {
-      console.log('❌ 請求失敗: 缺少聊天訊息');
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: { message: '缺少聊天訊息' } 
-      }), { 
-        status: 400, 
-        headers 
+      console.log(`❌ [${requestId}] 請求失敗: 缺少聊天訊息`);
+      return createErrorResponse('缺少聊天訊息', 400, request, { 
+        code: 'missing_messages',
+        requestId 
       });
     }
     
-    console.log('🔄 開始調用 Groq API...');
+    console.log(`🔄 [${requestId}] 開始調用 Groq API...`);
     // 調用 Groq API
-    const groqResponse = await callGroqApi(data, env);
-    
-    console.log('✅ Groq API 調用成功');
-    console.log('回應摘要:', {
-      model: groqResponse.model,
-      totalTokens: groqResponse.usage?.total_tokens || 0,
-      responseTime: new Date().toISOString(), // 使用當前時間代替
-      firstResponseWords: groqResponse.choices[0]?.message?.content?.substring(0, 50) + '...' || '無內容'
-    });
-    
-    // 返回成功回應
-    return new Response(JSON.stringify({
-      success: true,
-      data: groqResponse
-    }), { 
-      status: 200, 
-      headers 
-    });
+    try {
+      const groqResponse = await callGroqApi(data, env);
+      
+      console.log(`✅ [${requestId}] Groq API 調用成功`);
+      console.log(`回應摘要:`, {
+        model: groqResponse.model,
+        totalTokens: groqResponse.usage?.total_tokens || 0,
+        responseTime: new Date().toISOString(), // 使用當前時間代替
+        firstResponseWords: groqResponse.choices[0]?.message?.content?.substring(0, 50) + '...' || '無內容'
+      });
+      
+      // 返回成功回應
+      return createSuccessResponse(groqResponse, 200, request, requestId);
+    } catch (error) {
+      // 處理 Groq API 特定錯誤
+      console.error(`❌ [${requestId}] Groq API 調用失敗:`, error);
+      
+      // 如果是外部 API 錯誤，返回更具體的錯誤訊息
+      if (error instanceof ExternalApiError) {
+        return createErrorResponse(
+          `AI 服務暫時不可用: ${error.message}`, 
+          503, 
+          request, 
+          { code: 'groq_api_error', requestId }
+        );
+      }
+      
+      // 返回一般錯誤
+      return createErrorResponse(
+        error instanceof Error ? error.message : '處理聊天請求時發生錯誤',
+        500,
+        request,
+        { requestId }
+      );
+    }
     
   } catch (error) {
-    console.error('❌ 聊天處理錯誤:', error);
-    console.error('錯誤詳情:', error instanceof Error ? {
-      message: error.message,
-      stack: error.stack
-    } : '未知錯誤類型');
-    
-    // 返回錯誤回應
-    return new Response(JSON.stringify({
-      success: false,
-      error: {
-        message: error instanceof Error ? error.message : '處理聊天請求時發生錯誤'
-      }
-    }), { 
-      status: 500, 
-      headers 
-    });
+    // 處理一般錯誤
+    return handleError(error, request, requestId);
   }
 }
 
@@ -164,6 +133,9 @@ async function callGroqApi(
 ): Promise<GroqChatResponse> {
   try {
     const url = 'https://api.groq.com/openai/v1/chat/completions';
+    
+    // 建立環境變數管理器
+    const envManager = createEnvironmentManager(env);
     
     // 根據前端選擇的模型 ID 映射到實際模型名稱和參數
     let actualModel = DEFAULT_MODEL;
@@ -206,10 +178,12 @@ async function callGroqApi(
       hasImage: !!image
     });
     
-    // 檢查 API 金鑰
-    if (!env.GROQ_API_KEY) {
-      console.error('❌ 缺少 Groq API 金鑰');
-      throw new Error('未設定 Groq API 金鑰');
+    // 驗證 Groq 環境變數
+    try {
+      envManager.validateGroq();
+    } catch (error) {
+      console.error('❌ Groq 環境變數驗證失敗:', error);
+      throw new ExternalApiError('未設定 API 金鑰', 'Groq');
     }
     
     // 在訊息開頭加入系統提示詞
@@ -224,9 +198,9 @@ async function callGroqApi(
       max_tokens: actualMaxTokens
     };
 
-    // 如果是 maverick 模型且有圖片，添加圖片到請求中
-    if (model === 'maverick' && image) {
-      console.log('🖼️ 檢測到圖片上傳，添加到 maverick 模型請求中');
+    // 如果是支援圖片的模型且有圖片，添加圖片到請求中
+    if (modelSupportsImages(actualModel) && image) {
+      console.log(`🖼️ 檢測到圖片上傳，添加到 ${modelDisplayName} 模型請求中`);
       
       // 修改最後一條用戶訊息，添加圖片
       const lastUserMessageIndex = requestBody.messages.findIndex(
@@ -278,7 +252,13 @@ async function callGroqApi(
         statusText: response.statusText,
         errorData: errorData
       });
-      throw new Error(`Groq API 錯誤: ${JSON.stringify(errorData)}`);
+      
+      // 使用專門的外部 API 錯誤類型
+      throw new ExternalApiError(
+        JSON.stringify(errorData),
+        'Groq',
+        response.status
+      );
     }
     
     // 解析回應
@@ -293,12 +273,22 @@ async function callGroqApi(
     return responseData;
     
   } catch (error) {
+    // 如果已經是 ExternalApiError，直接拋出
+    if (error instanceof ExternalApiError) {
+      throw error;
+    }
+    
+    // 否則包裝為 ExternalApiError
     console.error('❌ Groq API 請求錯誤:', error);
     console.error('錯誤詳情:', error instanceof Error ? {
       name: error.name,
       message: error.message,
       stack: error.stack
     } : '未知錯誤類型');
-    throw error;
+    
+    throw new ExternalApiError(
+      error instanceof Error ? error.message : '與 Groq API 通訊時發生錯誤',
+      'Groq'
+    );
   }
 } 

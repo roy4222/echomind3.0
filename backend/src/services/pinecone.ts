@@ -94,7 +94,7 @@ export class PineconeClient {
    * @param threshold 相似度閾值
    * @returns FAQ 搜尋結果
    */
-  async searchFaqs(query: string, limit: number = 5, threshold: number = 0.2): Promise<FaqSearchResult[]> {
+  async searchFaqs(query: string, limit: number = 5, threshold: number = 0.1): Promise<FaqSearchResult[]> {
     try {
       // 檢查必要的配置
       if (!this.apiKey) {

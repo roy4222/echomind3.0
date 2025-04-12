@@ -2466,30 +2466,9 @@ init_modules_watch_stub();
 init_checked_fetch();
 init_modules_watch_stub();
 
-// src/utils/cors.ts
+// src/services/storage.ts
 init_checked_fetch();
 init_modules_watch_stub();
-function getCorsHeadersForRequest(request) {
-  const origin = request.headers.get("Origin");
-  return {
-    "Access-Control-Allow-Origin": origin || "*",
-    // 使用請求的來源或 '*'
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
-    "Access-Control-Max-Age": "86400",
-    "Access-Control-Allow-Credentials": "true",
-    "Cross-Origin-Opener-Policy": "same-origin-allow-popups"
-  };
-}
-__name(getCorsHeadersForRequest, "getCorsHeadersForRequest");
-function handleCors(request) {
-  return new Response(null, {
-    status: 204,
-    // No content
-    headers: getCorsHeadersForRequest(request)
-  });
-}
-__name(handleCors, "handleCors");
 
 // node_modules/@aws-sdk/client-s3/dist-es/S3Client.js
 init_checked_fetch();
@@ -13650,53 +13629,422 @@ var PutObjectCommand = class extends Command.classBuilder().ep({
   }
 };
 
-// src/handlers/upload.ts
-var S3_CLIENT = null;
-function getS3Client(env) {
-  if (S3_CLIENT) return S3_CLIENT;
-  console.log("\u521D\u59CB\u5316 S3 \u5BA2\u6236\u7AEF...", {
-    endpoint: env.R2_API_ENDPOINT,
-    hasAccessKey: !!env.R2_ACCESS_KEY_ID,
-    hasSecretKey: !!env.R2_SECRET_ACCESS_KEY
-  });
-  S3_CLIENT = new S3Client({
-    region: "auto",
-    endpoint: env.R2_API_ENDPOINT,
-    credentials: {
-      accessKeyId: env.R2_ACCESS_KEY_ID,
-      secretAccessKey: env.R2_SECRET_ACCESS_KEY
-    },
-    forcePathStyle: true
-  });
-  return S3_CLIENT;
+// src/utils/environment.ts
+init_checked_fetch();
+init_modules_watch_stub();
+
+// src/utils/errorHandler.ts
+init_checked_fetch();
+init_modules_watch_stub();
+
+// src/utils/cors.ts
+init_checked_fetch();
+init_modules_watch_stub();
+function getCorsHeadersForRequest(request) {
+  const origin = request.headers.get("Origin");
+  return {
+    "Access-Control-Allow-Origin": origin || "*",
+    // 使用請求的來源或 '*'
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+    "Access-Control-Max-Age": "86400",
+    "Access-Control-Allow-Credentials": "true",
+    "Cross-Origin-Opener-Policy": "same-origin-allow-popups"
+  };
 }
-__name(getS3Client, "getS3Client");
+__name(getCorsHeadersForRequest, "getCorsHeadersForRequest");
+function handleCors(request) {
+  return new Response(null, {
+    status: 204,
+    // No content
+    headers: getCorsHeadersForRequest(request)
+  });
+}
+__name(handleCors, "handleCors");
+
+// src/utils/errorHandler.ts
+function createErrorResponse(message, status = 500, request, options) {
+  const { code, details, requestId } = options || {};
+  const errorResponse = {
+    success: false,
+    error: {
+      message,
+      ...code ? { code } : {},
+      ...details ? { details } : {}
+    },
+    ...requestId ? { requestId } : {}
+  };
+  const headers = {
+    "Content-Type": "application/json"
+  };
+  if (request) {
+    Object.assign(headers, getCorsHeadersForRequest(request));
+  }
+  return new Response(JSON.stringify(errorResponse), {
+    status,
+    headers
+  });
+}
+__name(createErrorResponse, "createErrorResponse");
+function createSuccessResponse(data, status = 200, request, requestId) {
+  const successResponse = {
+    success: true,
+    data,
+    ...requestId ? { requestId } : {}
+  };
+  const headers = {
+    "Content-Type": "application/json"
+  };
+  if (request) {
+    Object.assign(headers, getCorsHeadersForRequest(request));
+  }
+  return new Response(JSON.stringify(successResponse), {
+    status,
+    headers
+  });
+}
+__name(createSuccessResponse, "createSuccessResponse");
+function handleError(error, request, requestId) {
+  console.error(`\u{1F534} [${requestId || "ERROR"}] \u8655\u7406\u932F\u8AA4:`, error);
+  let message = "\u4F3A\u670D\u5668\u5167\u90E8\u932F\u8AA4";
+  let status = 500;
+  let details = void 0;
+  if (error instanceof Error) {
+    message = error.message;
+    console.error(`\u{1F534} [${requestId || "ERROR"}] \u932F\u8AA4\u8A73\u60C5:`, {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    if (error.name === "ValidationError") {
+      status = 400;
+    } else if (error.name === "AuthenticationError") {
+      status = 401;
+    } else if (error.name === "AuthorizationError") {
+      status = 403;
+    } else if (error.name === "NotFoundError") {
+      status = 404;
+    }
+    if (error.details) {
+      details = error.details;
+    }
+  } else if (typeof error === "string") {
+    message = error;
+  } else if (error && typeof error === "object") {
+    if (error.message) {
+      message = error.message;
+    } else {
+      message = "\u672A\u77E5\u932F\u8AA4";
+      details = error;
+    }
+  }
+  return createErrorResponse(message, status, request, {
+    details,
+    requestId
+  });
+}
+__name(handleError, "handleError");
+var ValidationError = class extends Error {
+  static {
+    __name(this, "ValidationError");
+  }
+  details;
+  constructor(message, details) {
+    super(message);
+    this.name = "ValidationError";
+    this.details = details;
+  }
+};
+var ExternalApiError = class extends Error {
+  static {
+    __name(this, "ExternalApiError");
+  }
+  statusCode;
+  apiName;
+  constructor(message, apiName, statusCode = 500) {
+    super(message);
+    this.name = "ExternalApiError";
+    this.apiName = apiName;
+    this.statusCode = statusCode;
+  }
+};
+
+// src/utils/environment.ts
+function validateEnvVars(env, requiredVars, groupName) {
+  const missingVars = requiredVars.filter((varName) => !env[varName]);
+  if (missingVars.length > 0) {
+    throw new ValidationError(
+      `\u7F3A\u5C11\u5FC5\u8981\u7684${groupName}\u74B0\u5883\u8B8A\u6578: ${missingVars.join(", ")}`,
+      { missingVars, group: groupName }
+    );
+  }
+}
+__name(validateEnvVars, "validateEnvVars");
+var EnvironmentManager = class {
+  static {
+    __name(this, "EnvironmentManager");
+  }
+  env;
+  validated = /* @__PURE__ */ new Set();
+  constructor(env) {
+    this.env = env;
+  }
+  /**
+   * 驗證所有環境變數
+   * @throws ValidationError 如果缺少必要的環境變數
+   */
+  validateAll() {
+    this.validatePinecone();
+    this.validateCohere();
+    this.validateGroq();
+    this.validateR2();
+    this.validateFirebase();
+    console.log("\u2705 \u6240\u6709\u5FC5\u8981\u7684\u74B0\u5883\u8B8A\u6578\u5DF2\u9A57\u8B49\u901A\u904E");
+  }
+  /**
+   * 驗證 Pinecone 環境變數
+   * @returns Pinecone 環境變數對象
+   * @throws ValidationError 如果缺少必要的環境變數
+   */
+  validatePinecone() {
+    if (!this.validated.has("pinecone")) {
+      validateEnvVars(
+        this.env,
+        ["PINECONE_API_KEY", "PINECONE_ENVIRONMENT"],
+        "Pinecone"
+      );
+      if (!this.env.PINECONE_INDEX && !this.env.PINECONE_INDEX_NAME) {
+        throw new ValidationError(
+          "\u7F3A\u5C11\u5FC5\u8981\u7684 Pinecone \u74B0\u5883\u8B8A\u6578: PINECONE_INDEX \u6216 PINECONE_INDEX_NAME",
+          { missingVars: ["PINECONE_INDEX/PINECONE_INDEX_NAME"], group: "Pinecone" }
+        );
+      }
+      this.validated.add("pinecone");
+    }
+    return {
+      PINECONE_API_KEY: this.env.PINECONE_API_KEY,
+      PINECONE_ENVIRONMENT: this.env.PINECONE_ENVIRONMENT,
+      PINECONE_INDEX: this.env.PINECONE_INDEX || this.env.PINECONE_INDEX_NAME || "",
+      PINECONE_API_URL: this.env.PINECONE_API_URL
+    };
+  }
+  /**
+   * 驗證 Cohere 環境變數
+   * @returns Cohere 環境變數對象
+   */
+  validateCohere() {
+    if (!this.validated.has("cohere")) {
+      if (!this.env.COHERE_API_KEY) {
+        console.warn("\u26A0\uFE0F \u7F3A\u5C11 Cohere API \u91D1\u9470\uFF0C\u5C07\u4F7F\u7528\u6A21\u64EC\u5D4C\u5165\u5411\u91CF");
+      }
+      this.validated.add("cohere");
+    }
+    return {
+      COHERE_API_KEY: this.env.COHERE_API_KEY || ""
+    };
+  }
+  /**
+   * 驗證 Groq 環境變數
+   * @returns Groq 環境變數對象
+   * @throws ValidationError 如果缺少必要的環境變數
+   */
+  validateGroq() {
+    if (!this.validated.has("groq")) {
+      validateEnvVars(this.env, ["GROQ_API_KEY"], "Groq");
+      this.validated.add("groq");
+    }
+    return {
+      GROQ_API_KEY: this.env.GROQ_API_KEY
+    };
+  }
+  /**
+   * 驗證 R2 環境變數
+   * @returns R2 環境變數對象
+   * @throws ValidationError 如果缺少必要的環境變數
+   */
+  validateR2() {
+    if (!this.validated.has("r2")) {
+      validateEnvVars(
+        this.env,
+        [
+          "R2_API_ENDPOINT",
+          "R2_ACCESS_KEY_ID",
+          "R2_SECRET_ACCESS_KEY",
+          "R2_BUCKET",
+          "R2_ENDPOINT"
+        ],
+        "R2"
+      );
+      this.validated.add("r2");
+    }
+    return {
+      R2_API_ENDPOINT: this.env.R2_API_ENDPOINT,
+      R2_ACCESS_KEY_ID: this.env.R2_ACCESS_KEY_ID,
+      R2_SECRET_ACCESS_KEY: this.env.R2_SECRET_ACCESS_KEY,
+      R2_BUCKET: this.env.R2_BUCKET,
+      R2_ENDPOINT: this.env.R2_ENDPOINT
+    };
+  }
+  /**
+   * 驗證 Firebase 環境變數
+   * @returns Firebase 環境變數對象
+   * @throws ValidationError 如果缺少必要的環境變數
+   */
+  validateFirebase() {
+    if (!this.validated.has("firebase")) {
+      validateEnvVars(
+        this.env,
+        [
+          "FIREBASE_PROJECT_ID",
+          "FIREBASE_CLIENT_EMAIL",
+          "FIREBASE_PRIVATE_KEY"
+        ],
+        "Firebase"
+      );
+      this.validated.add("firebase");
+    }
+    return {
+      FIREBASE_PROJECT_ID: this.env.FIREBASE_PROJECT_ID,
+      FIREBASE_CLIENT_EMAIL: this.env.FIREBASE_CLIENT_EMAIL,
+      FIREBASE_PRIVATE_KEY: this.env.FIREBASE_PRIVATE_KEY
+    };
+  }
+  /**
+   * 驗證 Python API 環境變數
+   * @returns Python API 環境變數對象
+   */
+  validatePythonApi() {
+    if (this.env.PYTHON_API_URL) {
+      return {
+        PYTHON_API_URL: this.env.PYTHON_API_URL
+      };
+    }
+    return void 0;
+  }
+  /**
+   * 獲取環境變數值
+   * @param key 環境變數鍵名
+   * @returns 環境變數值
+   */
+  get(key) {
+    return this.env[key];
+  }
+};
+function createEnvironmentManager(env) {
+  return new EnvironmentManager(env);
+}
+__name(createEnvironmentManager, "createEnvironmentManager");
+
+// src/services/storage.ts
+var S3_CLIENT = null;
+var StorageService = class {
+  static {
+    __name(this, "StorageService");
+  }
+  s3Client;
+  env;
+  bucket;
+  endpoint;
+  /**
+   * 建立儲存服務實例
+   * @param env 環境變數
+   */
+  constructor(env) {
+    this.env = env;
+    const envManager = createEnvironmentManager(env);
+    const r2Config = envManager.validateR2();
+    this.bucket = r2Config.R2_BUCKET;
+    this.endpoint = r2Config.R2_ENDPOINT;
+    this.s3Client = this.getS3Client();
+  }
+  /**
+   * 獲取 S3 客戶端
+   * 如果已經初始化過，則返回快取的客戶端
+   * @returns S3 客戶端
+   */
+  getS3Client() {
+    if (S3_CLIENT) {
+      console.log("\u4F7F\u7528\u5DF2\u521D\u59CB\u5316\u7684 S3 \u5BA2\u6236\u7AEF");
+      return S3_CLIENT;
+    }
+    console.log("\u521D\u59CB\u5316 S3 \u5BA2\u6236\u7AEF...", {
+      endpoint: this.env.R2_API_ENDPOINT,
+      hasAccessKey: !!this.env.R2_ACCESS_KEY_ID,
+      hasSecretKey: !!this.env.R2_SECRET_ACCESS_KEY
+    });
+    S3_CLIENT = new S3Client({
+      region: "auto",
+      endpoint: this.env.R2_API_ENDPOINT,
+      credentials: {
+        accessKeyId: this.env.R2_ACCESS_KEY_ID,
+        secretAccessKey: this.env.R2_SECRET_ACCESS_KEY
+      },
+      forcePathStyle: true
+    });
+    return S3_CLIENT;
+  }
+  /**
+   * 上傳檔案到 R2 儲存
+   * @param fileContent 檔案內容 (Uint8Array)
+   * @param path 儲存路徑
+   * @param contentType 檔案類型
+   * @returns 檔案 URL
+   */
+  async uploadFile(fileContent, path, contentType) {
+    console.log("\u6E96\u5099\u4E0A\u50B3\u6A94\u6848\u5230 R2...", {
+      bucket: this.bucket,
+      key: path,
+      contentType
+    });
+    try {
+      await this.s3Client.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: path,
+          Body: fileContent,
+          ContentType: contentType
+        })
+      );
+      const fileUrl = `https://${this.endpoint}/${path}`;
+      console.log("\u6A94\u6848\u4E0A\u50B3\u6210\u529F\uFF0CURL:", fileUrl);
+      return fileUrl;
+    } catch (error) {
+      console.error("R2 \u4E0A\u50B3\u932F\u8AA4:", error);
+      throw new ExternalApiError(
+        error instanceof Error ? error.message : "\u4E0A\u50B3\u6A94\u6848\u5931\u6557",
+        "R2 Storage"
+      );
+    }
+  }
+  /**
+   * 檢查檔案大小是否超過限制
+   * @param fileSize 檔案大小 (bytes)
+   * @param maxSize 最大大小 (bytes)，預設 10MB
+   * @returns 是否超過限制
+   */
+  isFileSizeExceeded(fileSize, maxSize = 10 * 1024 * 1024) {
+    return fileSize > maxSize;
+  }
+  /**
+   * 獲取檔案 URL
+   * @param path 檔案路徑
+   * @returns 完整的檔案 URL
+   */
+  getFileUrl(path) {
+    return `https://${this.endpoint}/${path}`;
+  }
+};
+function createStorageService(env) {
+  return new StorageService(env);
+}
+__name(createStorageService, "createStorageService");
+
+// src/handlers/upload.ts
 async function handleUpload(request, env) {
-  const headers = { ...getCorsHeadersForRequest(request), "Content-Type": "application/json" };
   try {
     console.log("\u958B\u59CB\u8655\u7406\u6A94\u6848\u4E0A\u50B3\u8ACB\u6C42");
-    if (!env.R2_BUCKET || !env.R2_ENDPOINT || !env.R2_API_ENDPOINT) {
-      console.error("\u7F3A\u5C11\u5FC5\u8981\u7684 R2 \u74B0\u5883\u8B8A\u6578:", {
-        bucket: !!env.R2_BUCKET,
-        endpoint: !!env.R2_ENDPOINT,
-        apiEndpoint: !!env.R2_API_ENDPOINT
-      });
-      return new Response(JSON.stringify({
-        success: false,
-        error: "\u4F3A\u670D\u5668\u914D\u7F6E\u932F\u8AA4: R2 \u74B0\u5883\u8B8A\u6578\u672A\u8A2D\u7F6E"
-      }), {
-        status: 500,
-        headers
-      });
-    }
     if (request.method !== "POST") {
-      return new Response(JSON.stringify({
-        success: false,
-        error: "\u65B9\u6CD5\u4E0D\u5141\u8A31"
-      }), {
-        status: 405,
-        headers
-      });
+      return createErrorResponse("\u65B9\u6CD5\u4E0D\u5141\u8A31", 405, request);
     }
     const formData = await request.formData();
     const file = formData.get("file");
@@ -13706,13 +14054,7 @@ async function handleUpload(request, env) {
         hasFile: !!file,
         hasPath: !!path
       });
-      return new Response(JSON.stringify({
-        success: false,
-        error: "\u7F3A\u5C11\u6A94\u6848\u6216\u8DEF\u5F91\u53C3\u6578"
-      }), {
-        status: 400,
-        headers
-      });
+      throw new ValidationError("\u7F3A\u5C11\u6A94\u6848\u6216\u8DEF\u5F91\u53C3\u6578");
     }
     console.log("\u4E0A\u50B3\u6A94\u6848\u8CC7\u8A0A:", {
       filename: file.name,
@@ -13720,60 +14062,20 @@ async function handleUpload(request, env) {
       size: `${(file.size / 1024).toFixed(2)} KB`,
       uploadPath: path
     });
-    if (file.size > 10 * 1024 * 1024) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: "\u6A94\u6848\u5927\u5C0F\u4E0D\u80FD\u8D85\u904E 10MB"
-      }), {
-        status: 400,
-        headers
-      });
+    const storageService = createStorageService(env);
+    if (storageService.isFileSizeExceeded(file.size)) {
+      throw new ValidationError("\u6A94\u6848\u5927\u5C0F\u4E0D\u80FD\u8D85\u904E 10MB");
     }
-    const s3Client = getS3Client(env);
     const arrayBuffer = await file.arrayBuffer();
     const fileContent = new Uint8Array(arrayBuffer);
-    console.log("\u6E96\u5099\u767C\u9001\u81F3 R2...", {
-      bucket: env.R2_BUCKET,
-      key: path,
-      contentType: file.type
-    });
-    try {
-      await s3Client.send(
-        new PutObjectCommand({
-          Bucket: env.R2_BUCKET,
-          Key: path,
-          Body: fileContent,
-          ContentType: file.type
-        })
-      );
-    } catch (uploadError) {
-      console.error("R2 \u4E0A\u50B3\u932F\u8AA4:", uploadError);
-      return new Response(JSON.stringify({
-        success: false,
-        error: uploadError instanceof Error ? `R2 \u4E0A\u50B3\u932F\u8AA4: ${uploadError.message}` : "R2 \u4E0A\u50B3\u5931\u6557"
-      }), {
-        status: 500,
-        headers
-      });
-    }
-    const fileUrl = `https://${env.R2_ENDPOINT}/${path}`;
-    console.log("\u6A94\u6848\u4E0A\u50B3\u6210\u529F\uFF0CURL:", fileUrl);
-    return new Response(JSON.stringify({
-      success: true,
-      url: fileUrl
-    }), {
-      status: 200,
-      headers
-    });
+    const fileUrl = await storageService.uploadFile(fileContent, path, file.type);
+    return createSuccessResponse(
+      { success: true, url: fileUrl },
+      200,
+      request
+    );
   } catch (error) {
-    console.error("\u6A94\u6848\u4E0A\u50B3\u8655\u7406\u932F\u8AA4:", error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : "\u8655\u7406\u6A94\u6848\u4E0A\u50B3\u6642\u767C\u751F\u932F\u8AA4"
-    }), {
-      status: 500,
-      headers
-    });
+    return handleError(error, request);
   }
 }
 __name(handleUpload, "handleUpload");
@@ -13781,6 +14083,57 @@ __name(handleUpload, "handleUpload");
 // src/handlers/chat.ts
 init_checked_fetch();
 init_modules_watch_stub();
+
+// src/config/models.ts
+init_checked_fetch();
+init_modules_watch_stub();
+var MODEL_MAPPING = {
+  default: {
+    name: "llama-3.1-8b-instant",
+    displayName: "Llama 3.1 8B Instant",
+    temperature: 0.7,
+    maxTokens: 2048,
+    description: "\u5FEB\u901F\u4E14\u9AD8\u6548\u7684\u6A21\u578B\uFF0C\u9069\u5408\u4E00\u822C\u5C0D\u8A71\u4F7F\u7528"
+  },
+  advanced: {
+    name: "deepseek-r1-distill-llama-70b",
+    displayName: "Deepseek R1 Distill Llama 70B",
+    temperature: 0.5,
+    maxTokens: 4096,
+    description: "\u77E5\u8B58\u8C50\u5BCC\uFF0C\u9069\u5408\u8907\u96DC\u554F\u984C\u8207\u6DF1\u5EA6\u7406\u89E3\u4EFB\u52D9"
+  },
+  creative: {
+    name: "qwen-2.5-32b",
+    displayName: "Qwen 2.5 32B",
+    temperature: 0.9,
+    maxTokens: 3072,
+    description: "\u5E73\u8861\u6548\u80FD\u8207\u8CC7\u6E90\uFF0C\u512A\u79C0\u7684\u8DE8\u8A9E\u8A00\u80FD\u529B"
+  },
+  maverick: {
+    name: "meta-llama/llama-4-maverick-17b-128e-instruct",
+    displayName: "Llama 4 Maverick 17B",
+    temperature: 0.7,
+    maxTokens: 4096,
+    supportsImages: true,
+    description: "\u6700\u65B0\u4E14\u5F37\u5927\u591A\u6A21\u614B\u6A21\u578B\uFF0C\u652F\u63F4\u5716\u50CF\u8207\u6587\u5B57\u8F38\u5165"
+  }
+};
+function getModelConfig(modelType) {
+  return MODEL_MAPPING[modelType] || MODEL_MAPPING.default;
+}
+__name(getModelConfig, "getModelConfig");
+function modelSupportsImages(modelName) {
+  for (const key in MODEL_MAPPING) {
+    const config = MODEL_MAPPING[key];
+    if (config.name === modelName) {
+      return !!config.supportsImages;
+    }
+  }
+  return false;
+}
+__name(modelSupportsImages, "modelSupportsImages");
+
+// src/handlers/chat.ts
 var SYSTEM_PROMPT = {
   role: "system",
   content: `\u4F60\u662F\u8F14\u4EC1\u5927\u5B78\u8CC7\u8A0A\u7BA1\u7406\u5B78\u7CFB\u7684 AI \u52A9\u624B\uFF0C\u540D\u53EB EchoMind\u3002
@@ -13792,35 +14145,9 @@ var SYSTEM_PROMPT = {
   - \u5C08\u6CE8\u65BC\u8CC7\u7BA1\u76F8\u95DC\u7684\u5B78\u8853\u3001\u8AB2\u7A0B\u3001\u5C31\u696D\u8AEE\u8A62
   - \u907F\u514D\u8A0E\u8AD6\u653F\u6CBB\u3001\u5B97\u6559\u7B49\u654F\u611F\u8A71\u984C`
 };
-var DEFAULT_MODEL = "meta-llama/llama-4-maverick-17b-128e-instruct";
-var DEFAULT_TEMPERATURE = 0.7;
-var DEFAULT_MAX_TOKENS = 2048;
-var MODEL_MAPPING = {
-  default: {
-    name: "llama-3.1-8b-instant",
-    displayName: "Llama 3.1 8B Instant",
-    temperature: 0.7,
-    maxTokens: 2048
-  },
-  advanced: {
-    name: "deepseek-r1-distill-llama-70b",
-    displayName: "Deepseek R1 Distill Llama 70B",
-    temperature: 0.5,
-    maxTokens: 4096
-  },
-  creative: {
-    name: "qwen-2.5-32b",
-    displayName: "Qwen 2.5 32B",
-    temperature: 0.9,
-    maxTokens: 3072
-  },
-  maverick: {
-    name: "meta-llama/llama-4-maverick-17b-128e-instruct",
-    displayName: "Llama 4 Maverick 17B",
-    temperature: 0.7,
-    maxTokens: 4096
-  }
-};
+var DEFAULT_MODEL = getModelConfig("default").name;
+var DEFAULT_TEMPERATURE = getModelConfig("default").temperature;
+var DEFAULT_MAX_TOKENS = getModelConfig("default").maxTokens;
 async function handleChat(request, env) {
   console.log("=== \u6536\u5230\u804A\u5929\u8ACB\u6C42 ===");
   console.log("\u8ACB\u6C42 URL:", request.url);
@@ -13830,20 +14157,17 @@ async function handleChat(request, env) {
     hasGroqApiKey: !!env.GROQ_API_KEY,
     apiKeyLength: env.GROQ_API_KEY ? env.GROQ_API_KEY.length : 0
   });
-  const headers = { ...getCorsHeadersForRequest(request), "Content-Type": "application/json" };
+  const requestId = crypto.randomUUID();
   try {
     if (request.method !== "POST") {
-      console.log("\u274C \u8ACB\u6C42\u5931\u6557: \u65B9\u6CD5\u4E0D\u5141\u8A31 -", request.method);
-      return new Response(JSON.stringify({
-        success: false,
-        error: { message: "\u65B9\u6CD5\u4E0D\u5141\u8A31" }
-      }), {
-        status: 405,
-        headers
+      console.log(`\u274C [${requestId}] \u8ACB\u6C42\u5931\u6557: \u65B9\u6CD5\u4E0D\u5141\u8A31 -`, request.method);
+      return createErrorResponse("\u65B9\u6CD5\u4E0D\u5141\u8A31", 405, request, {
+        code: "method_not_allowed",
+        requestId
       });
     }
     const data = await request.json();
-    console.log("\u{1F4DD} \u8ACB\u6C42\u5167\u5BB9\u6458\u8981:", {
+    console.log(`\u{1F4DD} [${requestId}] \u8ACB\u6C42\u5167\u5BB9\u6458\u8981:`, {
       messagesCount: data.messages?.length || 0,
       requestedModel: data.model || DEFAULT_MODEL,
       temperature: data.temperature || DEFAULT_TEMPERATURE,
@@ -13851,53 +14175,50 @@ async function handleChat(request, env) {
       firstUserMessage: data.messages?.[0]?.content?.substring(0, 50) + "..." || "\u7121\u5167\u5BB9"
     });
     if (!data.messages || !Array.isArray(data.messages) || data.messages.length === 0) {
-      console.log("\u274C \u8ACB\u6C42\u5931\u6557: \u7F3A\u5C11\u804A\u5929\u8A0A\u606F");
-      return new Response(JSON.stringify({
-        success: false,
-        error: { message: "\u7F3A\u5C11\u804A\u5929\u8A0A\u606F" }
-      }), {
-        status: 400,
-        headers
+      console.log(`\u274C [${requestId}] \u8ACB\u6C42\u5931\u6557: \u7F3A\u5C11\u804A\u5929\u8A0A\u606F`);
+      return createErrorResponse("\u7F3A\u5C11\u804A\u5929\u8A0A\u606F", 400, request, {
+        code: "missing_messages",
+        requestId
       });
     }
-    console.log("\u{1F504} \u958B\u59CB\u8ABF\u7528 Groq API...");
-    const groqResponse = await callGroqApi(data, env);
-    console.log("\u2705 Groq API \u8ABF\u7528\u6210\u529F");
-    console.log("\u56DE\u61C9\u6458\u8981:", {
-      model: groqResponse.model,
-      totalTokens: groqResponse.usage?.total_tokens || 0,
-      responseTime: (/* @__PURE__ */ new Date()).toISOString(),
-      // 使用當前時間代替
-      firstResponseWords: groqResponse.choices[0]?.message?.content?.substring(0, 50) + "..." || "\u7121\u5167\u5BB9"
-    });
-    return new Response(JSON.stringify({
-      success: true,
-      data: groqResponse
-    }), {
-      status: 200,
-      headers
-    });
-  } catch (error) {
-    console.error("\u274C \u804A\u5929\u8655\u7406\u932F\u8AA4:", error);
-    console.error("\u932F\u8AA4\u8A73\u60C5:", error instanceof Error ? {
-      message: error.message,
-      stack: error.stack
-    } : "\u672A\u77E5\u932F\u8AA4\u985E\u578B");
-    return new Response(JSON.stringify({
-      success: false,
-      error: {
-        message: error instanceof Error ? error.message : "\u8655\u7406\u804A\u5929\u8ACB\u6C42\u6642\u767C\u751F\u932F\u8AA4"
+    console.log(`\u{1F504} [${requestId}] \u958B\u59CB\u8ABF\u7528 Groq API...`);
+    try {
+      const groqResponse = await callGroqApi(data, env);
+      console.log(`\u2705 [${requestId}] Groq API \u8ABF\u7528\u6210\u529F`);
+      console.log(`\u56DE\u61C9\u6458\u8981:`, {
+        model: groqResponse.model,
+        totalTokens: groqResponse.usage?.total_tokens || 0,
+        responseTime: (/* @__PURE__ */ new Date()).toISOString(),
+        // 使用當前時間代替
+        firstResponseWords: groqResponse.choices[0]?.message?.content?.substring(0, 50) + "..." || "\u7121\u5167\u5BB9"
+      });
+      return createSuccessResponse(groqResponse, 200, request, requestId);
+    } catch (error) {
+      console.error(`\u274C [${requestId}] Groq API \u8ABF\u7528\u5931\u6557:`, error);
+      if (error instanceof ExternalApiError) {
+        return createErrorResponse(
+          `AI \u670D\u52D9\u66AB\u6642\u4E0D\u53EF\u7528: ${error.message}`,
+          503,
+          request,
+          { code: "groq_api_error", requestId }
+        );
       }
-    }), {
-      status: 500,
-      headers
-    });
+      return createErrorResponse(
+        error instanceof Error ? error.message : "\u8655\u7406\u804A\u5929\u8ACB\u6C42\u6642\u767C\u751F\u932F\u8AA4",
+        500,
+        request,
+        { requestId }
+      );
+    }
+  } catch (error) {
+    return handleError(error, request, requestId);
   }
 }
 __name(handleChat, "handleChat");
 async function callGroqApi({ messages, model = DEFAULT_MODEL, temperature = DEFAULT_TEMPERATURE, maxTokens = DEFAULT_MAX_TOKENS, image }, env) {
   try {
     const url = "https://api.groq.com/openai/v1/chat/completions";
+    const envManager = createEnvironmentManager(env);
     let actualModel = DEFAULT_MODEL;
     let actualTemperature = temperature;
     let actualMaxTokens = maxTokens;
@@ -13930,9 +14251,11 @@ async function callGroqApi({ messages, model = DEFAULT_MODEL, temperature = DEFA
       maxTokens: actualMaxTokens,
       hasImage: !!image
     });
-    if (!env.GROQ_API_KEY) {
-      console.error("\u274C \u7F3A\u5C11 Groq API \u91D1\u9470");
-      throw new Error("\u672A\u8A2D\u5B9A Groq API \u91D1\u9470");
+    try {
+      envManager.validateGroq();
+    } catch (error) {
+      console.error("\u274C Groq \u74B0\u5883\u8B8A\u6578\u9A57\u8B49\u5931\u6557:", error);
+      throw new ExternalApiError("\u672A\u8A2D\u5B9A API \u91D1\u9470", "Groq");
     }
     const messagesWithSystemPrompt = [SYSTEM_PROMPT, ...messages];
     console.log("\u{1F504} \u6DFB\u52A0\u7CFB\u7D71\u63D0\u793A\u8A5E\uFF0C\u6700\u7D42\u8A0A\u606F\u6578\u91CF:", messagesWithSystemPrompt.length);
@@ -13943,8 +14266,8 @@ async function callGroqApi({ messages, model = DEFAULT_MODEL, temperature = DEFA
       temperature: actualTemperature,
       max_tokens: actualMaxTokens
     };
-    if (model === "maverick" && image) {
-      console.log("\u{1F5BC}\uFE0F \u6AA2\u6E2C\u5230\u5716\u7247\u4E0A\u50B3\uFF0C\u6DFB\u52A0\u5230 maverick \u6A21\u578B\u8ACB\u6C42\u4E2D");
+    if (modelSupportsImages(actualModel) && image) {
+      console.log(`\u{1F5BC}\uFE0F \u6AA2\u6E2C\u5230\u5716\u7247\u4E0A\u50B3\uFF0C\u6DFB\u52A0\u5230 ${modelDisplayName} \u6A21\u578B\u8ACB\u6C42\u4E2D`);
       const lastUserMessageIndex = requestBody.messages.findIndex(
         (msg) => msg.role === "user"
       );
@@ -13986,7 +14309,11 @@ async function callGroqApi({ messages, model = DEFAULT_MODEL, temperature = DEFA
         statusText: response.statusText,
         errorData
       });
-      throw new Error(`Groq API \u932F\u8AA4: ${JSON.stringify(errorData)}`);
+      throw new ExternalApiError(
+        JSON.stringify(errorData),
+        "Groq",
+        response.status
+      );
     }
     const responseData = await response.json();
     console.log(`\u2705 \u6A21\u578B ${modelDisplayName} \u56DE\u61C9\u6210\u529F:`, {
@@ -13996,13 +14323,19 @@ async function callGroqApi({ messages, model = DEFAULT_MODEL, temperature = DEFA
     });
     return responseData;
   } catch (error) {
+    if (error instanceof ExternalApiError) {
+      throw error;
+    }
     console.error("\u274C Groq API \u8ACB\u6C42\u932F\u8AA4:", error);
     console.error("\u932F\u8AA4\u8A73\u60C5:", error instanceof Error ? {
       name: error.name,
       message: error.message,
       stack: error.stack
     } : "\u672A\u77E5\u932F\u8AA4\u985E\u578B");
-    throw error;
+    throw new ExternalApiError(
+      error instanceof Error ? error.message : "\u8207 Groq API \u901A\u8A0A\u6642\u767C\u751F\u932F\u8AA4",
+      "Groq"
+    );
   }
 }
 __name(callGroqApi, "callGroqApi");
@@ -14146,7 +14479,7 @@ var PineconeClient = class {
    * @param threshold 相似度閾值
    * @returns FAQ 搜尋結果
    */
-  async searchFaqs(query, limit = 5, threshold = 0.2) {
+  async searchFaqs(query, limit = 5, threshold = 0.1) {
     try {
       if (!this.apiKey) {
         throw new Error("\u672A\u8A2D\u7F6E Pinecone API \u91D1\u9470");
@@ -14274,108 +14607,32 @@ var PineconeClient = class {
 
 // src/handlers/faq.ts
 async function handleFaq(request, env) {
-  const headers = { ...getCorsHeadersForRequest(request), "Content-Type": "application/json" };
-  try {
-    if (request.method !== "POST") {
-      return new Response(JSON.stringify({
-        success: false,
-        error: { message: "\u65B9\u6CD5\u4E0D\u5141\u8A31" }
-      }), {
-        status: 405,
-        headers
-      });
-    }
-    const { query, limit = 5, threshold = 0.75 } = await request.json();
-    if (!query || typeof query !== "string") {
-      return new Response(JSON.stringify({
-        success: false,
-        error: { message: "\u8ACB\u63D0\u4F9B\u6709\u6548\u7684\u67E5\u8A62" }
-      }), {
-        status: 400,
-        headers
-      });
-    }
-    const pinecone = new PineconeClient(
-      env.PINECONE_API_KEY,
-      env.PINECONE_ENVIRONMENT,
-      env.PINECONE_INDEX
-    );
-    const results = await pinecone.searchFaqs(query, limit, threshold);
-    return new Response(JSON.stringify({
-      success: true,
-      results
-    }), {
-      status: 200,
-      headers
-    });
-  } catch (error) {
-    console.error("FAQ \u67E5\u8A62\u8655\u7406\u932F\u8AA4:", error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: {
-        message: error instanceof Error ? error.message : "\u8655\u7406 FAQ \u67E5\u8A62\u6642\u767C\u751F\u932F\u8AA4"
-      }
-    }), {
-      status: 500,
-      headers
-    });
-  }
-}
-__name(handleFaq, "handleFaq");
-
-// src/handlers/vector-search.ts
-init_checked_fetch();
-init_modules_watch_stub();
-async function handleVectorSearch(request, env) {
-  const headers = { ...getCorsHeadersForRequest(request), "Content-Type": "application/json" };
   const requestId = crypto.randomUUID();
-  console.log(`\u{1F50D} [${requestId}] \u958B\u59CB\u8655\u7406\u5411\u91CF\u641C\u7D22\u8ACB\u6C42`);
+  console.log(`\u2753 [${requestId}] \u958B\u59CB\u8655\u7406 FAQ \u67E5\u8A62\u8ACB\u6C42`);
   try {
     if (request.method !== "POST") {
-      return new Response(JSON.stringify({
-        success: false,
-        error: { message: "\u65B9\u6CD5\u4E0D\u5141\u8A31" }
-      }), {
-        status: 405,
-        headers
-      });
+      return createErrorResponse("\u65B9\u6CD5\u4E0D\u5141\u8A31", 405, request);
     }
     const requestData = await request.json();
-    const { query, topK = 3, category, minImportance } = requestData;
-    console.log(`\u{1F50D} [${requestId}] \u641C\u7D22\u53C3\u6578:`, {
+    const {
       query,
-      topK,
+      limit = 5,
+      threshold = 0.1,
       category,
-      minImportance
+      minImportance,
+      topK
+    } = requestData;
+    const resultLimit = topK || limit;
+    console.log(`\u2753 [${requestId}] \u641C\u7D22\u53C3\u6578:`, {
+      query,
+      limit: resultLimit,
+      threshold,
+      category: category || "\u672A\u6307\u5B9A",
+      minImportance: minImportance !== void 0 ? minImportance : "\u672A\u6307\u5B9A"
     });
     if (!query || typeof query !== "string") {
-      return new Response(JSON.stringify({
-        success: false,
-        error: { message: "\u8ACB\u63D0\u4F9B\u6709\u6548\u7684\u67E5\u8A62" }
-      }), {
-        status: 400,
-        headers
-      });
+      throw new ValidationError("\u8ACB\u63D0\u4F9B\u6709\u6548\u7684\u67E5\u8A62");
     }
-    if (!env.PINECONE_API_KEY) {
-      console.error(`\u{1F534} [${requestId}] \u932F\u8AA4: \u7F3A\u5C11 PINECONE_API_KEY \u74B0\u5883\u8B8A\u6578`);
-      return new Response(JSON.stringify({
-        success: false,
-        error: {
-          message: "\u4F3A\u670D\u5668\u914D\u7F6E\u932F\u8AA4: \u7F3A\u5C11 API \u91D1\u9470"
-        }
-      }), {
-        status: 500,
-        headers
-      });
-    }
-    console.log(`\u{1F50D} [${requestId}] Pinecone \u74B0\u5883\u914D\u7F6E:`, {
-      API_KEY: env.PINECONE_API_KEY ? "\u5DF2\u8A2D\u7F6E" : "\u672A\u8A2D\u7F6E",
-      ENVIRONMENT: env.PINECONE_ENVIRONMENT,
-      INDEX: env.PINECONE_INDEX,
-      INDEX_NAME: env.PINECONE_INDEX_NAME,
-      API_URL: env.PINECONE_API_URL
-    });
     const pinecone = new PineconeClient(
       env.PINECONE_API_KEY,
       env.PINECONE_ENVIRONMENT,
@@ -14383,33 +14640,32 @@ async function handleVectorSearch(request, env) {
       env,
       env.PINECONE_API_URL
     );
-    console.log(`\u{1F50D} [${requestId}] \u57F7\u884C\u5411\u91CF\u641C\u7D22`);
-    const results = await pinecone.searchFaqs(query, topK, 0.3);
+    const results = await pinecone.searchFaqs(query, resultLimit, threshold);
     let filteredResults = results;
     if (category) {
+      console.log(`\u2753 [${requestId}] \u6309\u985E\u5225\u904E\u6FFE: ${category}`);
       filteredResults = filteredResults.filter(
         (item) => item.category && item.category.toLowerCase() === category.toLowerCase()
       );
     }
     if (minImportance !== void 0 && typeof minImportance === "number") {
-      console.log(`\u{1F50D} [${requestId}] \u7BE9\u9078\u91CD\u8981\u6027\u95BE\u503C: ${minImportance}`);
-      console.log(`\u{1F50D} [${requestId}] \u7BE9\u9078\u524D\u7D50\u679C\u6578\u91CF: ${filteredResults.length}`);
+      console.log(`\u2753 [${requestId}] \u6309\u91CD\u8981\u6027\u904E\u6FFE\uFF0C\u95BE\u503C: ${minImportance}`);
       const beforeFilterCount = filteredResults.length;
       filteredResults = filteredResults.filter((item) => {
         const importance = item.importance;
         const effectiveImportance = importance !== void 0 ? importance : 1;
         return effectiveImportance >= minImportance;
       });
-      console.log(`\u{1F50D} [${requestId}] \u91CD\u8981\u6027\u7BE9\u9078\u5F8C\u7D50\u679C\u6578\u91CF: ${filteredResults.length}, \u79FB\u9664\u4E86: ${beforeFilterCount - filteredResults.length} \u500B\u7D50\u679C`);
+      console.log(`\u2753 [${requestId}] \u91CD\u8981\u6027\u904E\u6FFE\u5F8C\u7D50\u679C\u6578\u91CF: ${filteredResults.length}, \u79FB\u9664\u4E86: ${beforeFilterCount - filteredResults.length} \u500B\u7D50\u679C`);
     }
-    console.log(`\u{1F50D} [${requestId}] \u641C\u7D22\u7D50\u679C:`, {
+    console.log(`\u2753 [${requestId}] \u641C\u7D22\u7D50\u679C:`, {
       total: results.length,
       filtered: filteredResults.length
     });
     if (filteredResults.length > 0) {
-      console.log(`\u{1F50D} [${requestId}] \u8FD4\u56DE\u7D50\u679C\u8A73\u60C5:`);
+      console.log(`\u2753 [${requestId}] \u8FD4\u56DE\u7D50\u679C\u8A73\u60C5:`);
       filteredResults.forEach((result, index) => {
-        console.log(`\u{1F50D} [${requestId}] \u7D50\u679C #${index + 1}:`, {
+        console.log(`\u2753 [${requestId}] \u7D50\u679C #${index + 1}:`, {
           id: result.id,
           question: result.question.substring(0, 50) + (result.question.length > 50 ? "..." : ""),
           score: result.score,
@@ -14418,29 +14674,17 @@ async function handleVectorSearch(request, env) {
         });
       });
     } else {
-      console.log(`\u{1F50D} [${requestId}] \u6C92\u6709\u5339\u914D\u7684\u7D50\u679C\u53EF\u8FD4\u56DE`);
+      console.log(`\u2753 [${requestId}] \u6C92\u6709\u5339\u914D\u7684\u7D50\u679C\u53EF\u8FD4\u56DE`);
     }
-    return new Response(JSON.stringify({
+    return createSuccessResponse({
       success: true,
       results: filteredResults
-    }), {
-      status: 200,
-      headers
-    });
+    }, 200, request);
   } catch (error) {
-    console.error(`\u{1F534} [${requestId}] \u5411\u91CF\u641C\u7D22\u8655\u7406\u932F\u8AA4:`, error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: {
-        message: error instanceof Error ? error.message : "\u8655\u7406\u5411\u91CF\u641C\u7D22\u8ACB\u6C42\u6642\u767C\u751F\u932F\u8AA4"
-      }
-    }), {
-      status: 500,
-      headers
-    });
+    return handleError(error, request);
   }
 }
-__name(handleVectorSearch, "handleVectorSearch");
+__name(handleFaq, "handleFaq");
 
 // src/index.ts
 var src_default = {
@@ -14457,6 +14701,7 @@ var src_default = {
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     });
     try {
+      const envManager = createEnvironmentManager(env);
       if (request.method === "OPTIONS") {
         console.log(`\u26AA [${requestId}] CORS \u9810\u6AA2\u8ACB\u6C42`);
         return handleCors(request);
@@ -14465,29 +14710,47 @@ var src_default = {
       console.log(`\u{1F50D} [${requestId}] \u8DEF\u7531\u5206\u767C: ${url.pathname}`);
       let response;
       if (url.pathname === "/api/chat") {
+        envManager.validateGroq();
         console.log(`\u{1F4AC} [${requestId}] \u8655\u7406\u804A\u5929\u8ACB\u6C42`);
         response = await handleChat(request, env);
       } else if (url.pathname === "/api/faq") {
+        envManager.validatePinecone();
+        envManager.validateCohere();
         console.log(`\u2753 [${requestId}] \u8655\u7406 FAQ \u8ACB\u6C42`);
         response = await handleFaq(request, env);
       } else if (url.pathname === "/api/upload") {
+        envManager.validateR2();
         console.log(`\u{1F4E4} [${requestId}] \u8655\u7406\u4E0A\u50B3\u8ACB\u6C42`);
         response = await handleUpload(request, env);
-      } else if (url.pathname === "/upload") {
-        console.log(`\u{1F4E4} [${requestId}] \u8655\u7406\u4E0A\u50B3\u8ACB\u6C42 (\u76F4\u63A5\u8DEF\u5F91)`);
-        response = await handleUpload(request, env);
-      } else if (url.pathname === "/api/vector-search") {
-        console.log(`\u{1F50D} [${requestId}] \u8655\u7406\u5411\u91CF\u641C\u7D22\u8ACB\u6C42`);
-        response = await handleVectorSearch(request, env);
       } else if (url.pathname === "/api/health") {
         console.log(`\u{1F493} [${requestId}] \u5065\u5EB7\u6AA2\u67E5`);
-        response = new Response(JSON.stringify({ status: "ok" }), {
-          status: 200,
-          headers: {
-            ...getCorsHeadersForRequest(request),
-            "Content-Type": "application/json"
-          }
-        });
+        try {
+          envManager.validateAll();
+          response = new Response(JSON.stringify({
+            status: "ok",
+            environmentStatus: "ok"
+          }), {
+            status: 200,
+            headers: {
+              ...getCorsHeadersForRequest(request),
+              "Content-Type": "application/json"
+            }
+          });
+        } catch (error) {
+          console.warn(`\u26A0\uFE0F [${requestId}] \u5065\u5EB7\u6AA2\u67E5\u74B0\u5883\u8B8A\u6578\u9A57\u8B49\u5931\u6557:`, error);
+          response = new Response(JSON.stringify({
+            status: "warning",
+            environmentStatus: "incomplete",
+            message: error instanceof Error ? error.message : "\u74B0\u5883\u8B8A\u6578\u4E0D\u5B8C\u6574"
+          }), {
+            status: 200,
+            // 仍然返回 200，但帶有警告信息
+            headers: {
+              ...getCorsHeadersForRequest(request),
+              "Content-Type": "application/json"
+            }
+          });
+        }
       } else {
         console.log(`\u26A0\uFE0F [${requestId}] \u672A\u627E\u5230\u8DEF\u7531: ${url.pathname}`);
         response = new Response(JSON.stringify({ error: "\u8DEF\u5F91\u4E0D\u5B58\u5728" }), {
@@ -14499,9 +14762,9 @@ var src_default = {
         });
       }
       const originalHeaders = response.headers;
-      const corsHeaders5 = getCorsHeadersForRequest(request);
+      const corsHeaders2 = getCorsHeadersForRequest(request);
       const newHeaders = new Headers(originalHeaders);
-      Object.entries(corsHeaders5).forEach(([key, value]) => {
+      Object.entries(corsHeaders2).forEach(([key, value]) => {
         newHeaders.set(key, value);
       });
       const newResponse = new Response(response.body, {
@@ -14515,22 +14778,7 @@ var src_default = {
     } catch (error) {
       const processingTime = Date.now() - startTime;
       console.error(`\u{1F534} [${requestId}] API \u8655\u7406\u932F\u8AA4 (${processingTime}ms):`, error);
-      console.error("\u932F\u8AA4\u8A73\u60C5:", error instanceof Error ? {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      } : "\u672A\u77E5\u932F\u8AA4\u985E\u578B");
-      return new Response(JSON.stringify({
-        error: error instanceof Error ? error.message : "\u4F3A\u670D\u5668\u5167\u90E8\u932F\u8AA4",
-        requestId
-        // 包含請求 ID 以便追蹤
-      }), {
-        status: 500,
-        headers: {
-          ...getCorsHeadersForRequest(request),
-          "Content-Type": "application/json"
-        }
-      });
+      return handleError(error, request, requestId);
     }
   }
 };

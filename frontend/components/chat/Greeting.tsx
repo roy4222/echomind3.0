@@ -80,7 +80,7 @@ export const Greeting = () => {
  */
 interface WelcomeScreenProps {
   /** 提交訊息的回調函數 */
-  onSubmit: (input: string, modelId?: string, image?: string) => Promise<void>;
+  onSubmit: (input: string, modelId?: string, image?: string, startChat?: boolean) => Promise<void>;
   /** 是否正在載入中 */
   isLoading: boolean;
 }

@@ -4,8 +4,9 @@
 import { handleUpload } from './handlers/upload';
 import { handleChat } from './handlers/chat';
 import { handleFaq } from './handlers/faq';
-import { handleVectorSearch } from './handlers/vector-search';
 import { corsHeaders, handleCors, getCorsHeadersForRequest } from './utils/cors';
+import { createEnvironmentManager } from './utils/environment';
+import { handleError } from './utils/errorHandler';
 import type { ExecutionContext } from '@cloudflare/workers-types';
 
 /**
@@ -62,6 +63,9 @@ export default {
     });
     
     try {
+      // 建立環境變數管理器並驗證關鍵環境變數
+      const envManager = createEnvironmentManager(env);
+      
       // 處理 CORS 預檢請求 (OPTIONS 方法)
       if (request.method === 'OPTIONS') {
         console.log(`⚪ [${requestId}] CORS 預檢請求`);
@@ -76,40 +80,62 @@ export default {
       let response: Response;
       
       if (url.pathname === '/api/chat') {
+        // 驗證 Groq 環境變數
+        envManager.validateGroq();
+        
         // 處理聊天 API 請求
         console.log(`💬 [${requestId}] 處理聊天請求`);
         response = await handleChat(request, env);
       }
       else if (url.pathname === '/api/faq') {
+        // 驗證 Pinecone 和 Cohere 環境變數
+        envManager.validatePinecone();
+        envManager.validateCohere();
+        
         // 處理常見問題 API 請求
         console.log(`❓ [${requestId}] 處理 FAQ 請求`);
         response = await handleFaq(request, env);
       }
       else if (url.pathname === '/api/upload') {
+        // 驗證 R2 環境變數
+        envManager.validateR2();
+        
         // 處理檔案上傳 API 請求
         console.log(`📤 [${requestId}] 處理上傳請求`);
         response = await handleUpload(request, env);
       }
-      // 處理替代上傳路徑
-      else if (url.pathname === '/upload') {
-        console.log(`📤 [${requestId}] 處理上傳請求 (直接路徑)`);
-        response = await handleUpload(request, env);
-      }
-      // 處理向量搜索 API 請求
-      else if (url.pathname === '/api/vector-search') {
-        console.log(`🔍 [${requestId}] 處理向量搜索請求`);
-        response = await handleVectorSearch(request, env);
-      }
       // 健康檢查端點 - 用於監控系統狀態
       else if (url.pathname === '/api/health') {
         console.log(`💓 [${requestId}] 健康檢查`);
-        response = new Response(JSON.stringify({ status: 'ok' }), {
-          status: 200,
-          headers: {
-            ...getCorsHeadersForRequest(request),
-            'Content-Type': 'application/json'
-          }
-        });
+        
+        // 嘗試驗證所有環境變數，但不阻止健康檢查回應
+        try {
+          envManager.validateAll();
+          response = new Response(JSON.stringify({ 
+            status: 'ok',
+            environmentStatus: 'ok' 
+          }), {
+            status: 200,
+            headers: {
+              ...getCorsHeadersForRequest(request),
+              'Content-Type': 'application/json'
+            }
+          });
+        } catch (error) {
+          // 如果環境變數驗證失敗，返回警告狀態
+          console.warn(`⚠️ [${requestId}] 健康檢查環境變數驗證失敗:`, error);
+          response = new Response(JSON.stringify({ 
+            status: 'warning',
+            environmentStatus: 'incomplete',
+            message: error instanceof Error ? error.message : '環境變數不完整'
+          }), {
+            status: 200,  // 仍然返回 200，但帶有警告信息
+            headers: {
+              ...getCorsHeadersForRequest(request),
+              'Content-Type': 'application/json'
+            }
+          });
+        }
       }
       // 處理未找到的路由
       else {
@@ -145,26 +171,11 @@ export default {
       
       return newResponse;
     } catch (error) {
-      // 錯誤處理邏輯 - 捕獲並記錄所有未處理的異常
+      // 使用統一的錯誤處理工具處理異常
       const processingTime = Date.now() - startTime;
       console.error(`🔴 [${requestId}] API 處理錯誤 (${processingTime}ms):`, error);
-      console.error('錯誤詳情:', error instanceof Error ? {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      } : '未知錯誤類型');
       
-      // 返回標準化的錯誤響應
-      return new Response(JSON.stringify({
-        error: error instanceof Error ? error.message : '伺服器內部錯誤',
-        requestId: requestId  // 包含請求 ID 以便追蹤
-      }), { 
-        status: 500,
-        headers: {
-          ...getCorsHeadersForRequest(request),
-          'Content-Type': 'application/json'
-        }
-      });
+      return handleError(error, request, requestId);
     }
   }
 }; 

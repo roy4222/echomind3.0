@@ -70,6 +70,7 @@ const formatUserMessage = (text: string) => {
  * - 列表 (- 開頭)
  * - 粗體文字 (**文字**)
  * - 思考鏈 (<think>內容</think>)
+ * - Markdown 格式
  * @param text - 要格式化的文字
  * @returns 格式化後的 JSX 元素
  */
@@ -103,50 +104,89 @@ const formatAssistantMessage = (text: string) => {
               viewBox="0 0 24 24" 
               stroke="currentColor"
             >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M19 9l-7 7-7-7" 
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </summary>
-          {/* 思考鏈內容區域，使用淺色背景和圓角設計 */}
-          <div className="p-3 text-sm bg-purple-50 dark:bg-purple-900/20 rounded-b-lg border-t border-purple-200 dark:border-purple-800 whitespace-pre-wrap">
-            {/* 顯示思考鏈的實際內容，保留原始格式 */}
+          {/* 思考內容區域 */}
+          <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-b-lg text-sm whitespace-pre-wrap">
             {thinkContent}
           </div>
         </details>
       </div>
     );
   }
+
+  // 處理 Markdown 格式
+  let inCodeBlock = false;
+  let codeContent = '';
+  let codeLanguage = '';
   
-  // 逐行處理文字格式
+  // 遍歷每一行文字
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     
-    // 處理標題格式 (# 開頭)
-    if (line.match(/^#+\s/)) {
-      const headingMatch = line.match(/^(#+)\s/);
-      if (headingMatch) {
-        const level = headingMatch[1].length; // 獲取標題層級
-        const content = line.replace(/^#+\s/, '');
-        const fontSize = level === 1 ? 'text-2xl' : level === 2 ? 'text-xl' : 'text-lg';
+    // 處理代碼塊
+    if (line.startsWith('```')) {
+      if (!inCodeBlock) {
+        // 開始代碼塊
+        inCodeBlock = true;
+        codeLanguage = line.slice(3).trim();
+        codeContent = '';
+      } else {
+        // 結束代碼塊
+        inCodeBlock = false;
         formattedLines.push(
-          <h1 key={i} className={`font-bold ${fontSize} mb-2`}>
-            {content}
-          </h1>
+          <pre key={`code-${i}`} className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg overflow-x-auto my-2">
+            <code className={`language-${codeLanguage}`}>{codeContent}</code>
+          </pre>
         );
       }
-    } 
-    // 處理列表項目 (- 開頭)
-    else if (line.match(/^\s*-\s/)) {
-      const content = line.replace(/^\s*-\s/, '');
+      continue;
+    }
+    
+    // 如果在代碼塊內，添加到代碼內容
+    if (inCodeBlock) {
+      codeContent += line + '\n';
+      continue;
+    }
+    
+    // 處理標題 (### 開頭)
+    if (line.startsWith('###')) {
       formattedLines.push(
-        <div key={i} className="flex mb-1 pl-2">
-          <span className="mr-2">•</span>
-          <span>{formatUserMessage(content)}</span>
+        <h3 key={i} className="text-lg font-bold mt-4 mb-2 text-purple-700 dark:text-purple-300">
+          {line.substring(3).trim()}
+        </h3>
+      );
+    }
+    // 處理標題 (## 開頭)
+    else if (line.startsWith('##')) {
+      formattedLines.push(
+        <h2 key={i} className="text-xl font-bold mt-4 mb-2 text-purple-700 dark:text-purple-300">
+          {line.substring(2).trim()}
+        </h2>
+      );
+    }
+    // 處理標題 (# 開頭)
+    else if (line.startsWith('#')) {
+      formattedLines.push(
+        <h1 key={i} className="text-2xl font-bold mt-4 mb-2 text-purple-700 dark:text-purple-300">
+          {line.substring(1).trim()}
+        </h1>
+      );
+    }
+    // 處理列表項 (- 開頭)
+    else if (line.trim().startsWith('-')) {
+      formattedLines.push(
+        <div key={i} className="flex items-start mt-1">
+          <span className="mr-2 mt-1">•</span>
+          <span>{formatUserMessage(line.substring(line.indexOf('-') + 1).trim())}</span>
         </div>
+      );
+    }
+    // 處理分隔線 (---)
+    else if (line.trim() === '---') {
+      formattedLines.push(
+        <hr key={i} className="my-3 border-t border-gray-200 dark:border-gray-700" />
       );
     }
     // 處理一般文字，包含粗體格式
