@@ -17,6 +17,8 @@ export interface ChatMessage {
   createdAt?: number;
   /** 圖片 (base64 格式) */
   image?: string;
+  /** 圖片 URL (R2 存儲) */
+  imageUrl?: string;
 }
 
 /**

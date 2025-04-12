@@ -13,6 +13,8 @@ import { chatClient } from '@/lib/services/chatClient';
 import { chatHistoryService } from '@/lib/services/chatHistory';
 import { useAuth } from '@/contexts/AuthContext';
 import { authService } from '@/lib/utils/auth';
+import { uploadService } from '@/lib/services/upload';
+import { toast } from 'sonner';
 
 interface ChatInterfaceProps {
   chatId?: string | null;
@@ -89,15 +91,14 @@ export function ChatInterface({
   }, [initialChatId, isNewChat, user, onResetUrl]);
 
   /**
-   * 處理訊息提交
-   * @param input - 使用者輸入的訊息
-   * @param modelId - 選擇的模型 ID
-   * @param image - 上傳的圖片 (base64 格式)
+   * 處理聊天輸入提交
+   * @param input 用戶輸入的文字
+   * @param modelId 選擇的模型 ID (可選)
+   * @param image 上傳的圖片 (base64 格式，可選)
    */
   const handleSubmit = async (input: string, modelId?: string, image?: string) => {
     if (!input.trim() && !image) return;
-    if (isLoading) return;
-
+    
     try {
       // 更新當前選擇的模型 ID (如果提供了新的模型 ID)
       let useModelId = currentModelId;
@@ -112,14 +113,52 @@ export function ChatInterface({
       // 開始載入
       setIsLoading(true);
       
-      // 建立用戶訊息
+      // 準備用戶訊息
       const userMessage: ChatMessage = {
         role: 'user',
         content: input.trim(),
         id: Date.now().toString(),
         createdAt: Date.now(),
-        image: image, // 添加圖片屬性
       };
+      
+      // 如果有圖片，先上傳到 R2
+      let imageUrl: string | undefined;
+      if (image) {
+        try {
+          // 將 base64 圖片轉換為 Blob
+          const base64Data = image.split(',')[1];
+          const mimeType = image.split(';')[0].split(':')[1];
+          const byteCharacters = atob(base64Data);
+          const byteArrays = [];
+          
+          for (let i = 0; i < byteCharacters.length; i += 512) {
+            const slice = byteCharacters.slice(i, i + 512);
+            const byteNumbers = new Array(slice.length);
+            for (let j = 0; j < slice.length; j++) {
+              byteNumbers[j] = slice.charCodeAt(j);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            byteArrays.push(byteArray);
+          }
+          
+          const blob = new Blob(byteArrays, { type: mimeType });
+          const fileName = `chat-image-${Date.now()}.${mimeType.split('/')[1]}`;
+          const file = new File([blob], fileName, { type: mimeType });
+          
+          // 上傳到 R2
+          const uploadPath = `images/chat/${userMessage.id}/${fileName}`;
+          const result = await uploadService.uploadFile(file, uploadPath);
+          
+          if (result) {
+            imageUrl = result;
+            userMessage.imageUrl = imageUrl; // 使用 imageUrl 而非 image
+            console.log('圖片已上傳到 R2:', imageUrl);
+          }
+        } catch (uploadError) {
+          console.error('圖片上傳失敗:', uploadError);
+          toast.error('圖片上傳失敗，但會繼續發送文字訊息');
+        }
+      }
       
       // 更新訊息列表
       const updatedMessages = [...messages, userMessage];

@@ -245,10 +245,10 @@ export const ChatMessageList = ({
               : (
                 <>
                   {/* 如果用戶訊息包含圖片，顯示圖片 */}
-                  {message.image && (
+                  {(message.imageUrl || message.image) && (
                     <div className="mb-3">
                       <img 
-                        src={message.image} 
+                        src={message.imageUrl || message.image} 
                         alt="用戶上傳圖片" 
                         className="max-h-64 w-auto rounded-lg object-contain"
                       />
