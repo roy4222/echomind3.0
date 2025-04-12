@@ -6,7 +6,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatInput } from './input';
-import { Greeting } from "@/components/chat/Greeting";
+import { WelcomeScreen } from "@/components/chat/Greeting"; // 從 Greeting 文件導入 WelcomeScreen
 import { Sparkles, Search, Lightbulb } from 'lucide-react';
 import { type ChatMessage } from '@/lib/types/chat';
 import { chatClient } from '@/lib/services/chatClient';
@@ -244,17 +244,10 @@ export function ChatInterface({
    */
   const renderWelcomeScreen = () => {
     return (
-      <>
-        {/* 問候語組件 */}
-        <Greeting />
-        
-        {/* 聊天輸入框 */}
-        <ChatInput 
-          onSubmit={handleSubmit} 
-          onSendMessage={handleSendMessage}
-          isLoading={isLoading} 
-        />
-      </>
+      <WelcomeScreen 
+        onSubmit={handleSubmit} 
+        isLoading={isLoading} 
+      />
     );
   };
 

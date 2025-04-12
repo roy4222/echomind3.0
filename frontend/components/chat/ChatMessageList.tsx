@@ -175,26 +175,35 @@ export const ChatMessageList = ({
   isLoading,
   error,
 }: ChatMessageListProps) => {
+  // 獲取當前主題設置
   const { resolvedTheme } = useTheme();
+  // 判斷是否為深色主題
   const isDark = resolvedTheme === 'dark';
+  // 獲取當前登入用戶資訊
   const { user } = useAuth();
 
   return (
     <div className="space-y-8 py-4">
       {/* 遍歷並顯示所有訊息 */}
       {messages.map((message, index) => (
+        // 使用 motion.div 添加動畫效果
         <motion.div
           key={message.id || index}
+          // 初始狀態：透明度為0，向下偏移10px
           initial={{ opacity: 0, y: 10 }}
+          // 動畫結束狀態：完全顯示且回到原位
           animate={{ opacity: 1, y: 0 }}
+          // 動畫持續時間及延遲設定
           transition={{ duration: 0.3, delay: index * 0.1 }}
+          // 根據消息發送者調整排列方向
           className={`flex items-start gap-3 ${
             message.role === 'user' ? 'flex-row-reverse' : 'flex-row'
           }`}
         >
-          {/* 頭像 */}
+          {/* 頭像區塊 */}
           <div className="flex-shrink-0">
             {message.role === 'user' ? (
+              // 如果是用戶且有頭像，顯示用戶頭像
               user && user.photoURL ? (
                 <div className="h-9 w-9 overflow-hidden rounded-full border-2 border-blue-100 dark:border-blue-900">
                   <Image 
@@ -206,11 +215,13 @@ export const ChatMessageList = ({
                   />
                 </div>
               ) : (
+                // 如果用戶沒有頭像，顯示默認頭像圖標
                 <div className="h-9 w-9 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300">
                   <UserCircle size={24} />
                 </div>
               )
             ) : (
+              // 如果是AI助手，顯示機器人圖標
               <div className="h-9 w-9 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center text-purple-600 dark:text-purple-300">
                 <Bot size={22} />
               </div>
@@ -221,19 +232,19 @@ export const ChatMessageList = ({
           <div
             className={`relative max-w-[85%] rounded-2xl px-5 py-3.5 shadow-sm ${
               message.role === 'user'
-                ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white'
+                ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' // 用戶訊息樣式
                 : isDark 
-                  ? 'bg-gradient-to-br from-gray-800 to-gray-900 text-gray-100 border border-gray-700'
-                  : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-800 border border-gray-200'
+                  ? 'bg-gradient-to-br from-gray-800 to-gray-900 text-gray-100 border border-gray-700' // 深色模式下AI訊息樣式
+                  : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-800 border border-gray-200' // 淺色模式下AI訊息樣式
             }`}
           >
             
-            {/* 根據角色使用不同的格式化方法 */}
+            {/* 根據角色使用不同的格式化方法顯示訊息內容 */}
             {message.role === 'assistant' 
-              ? formatAssistantMessage(message.content)
+              ? formatAssistantMessage(message.content) // 處理AI助手訊息
               : (
                 <>
-                  {/* 如果有圖片，顯示圖片 */}
+                  {/* 如果用戶訊息包含圖片，顯示圖片 */}
                   {message.image && (
                     <div className="mb-3">
                       <img 
@@ -243,12 +254,13 @@ export const ChatMessageList = ({
                       />
                     </div>
                   )}
-                  {/* 顯示文字內容 */}
+                  {/* 顯示用戶文字內容，按行分割並處理格式 */}
                   {message.content.split('\n').map((line, i) => (
                     <p key={i} className={i > 0 ? 'mt-2' : ''}>
                       {typeof formatUserMessage(line) === 'string' 
-                        ? line 
-                        : formatUserMessage(line)}
+                        ? line // 如果格式化結果是字串，直接顯示
+                        : formatUserMessage(line) // 如果是JSX元素陣列，渲染元素
+                      }
                     </p>
                   ))}
                 </>
@@ -258,7 +270,7 @@ export const ChatMessageList = ({
         </motion.div>
       ))}
       
-      {/* 錯誤訊息顯示 */}
+      {/* 錯誤訊息顯示區塊 */}
       {error && (
         <motion.div 
           initial={{ opacity: 0 }}
@@ -273,11 +285,15 @@ export const ChatMessageList = ({
       {isLoading && (
         <div className="flex justify-start">
           <div className="flex items-start gap-3">
+            {/* AI頭像 */}
             <div className="h-9 w-9 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center text-purple-600 dark:text-purple-300">
               <Bot size={22} />
             </div>
+            {/* 載入動畫氣泡 */}
             <div className="relative rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 px-5 py-3 border border-gray-200 dark:border-gray-700">
+              {/* 氣泡尖角 */}
               <div className="absolute top-3 left-[-6px] w-3 h-3 rotate-45 bg-gray-50 dark:bg-gray-800" />
+              {/* 三點載入動畫 */}
               <div className="flex space-x-2">
                 <div className="h-2.5 w-2.5 animate-bounce rounded-full bg-gray-400 dark:bg-gray-500 [animation-delay:-0.3s]"></div>
                 <div className="h-2.5 w-2.5 animate-bounce rounded-full bg-gray-400 dark:bg-gray-500 [animation-delay:-0.15s]"></div>

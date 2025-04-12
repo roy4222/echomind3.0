@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { ChatInput } from './input';
 
+/**
+ * 問候語組件
+ * 根據當前時間顯示適當的問候語
+ */
 export const Greeting = () => {
   // 用於存儲問候語的狀態
   const [greeting, setGreeting] = useState('');
@@ -69,3 +74,28 @@ export const Greeting = () => {
     </motion.div>
   );
 };
+
+/**
+ * 歡迎畫面組件介面
+ */
+interface WelcomeScreenProps {
+  /** 提交訊息的回調函數 */
+  onSubmit: (input: string, modelId?: string, image?: string) => Promise<void>;
+  /** 是否正在載入中 */
+  isLoading: boolean;
+}
+
+/**
+ * 歡迎畫面組件
+ * 顯示在聊天開始前的問候語和輸入框
+ * @param props - 組件屬性
+ * @returns 歡迎畫面 JSX 元素
+ */
+export function WelcomeScreen({ onSubmit, isLoading }: WelcomeScreenProps) {
+  return (
+    <div className="space-y-6">
+      <Greeting />
+      <ChatInput onSubmit={onSubmit} isLoading={isLoading} />
+    </div>
+  );
+}
