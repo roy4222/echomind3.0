@@ -20,6 +20,8 @@ export function ChatInput({ onSubmit, onSendMessage, isLoading }: ChatInputProps
     setInputValue,
     isDbSearchActive,
     toggleDbSearch,
+    isWebSearchActive,
+    toggleWebSearch,
     selectedModelId,
     setSelectedModelId,
     isModelDropdownOpen,
@@ -47,6 +49,15 @@ export function ChatInput({ onSubmit, onSendMessage, isLoading }: ChatInputProps
             </div>
           )}
           
+          {/* 如果網絡搜尋模式啟用，顯示提示 */}
+          {isWebSearchActive && (
+            <div className="bg-green-50 dark:bg-green-900/20 px-4 py-2 text-xs text-green-700 dark:text-green-300 rounded-t-2xl border-b border-green-100 dark:border-green-900/50">
+              <div className="flex items-center gap-1">
+                <span>網絡搜尋模式已啟用 - 您的問題將觸發網絡爬蟲獲取最新資訊</span>
+              </div>
+            </div>
+          )}
+          
           {/* 已上傳圖片顯示區域 - Grok 風格 */}
           {uploadedImage && selectedModelId === 'maverick' && (
             <ImagePreview 
@@ -60,7 +71,13 @@ export function ChatInput({ onSubmit, onSendMessage, isLoading }: ChatInputProps
           <div className="flex items-center px-4 py-4 bg-white dark:bg-gray-900 rounded-2xl">
             <input
               type="text"
-              placeholder={isDbSearchActive ? "搜尋輔大資管專業知識庫..." : "輸入訊息..."}
+              placeholder={
+                isDbSearchActive 
+                  ? "搜尋輔大資管專業知識庫..." 
+                  : isWebSearchActive 
+                    ? "輸入關鍵詞進行網絡搜尋..." 
+                    : "輸入訊息..."
+              }
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               className="flex-1 bg-transparent focus:outline-none text-gray-700 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
@@ -91,6 +108,8 @@ export function ChatInput({ onSubmit, onSendMessage, isLoading }: ChatInputProps
             <ActionButtons 
               isDbSearchActive={isDbSearchActive}
               toggleDbSearch={toggleDbSearch}
+              isWebSearchActive={isWebSearchActive}
+              toggleWebSearch={toggleWebSearch}
               handleImageUpload={handleImageUpload}
               selectedModelId={selectedModelId}
               fileInputRef={fileInputRef}

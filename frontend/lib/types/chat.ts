@@ -172,6 +172,10 @@ export interface ActionButtonsProps {
   isDbSearchActive: boolean;
   /** 切換資料庫搜尋的函數 */
   toggleDbSearch: () => void;
+  /** 網絡搜尋是否啟用 */
+  isWebSearchActive: boolean;
+  /** 切換網絡搜尋的函數 */
+  toggleWebSearch: () => void;
   /** 處理圖片上傳的函數 */
   handleImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   /** 當前選擇的模型 ID */

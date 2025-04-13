@@ -30,6 +30,10 @@ export interface UseChatInputReturn {
   isDbSearchActive: boolean;
   /** 切換資料庫搜尋狀態的函數 */
   toggleDbSearch: () => void;
+  /** 網絡搜尋是否啟用 */
+  isWebSearchActive: boolean;
+  /** 切換網絡搜尋狀態的函數 */
+  toggleWebSearch: () => void;
   /** 選擇的模型 ID */
   selectedModelId: string;
   /** 設置選擇的模型 ID 的函數 */
@@ -66,6 +70,7 @@ export function useChatInput({ onSubmit, onSendMessage, isLoading }: UseChatInpu
   const [inputValue, setInputValue] = useState('');
   // UI 狀態
   const [isDbSearchActive, setIsDbSearchActive] = useState(false);
+  const [isWebSearchActive, setIsWebSearchActive] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState(DEFAULT_MODEL_ID);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -119,6 +124,21 @@ export function useChatInput({ onSubmit, onSendMessage, isLoading }: UseChatInpu
    */
   const toggleDbSearch = () => {
     setIsDbSearchActive(!isDbSearchActive);
+    // 如果啟用了資料庫搜尋，關閉網絡搜尋
+    if (!isDbSearchActive && isWebSearchActive) {
+      setIsWebSearchActive(false);
+    }
+  };
+
+  /**
+   * 切換網絡搜尋狀態
+   */
+  const toggleWebSearch = () => {
+    setIsWebSearchActive(!isWebSearchActive);
+    // 如果啟用了網絡搜尋，關閉資料庫搜尋
+    if (!isWebSearchActive && isDbSearchActive) {
+      setIsDbSearchActive(false);
+    }
   };
 
   /**
@@ -142,6 +162,23 @@ export function useChatInput({ onSubmit, onSendMessage, isLoading }: UseChatInpu
         // 在資料庫搜尋模式下，不需要發送 AI 請求
         return;
       } 
+      
+      // 網絡搜尋模式 - 使用網絡爬蟲
+      if (isWebSearchActive) {
+        setIsSearching(true);
+        // 添加用戶訊息到聊天界面
+        if (onSendMessage) {
+          onSendMessage({
+            role: 'user',
+            content: inputValue,
+            id: Date.now().toString(),
+            createdAt: Date.now()
+          });
+        }
+        // 使用 "websearch" 作為模型 ID 來告訴後端使用網絡搜尋
+        await onSubmit(inputValue, "websearch");
+        return;
+      }
       
       // 一般聊天模式 - 添加用戶訊息到聊天界面
       if (onSendMessage) {
@@ -196,6 +233,8 @@ export function useChatInput({ onSubmit, onSendMessage, isLoading }: UseChatInpu
     setInputValue,
     isDbSearchActive,
     toggleDbSearch,
+    isWebSearchActive,
+    toggleWebSearch,
     selectedModelId,
     setSelectedModelId,
     isModelDropdownOpen,
