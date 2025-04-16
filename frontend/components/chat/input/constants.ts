@@ -21,7 +21,7 @@ export const MODEL_OPTIONS: ModelOption[] = [
   { 
     id: 'maverick', 
     name: 'Llama 4 Maverick 17B', 
-    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12S6.477 2 12 2m0 2a8 8 0 1 0 0 16a8 8 0 0 0 0-16m0 7c.2 0 .4.12.47.3l1.96 5.16a.5.5 0 0 1-.93.36l-1-2.62h-1l-1 2.62a.5.5 0 0 1-.93-.36l1.96-5.16c.08-.18.27-.3.47-.3m0-4a1 1 0 1 1 0 2a1 1 0 0 1 0-2"/></svg>`, 
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 9c2-5 7-6 10 0s5 10 8 10s4-5 2-10s-7-6-10 0s-5 10-8 10s-4-5-2-10"/></svg>`,
     description: '最新且強大多模態模型，支援圖像與文字輸入'
   },
   { 
@@ -33,13 +33,13 @@ export const MODEL_OPTIONS: ModelOption[] = [
   { 
     id: 'advanced', 
     name: 'Deepseek R1 Distill Llama 70B', 
-    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 48 48"><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" d="M31.97 33.128c5.146-5.785 5.618-11.022 5.797-13.649"/><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" d="M37.764 19.48c4.61-.866 6.127-3.58 6.623-5.779c.269-1.19.016-1.792-.316-1.97c-.332-.18-.742.064-1.117.463c-1.892 2.01-3.02.998-4.405 1.37c-.765.206-1.218.796-1.655.56s-.86-1.303-1.476-1.745c-.617-.443-1.428-.264-1.982-.965c-.553-.7-.959-2.436-1.38-2.384c-.99 0-1.573 1.995-1.579 3.698c-.005 1.754.919 3.887 3.557 5.824c0 0-.455 1.457-.602 2.205h.004c-3.954-1.765-6.14-5.062-9.006-7.254c-.902-.69-.89-1.382-.325-1.888c.564-.506 1.555-.843 1.38-1.133c-.173-.29-1.512-.532-2.814-.353s-2.566.78-3.831 1.38c0 0-1.129-.727-3.19-.727c-8.454 0-12.15 6.554-12.15 12.119c0 6.636 6.091 16.07 16.107 16.07c7.585 0 9.221-3.111 9.221-3.111c3.708 1.206 6.08.788 6.924-.333c.753-1-2.268-1.808-3.784-2.399"/></svg>`, 
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M18 9.1V5a2 2 0 0 0-4 0m4 0a2 2 0 0 1 4 0"/><path d="M6 9.7L3.9 8.4C2.7 7.7 2 6.4 2 5V3c2 0 4 2 4 2s2-2 4-2v2c0 1.4-.7 2.7-1.9 3.4l-3.8 2.4A5 5 0 0 0 7 20h12c1.7 0 3-1.3 3-3v-3c0-2.8-2.2-5-5-5c-2.7 0-5.1 1.4-6.4 3.6L9.7 14A2 2 0 0 1 6 13Zm9 5.3h.01"/></g></svg>`, 
     description: '知識豐富，適合複雜問題與深度理解任務'
   },
   { 
     id: 'creative', 
     name: 'Qwen 2.5 32B', 
-    icon: '💎', 
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 20a2 2 0 1 0-4 0a2 2 0 0 0 4 0M16 4a2 2 0 1 0-4 0a2 2 0 0 0 4 0m0 16a2 2 0 1 0-4 0a2 2 0 0 0 4 0m-5-8a2 2 0 1 0-4 0a2 2 0 0 0 4 0m10 0a2 2 0 1 0-4 0a2 2 0 0 0 4 0M5.058 18.306l2.88-4.606m2.123-3.397l2.877-4.604m-2.873 8.006l2.876 4.6M15.063 5.7l2.881 4.61"/></svg>`,
     description: '平衡效能與資源，優秀的跨語言能力'
   },
 ];
