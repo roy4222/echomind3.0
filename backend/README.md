@@ -199,6 +199,141 @@ export const targetWebsites = {
 
 您已經擁有了實現完整 RAG 系統所需的大部分基礎設施，只需要進行整合和一些擴展即可。
 
+## 重排序系統實現計劃
+
+### 1. 系統架構
+
+```typescript
+// src/services/reranking.ts
+interface RerankingService {
+  // 重排序主要方法
+  rerank(query: string, candidates: SearchResult[]): Promise<SearchResult[]>;
+  
+  // 獲取重排序分數
+  getScores(): Map<string, number>;
+  
+  // 快取管理
+  clearCache(): void;
+}
+
+// 配置介面
+interface RerankingConfig {
+  model: string;           // 使用的重排序模型
+  batchSize: number;       // 批次處理大小
+  scoreThreshold: number;  // 分數閾值
+  cacheTTL: number;       // 快取存活時間
+}
+```
+
+### 2. 實現步驟
+
+#### 2.1 基礎設施準備
+1. 建立 `src/services/reranking.ts`
+2. 配置 Cohere Rerank API
+3. 設置測試環境
+
+#### 2.2 核心功能實現
+1. 實現重排序服務
+2. 添加快取機制
+3. 實現分數組合策略
+4. 建立錯誤處理機制
+
+#### 2.3 整合與優化
+1. 與現有搜索流程整合
+2. 實現批次處理
+3. 添加效能監控
+4. 優化響應時間
+
+### 3. 評估指標
+
+#### 3.1 效能指標
+- 搜索結果準確率 (Precision@K)
+- 平均響應時間
+- API 調用成本
+- 資源使用情況
+
+#### 3.2 監控指標
+- 重排序效果
+- 快取命中率
+- 錯誤率統計
+- 資源使用量
+
+### 4. 優化策略
+
+#### 4.1 效能優化
+- 實現智能批次處理
+- 優化快取策略
+- 實現並行處理
+
+#### 4.2 成本優化
+- 實現選擇性重排序
+- 優化 API 調用頻率
+- 實現結果快取
+
+### 5. 測試計劃
+
+#### 5.1 單元測試
+```typescript
+describe('RerankingService', () => {
+  it('should improve search quality', async () => {
+    const service = new RerankingService(config);
+    const results = await service.rerank(query, candidates);
+    expect(results[0].score).toBeGreaterThan(0.8);
+  });
+});
+```
+
+#### 5.2 整合測試
+- 與向量搜索整合測試
+- 效能基準測試
+- 負載測試
+
+### 6. 部署策略
+
+#### 6.1 階段性部署
+1. 開發環境測試
+2. 小規模生產測試
+3. 全面部署
+
+#### 6.2 監控與維護
+- 設置效能監控
+- 配置告警機制
+- 建立維護流程
+
+### 7. 時程規劃
+
+#### 第一週：基礎建設
+- 建立專案結構
+- 實現基本功能
+- 設置測試環境
+
+#### 第二週：功能完善
+- 實現核心功能
+- 添加錯誤處理
+- 進行單元測試
+
+#### 第三週：整合測試
+- 系統整合
+- 效能測試
+- 問題修復
+
+#### 第四週：優化部署
+- 效能優化
+- 部署上線
+- 監控設置
+
+### 8. 風險評估
+
+#### 8.1 技術風險
+- API 限制
+- 效能瓶頸
+- 整合問題
+
+#### 8.2 應對策略
+- 實現降級機制
+- 設置備用方案
+- 優化資源使用
+
 ## RAG 系統改進計劃
 
 為了進一步提升 RAG 系統的效能與使用者體驗，我們計劃實施以下改進：
@@ -231,6 +366,42 @@ export const targetWebsites = {
    - 改進 FAQ 內容整合策略
    - 實現加權相似度排序
    - 添加相關性分數校準機制
+   
+5.1 **重排序系統實現**：
+   - **架構設計**：
+     ```typescript
+     // 重排序服務介面
+     interface RerankingService {
+       rerank(query: string, candidates: SearchResult[]): Promise<SearchResult[]>;
+       getScores(): Map<string, number>;
+     }
+     ```
+   
+   - **實現步驟**：
+     1. 建立 `src/services/reranking.ts`
+     2. 整合 Cohere Rerank API
+     3. 實現分數組合策略
+     4. 添加快取機制
+   
+   - **評估指標**：
+     - 搜索結果準確率 (Precision@K)
+     - 平均響應時間
+     - API 調用成本
+   
+   - **優化策略**：
+     - 動態批次大小調整
+     - 智能快取策略
+     - 自適應分數組合
+   
+   - **監控方案**：
+     - 重排序效果監控
+     - 資源使用監控
+     - 成本效益分析
+   
+   - **降級策略**：
+     - 定義重排序失敗時的回退方案
+     - 實現優雅降級機制
+     - 設置自動恢復流程
 
 6. **提示詞工程優化**：
    - 重構系統提示詞生成邏輯
@@ -317,8 +488,7 @@ export const targetWebsites = {
    cd backend/llama_index
    pip install -r requirements.txt
    python api_server.py
-   ```
-   **(註：此步驟將在遷移完成後移除)**
+   ```   **(註：此步驟將在遷移完成後移除)**
 
 3. **資料處理與上傳 (使用 TypeScript 腳本)**:
    ```bash
@@ -327,7 +497,6 @@ export const targetWebsites = {
    # 需要確保環境變數已正確設置 (例如使用 .env 文件和 dotenv)
    npx ts-node scripts/upload_vectors.ts path/to/your/qa_data.json
    ```
-
 ### 資料處理流程
 
 1. 準備問答資料 JSON 檔案
@@ -418,3 +587,5 @@ export const targetWebsites = {
 - [Cohere 文檔](https://docs.cohere.com/)
 - [LlamaIndex 文檔](https://docs.llamaindex.ai/)
 - [Cloudflare Workers 文檔](https://developers.cloudflare.com/workers/) 
+
+
