@@ -7,6 +7,7 @@ import { handleFaq } from './handlers/faq';
 import { corsHeaders, handleCors, getCorsHeadersForRequest } from './utils/cors';
 import { createEnvironmentManager } from './utils/environment';
 import { handleError } from './utils/errorHandler';
+import { logger, apiLogger, LogLevel } from './utils/logger';
 import type { ExecutionContext } from '@cloudflare/workers-types';
 
 /**
@@ -52,15 +53,10 @@ export default {
     // 記錄請求基本資訊，用於監控和除錯
     const startTime = Date.now();
     const requestId = crypto.randomUUID();
-    console.log(`🔵 [${requestId}] 接收請求:`, {
-      method: request.method,
-      url: request.url,
-      userAgent: request.headers.get('User-Agent'),
-      origin: request.headers.get('Origin'),
-      referer: request.headers.get('Referer'),
-      contentType: request.headers.get('Content-Type'),
-      timestamp: new Date().toISOString()
-    });
+    const requestLogger = apiLogger.forRequest(requestId);
+    
+    // 記錄請求開始
+    requestLogger.logRequestStart(request);
     
     try {
       // 建立環境變數管理器並驗證關鍵環境變數
@@ -68,13 +64,13 @@ export default {
       
       // 處理 CORS 預檢請求 (OPTIONS 方法)
       if (request.method === 'OPTIONS') {
-        console.log(`⚪ [${requestId}] CORS 預檢請求`);
+        requestLogger.debug('CORS 預檢請求');
         return handleCors(request);
       }
 
       // 解析 URL 以確定要使用的路由
       const url = new URL(request.url);
-      console.log(`🔍 [${requestId}] 路由分發: ${url.pathname}`);
+      requestLogger.info(`路由分發: ${url.pathname}`);
       
       // 路由分發邏輯 - 根據路徑將請求導向不同的處理程序
       let response: Response;
@@ -84,7 +80,7 @@ export default {
         envManager.validateGroq();
         
         // 處理聊天 API 請求
-        console.log(`💬 [${requestId}] 處理聊天請求`);
+        requestLogger.info('處理聊天請求');
         response = await handleChat(request, env);
       }
       else if (url.pathname === '/api/faq') {
@@ -93,7 +89,7 @@ export default {
         envManager.validateCohere();
         
         // 處理常見問題 API 請求
-        console.log(`❓ [${requestId}] 處理 FAQ 請求`);
+        requestLogger.info('處理 FAQ 請求');
         response = await handleFaq(request, env);
       }
       else if (url.pathname === '/api/upload') {
@@ -101,12 +97,12 @@ export default {
         envManager.validateR2();
         
         // 處理檔案上傳 API 請求
-        console.log(`📤 [${requestId}] 處理上傳請求`);
+        requestLogger.info('處理上傳請求');
         response = await handleUpload(request, env);
       }
       // 健康檢查端點 - 用於監控系統狀態
       else if (url.pathname === '/api/health') {
-        console.log(`💓 [${requestId}] 健康檢查`);
+        requestLogger.info('健康檢查');
         
         // 嘗試驗證所有環境變數，但不阻止健康檢查回應
         try {
@@ -123,7 +119,7 @@ export default {
           });
         } catch (error) {
           // 如果環境變數驗證失敗，返回警告狀態
-          console.warn(`⚠️ [${requestId}] 健康檢查環境變數驗證失敗:`, error);
+          requestLogger.warn('健康檢查環境變數驗證失敗', error);
           response = new Response(JSON.stringify({ 
             status: 'warning',
             environmentStatus: 'incomplete',
@@ -139,7 +135,7 @@ export default {
       }
       // 處理未找到的路由
       else {
-        console.log(`⚠️ [${requestId}] 未找到路由: ${url.pathname}`);
+        requestLogger.warn(`未找到路由: ${url.pathname}`);
         response = new Response(JSON.stringify({ error: '路徑不存在' }), { 
           status: 404,
           headers: {
@@ -167,13 +163,13 @@ export default {
       
       // 記錄處理時間，用於性能監控
       const processingTime = Date.now() - startTime;
-      console.log(`🟢 [${requestId}] 請求完成: ${newResponse.status}, 耗時 ${processingTime}ms`);
+      requestLogger.logRequestEnd(newResponse, processingTime);
       
       return newResponse;
     } catch (error) {
       // 使用統一的錯誤處理工具處理異常
       const processingTime = Date.now() - startTime;
-      console.error(`🔴 [${requestId}] API 處理錯誤 (${processingTime}ms):`, error);
+      requestLogger.error(`API 處理錯誤 (${processingTime}ms)`, error);
       
       return handleError(error, request, requestId);
     }

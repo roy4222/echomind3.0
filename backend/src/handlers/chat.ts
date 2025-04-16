@@ -6,6 +6,7 @@ import { createSuccessResponse, createErrorResponse, handleError, ExternalApiErr
 import { createEnvironmentManager } from '../utils/environment';
 import { MODEL_MAPPING, getModelConfig, modelSupportsImages } from '../config/models';
 import { GroqService } from '../services/groq';
+import { chatLogger } from '../utils/logger';
 
 /**
  * 系統提示詞設定
@@ -37,17 +38,19 @@ const DEFAULT_MAX_TOKENS = getModelConfig('default').maxTokens;
  * @returns 回應對象
  */
 export async function handleChat(request: Request, env: Env): Promise<Response> {
-  console.log('=== 收到聊天請求 ===');
-  console.log('請求 URL:', request.url);
-  console.log('請求方法:', request.method);
-  console.log('請求來源:', request.headers.get('Origin'));
-  console.log('Worker 環境變數檢查:', {
-    hasGroqApiKey: !!env.GROQ_API_KEY,
-    apiKeyLength: env.GROQ_API_KEY ? env.GROQ_API_KEY.length : 0,
-  });
-  
   // 生成請求 ID 用於追蹤
   const requestId = crypto.randomUUID();
+  const logger = chatLogger.forRequest(requestId);
+  
+  logger.info('收到聊天請求', {
+    url: request.url,
+    method: request.method,
+    origin: request.headers.get('Origin'),
+    envCheck: {
+      hasGroqApiKey: !!env.GROQ_API_KEY,
+      apiKeyLength: env.GROQ_API_KEY ? `${env.GROQ_API_KEY.substring(0, 3)}...` : 0,
+    }
+  });
   
   try {
     // 驗證請求方法

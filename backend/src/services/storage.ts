@@ -6,6 +6,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { Env } from '../index';
 import { createEnvironmentManager } from '../utils/environment';
 import { ExternalApiError } from '../utils/errorHandler';
+import { uploadLogger } from '../utils/logger';
 
 /**
  * S3 客戶端快取
@@ -46,11 +47,11 @@ export class StorageService {
    */
   private getS3Client(): S3Client {
     if (S3_CLIENT) {
-      console.log('使用已初始化的 S3 客戶端');
+      uploadLogger.debug('使用已初始化的 S3 客戶端');
       return S3_CLIENT;
     }
     
-    console.log('初始化 S3 客戶端...', {
+    uploadLogger.info('初始化 S3 客戶端', {
       endpoint: this.env.R2_API_ENDPOINT,
       hasAccessKey: !!this.env.R2_ACCESS_KEY_ID,
       hasSecretKey: !!this.env.R2_SECRET_ACCESS_KEY
@@ -77,10 +78,11 @@ export class StorageService {
    * @returns 檔案 URL
    */
   async uploadFile(fileContent: Uint8Array, path: string, contentType: string): Promise<string> {
-    console.log('準備上傳檔案到 R2...', {
+    uploadLogger.info('準備上傳檔案到 R2', {
       bucket: this.bucket,
       key: path,
-      contentType: contentType
+      contentType: contentType,
+      fileSize: fileContent.length
     });
     
     try {
@@ -96,14 +98,25 @@ export class StorageService {
       
       // 構建檔案 URL
       const fileUrl = `https://${this.endpoint}/${path}`;
-      console.log('檔案上傳成功，URL:', fileUrl);
+      uploadLogger.info('檔案上傳成功', {
+        fileUrl,
+        path,
+        contentType
+      });
       
       return fileUrl;
     } catch (error) {
-      console.error('R2 上傳錯誤:', error);
+      uploadLogger.error('檔案上傳錯誤', {
+        path,
+        contentType,
+        error
+      });
+      
+      // 將 AWS S3 錯誤轉換為自定義錯誤
       throw new ExternalApiError(
-        error instanceof Error ? error.message : '上傳檔案失敗',
-        'R2 Storage'
+        '檔案上傳失敗: ' + (error instanceof Error ? error.message : '未知錯誤'),
+        'Cloudflare R2',
+        500
       );
     }
   }
@@ -134,5 +147,6 @@ export class StorageService {
  * @returns 儲存服務實例
  */
 export function createStorageService(env: Env): StorageService {
+  uploadLogger.debug('建立儲存服務');
   return new StorageService(env);
 }

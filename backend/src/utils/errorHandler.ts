@@ -4,6 +4,7 @@
  */
 
 import { getCorsHeadersForRequest } from './cors';
+import { logger } from './logger';
 
 /**
  * 錯誤回應介面
@@ -131,7 +132,7 @@ export function handleError(
   requestId?: string
 ): Response {
   // 記錄錯誤詳情
-  console.error(`🔴 [${requestId || 'ERROR'}] 處理錯誤:`, error);
+  logger.error('處理錯誤', requestId, error);
   
   // 根據錯誤類型提取訊息
   let message = '伺服器內部錯誤';
@@ -142,7 +143,7 @@ export function handleError(
     message = error.message;
     
     // 記錄詳細錯誤資訊
-    console.error(`🔴 [${requestId || 'ERROR'}] 錯誤詳情:`, {
+    logger.error('錯誤詳情', requestId, {
       name: error.name,
       message: error.message,
       stack: error.stack

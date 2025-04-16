@@ -8,6 +8,7 @@ import { ExternalApiError } from '../utils/errorHandler';
 import type { ChatMessage, ChatCompletionOptions, GroqChatResponse, FaqSearchResult } from '../types/chat';
 import { MODEL_MAPPING, getModelConfig, modelSupportsImages } from '../config/models';
 import { PineconeClient } from './pinecone';
+import { chatLogger } from '../utils/logger';
 
 /**
  * 預設配置參數
@@ -94,6 +95,12 @@ export class GroqService {
       let actualMaxTokens = maxTokens;
       let modelDisplayName = '預設模型';
       
+      chatLogger.debug('準備調用 Groq API', {
+        messageCount: messages.length,
+        selectedModel: model,
+        hasImage: !!image
+      });
+      
       // 使用映射表處理模型選擇
       if (model in MODEL_MAPPING) {
         const modelConfig = MODEL_MAPPING[model as keyof typeof MODEL_MAPPING];
@@ -108,8 +115,13 @@ export class GroqService {
           actualMaxTokens = modelConfig.maxTokens;
         }
         
-        console.log(`🔄 切換到模型: ${modelDisplayName} (ID: ${model})`);
-        console.log(`📝 模型參數: 溫度=${actualTemperature}, 最大Tokens=${actualMaxTokens}`);
+        chatLogger.info('模型映射', {
+          frontend: model,
+          actual: actualModel,
+          displayName: modelDisplayName,
+          temperature: actualTemperature,
+          maxTokens: actualMaxTokens
+        });
       } else if (model.includes('llama') || model.includes('deepseek') || model.includes('qwen')) {
         // 如果傳入的是完整模型名稱，直接使用
         actualModel = model;
@@ -119,13 +131,13 @@ export class GroqService {
         console.log(`⚠️ 未知模型 ID: ${model}，使用預設模型: ${DEFAULT_MODEL}`);
       }
       
-      console.log('📊 Groq API 請求詳情:', {
-        modelId: model,
-        actualModel: actualModel,
-        modelName: modelDisplayName,
-        messagesCount: messages.length,
+      // 開始計時 API 調用
+      const startTime = Date.now();
+      chatLogger.info('調用 Groq API', {
+        model: actualModel,
         temperature: actualTemperature,
         maxTokens: actualMaxTokens,
+        messagesCount: messages.length,
         hasImage: !!image
       });
       
@@ -175,15 +187,19 @@ export class GroqService {
             ]
           };
           
-          console.log('✅ 已將圖片添加到用戶訊息中');
+          chatLogger.debug('添加圖片到最後一條消息', {
+            messageCount: requestBody.messages.length,
+            imageSize: image.length
+          });
         } else {
-          console.log('⚠️ 未找到用戶訊息，無法添加圖片');
+          chatLogger.warn('無法添加圖片：最後一條消息不是用戶消息', {
+            lastMessageRole: lastUserMessageIndex === -1 ? '未找到用戶消息' : '系統消息'
+          });
         }
       }
       
       // 發送請求到 Groq API
       console.log(`🌐 發送請求到 Groq API (模型: ${modelDisplayName})...`);
-      const startTime = Date.now();
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -192,54 +208,68 @@ export class GroqService {
         },
         body: JSON.stringify(requestBody)
       });
-      const endTime = Date.now();
-      console.log(`⏱️ Groq API 請求耗時: ${endTime - startTime}ms (模型: ${modelDisplayName})`);
       
-      // 檢查回應狀態
+      // 記錄 API 響應時間
+      const responseTime = Date.now() - startTime;
+      chatLogger.info('收到 Groq API 響應', {
+        responseTime: `${responseTime}ms`,
+        status: response.status
+      });
+      
+      // 檢查 API 響應
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ Groq API 回應錯誤:', {
-          status: response.status,
-          statusText: response.statusText,
-          errorData: errorData
-        });
+        // 嘗試解析錯誤響應
+        let errorMessage: string;
+        try {
+          const errorData = await response.json();
+          chatLogger.error('Groq API 錯誤', errorData);
+          errorMessage = errorData.error?.message || `HTTP 錯誤 ${response.status}`;
+        } catch (e) {
+          // 如果無法解析 JSON，則獲取文本
+          errorMessage = await response.text();
+          chatLogger.error('Groq API 返回非 JSON 錯誤', { 
+            error: errorMessage,
+            status: response.status 
+          });
+        }
         
         // 使用專門的外部 API 錯誤類型
         throw new ExternalApiError(
-          JSON.stringify(errorData),
+          errorMessage,
           'Groq',
           response.status
         );
       }
       
-      // 解析回應
-      const responseData = await response.json() as GroqChatResponse;
-      console.log(`✅ 模型 ${modelDisplayName} 回應成功:`, {
-        model: responseData.model,
-        usage: responseData.usage,
-        responseCharCount: responseData.choices[0]?.message?.content?.length || 0
+      // 解析 API 回應
+      const result = await response.json();
+      
+      // 從第一個選擇中提取回應內容
+      const choices = result.choices || [];
+      
+      // 記錄模型和用量信息
+      chatLogger.info('Groq API 完成', {
+        model: result.model,
+        usage: result.usage,
+        choicesCount: choices.length,
+        responseTime: `${Date.now() - startTime}ms`
       });
       
       // 返回 Groq API 回應
-      return responseData;
+      return result;
       
     } catch (error) {
-      // 如果已經是 ExternalApiError，直接拋出
+      // 如果是已知的外部 API 錯誤，直接重新拋出
       if (error instanceof ExternalApiError) {
         throw error;
       }
       
-      // 否則包裝為 ExternalApiError
-      console.error('❌ Groq API 請求錯誤:', error);
-      console.error('錯誤詳情:', error instanceof Error ? {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      } : '未知錯誤類型');
-      
+      // 將其他錯誤包裝為外部 API 錯誤
+      chatLogger.error('未處理的 Groq API 錯誤', error);
       throw new ExternalApiError(
-        error instanceof Error ? error.message : '與 Groq API 通訊時發生錯誤',
-        'Groq'
+        '與 Groq API 通信時發生錯誤: ' + (error instanceof Error ? error.message : '未知錯誤'),
+        'Groq',
+        500
       );
     }
   }
@@ -257,63 +287,62 @@ export class GroqService {
     threshold: number = 0.3
   ): Promise<GroqChatResponse> {
     try {
-      // 從最後一條用戶訊息獲取查詢文本
-      const userMessages = options.messages.filter((msg: ChatMessage) => msg.role === 'user');
-      const lastUserMessage = userMessages.length > 0 ? userMessages[userMessages.length - 1] : null;
+      chatLogger.info('開始增強聊天處理');
       
-      if (!lastUserMessage) {
-        throw new Error('未找到用戶訊息');
-      }
+      // 獲取相關 FAQ 結果
+      let faqs: FaqSearchResult[] = [];
       
-      const query = lastUserMessage.content;
-      console.log(`🔍 RAG: 開始處理用戶查詢: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`);
-      
-      // 創建 Pinecone 客戶端
-      const pinecone = new PineconeClient(
-        this.env.PINECONE_API_KEY,
-        this.env.PINECONE_ENVIRONMENT,
-        this.env.PINECONE_INDEX || this.env.PINECONE_INDEX_NAME || '',
-        this.env,
-        this.env.PINECONE_API_URL
-      );
-      
-      // 查詢相關 FAQ
-      console.log(`🔍 RAG: 開始在向量資料庫中搜尋相關資訊 (限制: ${limit}, 閾值: ${threshold})`);
-      const faqs = await pinecone.searchFaqs(query, limit, threshold);
-      
-      console.log(`🔍 RAG: 找到 ${faqs.length} 個相關答案`);
-      
-      // 如果找到相關 FAQ，創建增強的系統提示詞
-      let finalOptions = { ...options };
-      if (faqs.length > 0) {
-        console.log(`🔄 RAG: 創建增強的系統提示詞，整合 ${faqs.length} 個相關知識點`);
+      // 僅處理用戶角色的最後一條消息
+      const userMessages = options.messages.filter(m => m.role === 'user');
+      if (userMessages.length > 0) {
+        const lastUserMessage = userMessages[userMessages.length - 1];
+        const query = typeof lastUserMessage.content === 'string' 
+          ? lastUserMessage.content 
+          : ''; // 如果不是字符串（如多模態消息），則使用空字符串
         
-        // 記錄找到的 FAQ
-        faqs.forEach((faq, index) => {
-          console.log(`🔄 RAG: FAQ #${index + 1}: "${faq.question.substring(0, 30)}..." (相似度: ${faq.score.toFixed(2)})`);
-        });
+        if (query) {
+          chatLogger.info('嘗試查找相關FAQ', {
+            queryPreview: `${query.substring(0, 50)}${query.length > 50 ? '...' : ''}`,
+            queryLength: query.length
+          });
+          
+          try {
+            // 創建 Pinecone 客戶端
+            const pineconeClient = new PineconeClient(
+              this.env.PINECONE_API_KEY,
+              this.env.PINECONE_ENVIRONMENT,
+              this.env.PINECONE_INDEX || this.env.PINECONE_INDEX_NAME || '',
+              this.env,
+              this.env.PINECONE_API_URL
+            );
+            
+            // 搜索相關 FAQ
+            faqs = await pineconeClient.searchFaqs(query, limit, threshold);
+            chatLogger.info('FAQ 搜索結果', {
+              faqCount: faqs.length,
+              categories: faqs.map(f => f.category).filter(Boolean)
+            });
+          } catch (error) {
+            chatLogger.error('FAQ 搜索失敗', error);
+            // 即使 FAQ 搜索失敗，仍然繼續處理聊天
+          }
+        }
         
-        // 創建增強的系統提示詞
-        const enhancedSystemPrompt = createEnhancedSystemPrompt(faqs);
-        
-        // 替換原始系統提示詞
-        finalOptions = {
-          ...options,
-          messages: [
-            ...options.messages
-          ]
-        };
-        
-        // 調用 Groq API 並返回結果
-        console.log(`🤖 RAG: 使用增強提示詞調用 Groq API`);
-        return this.callGroqApiWithSystemPrompt(finalOptions, enhancedSystemPrompt);
+        // 如果找到相關 FAQ，創建增強的系統提示詞
+        if (faqs.length > 0) {
+          const enhancedSystemPrompt = createEnhancedSystemPrompt(faqs);
+          const finalOptions = { ...options, messages: [enhancedSystemPrompt, ...options.messages] };
+          return this.callGroqApi(finalOptions);
+        } else {
+          // 沒有找到相關 FAQ，使用基本系統提示詞
+          return this.callGroqApi(options);
+        }
       } else {
-        // 沒有找到相關 FAQ，使用基本系統提示詞
-        console.log(`🤖 RAG: 未找到相關知識，使用基本系統提示詞`);
+        // 沒有用戶消息，直接調用 Groq API
         return this.callGroqApi(options);
       }
     } catch (error) {
-      console.error('❌ RAG 增強聊天錯誤:', error);
+      chatLogger.error('調用 Groq API 時發生錯誤', error);
       
       // 降級策略: 如果 RAG 增強失敗，回退到直接調用 Groq
       console.log('🔄 RAG: 增強查詢失敗，降級為標準查詢');

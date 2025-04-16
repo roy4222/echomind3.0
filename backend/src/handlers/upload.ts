@@ -3,6 +3,7 @@ import { corsHeaders, getCorsHeadersForRequest } from '../utils/cors';
 import { verifyAuth } from '../middlewares/auth';
 import { createStorageService } from '../services/storage';
 import { createSuccessResponse, createErrorResponse, handleError, ValidationError } from '../utils/errorHandler';
+import { uploadLogger } from '../utils/logger';
 
 /**
  * 處理檔案上傳請求
@@ -11,8 +12,12 @@ import { createSuccessResponse, createErrorResponse, handleError, ValidationErro
  * @returns 回應對象
  */
 export async function handleUpload(request: Request, env: Env): Promise<Response> {
+  // 生成請求 ID 用於追蹤
+  const requestId = crypto.randomUUID();
+  const logger = uploadLogger.forRequest(requestId);
+  
   try {
-    console.log('開始處理檔案上傳請求');
+    logger.info('開始處理檔案上傳請求');
     
     // 驗證請求方法
     if (request.method !== 'POST') {
@@ -32,7 +37,7 @@ export async function handleUpload(request: Request, env: Env): Promise<Response
     
     // 檢查必要參數
     if (!file || !path) {
-      console.log('缺少上傳參數:', { 
+      logger.warn('缺少上傳參數', { 
         hasFile: !!file, 
         hasPath: !!path 
       });
@@ -40,7 +45,7 @@ export async function handleUpload(request: Request, env: Env): Promise<Response
       throw new ValidationError('缺少檔案或路徑參數');
     }
     
-    console.log('上傳檔案資訊:', {
+    logger.info('上傳檔案資訊', {
       filename: file.name,
       type: file.type,
       size: `${(file.size / 1024).toFixed(2)} KB`,

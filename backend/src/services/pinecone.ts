@@ -4,6 +4,7 @@
 import { generateEmbedding } from './../services/embedding';
 import type { FaqSearchResult } from './../types/chat';
 import { Env } from '../index';
+import { vectorLogger, LogLevel } from '../utils/logger';
 
 /**
  * Pinecone 客戶端
@@ -79,11 +80,11 @@ export class PineconeClient {
     this.env = env;
     
     // 記錄初始化信息，但不顯示完整 API 密鑰
-    console.log('初始化 Pinecone 客戶端:', {
-      环境: environment,
-      索引名稱: indexName,
-      API密鑰: apiKey ? `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}` : '未提供',
-      完整URL: this.fullApiUrl || '未提供'
+    vectorLogger.info('初始化 Pinecone 客戶端', {
+      environment,
+      indexName,
+      apiKey: apiKey ? `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}` : '未提供',
+      fullApiUrl: this.fullApiUrl || '未提供'
     });
   }
   
@@ -104,12 +105,12 @@ export class PineconeClient {
       // 生成查詢文本的向量嵌入
       const embedding = await generateEmbedding(query, this.env);
       
-      // 決定使用哪個 API URL
+      // Pinecone 索引 URL - 直接使用完整URL或組合
       let url: string;
       if (this.fullApiUrl) {
         // 使用完整的 API URL
         url = `${this.fullApiUrl.replace(/\/$/, '')}/query`;
-        console.log(`使用完整 Pinecone API URL: ${url}`);
+        vectorLogger.debug(`使用完整 Pinecone API URL: ${url}`);
       } else {
         // 創建 Pinecone API URL - 處理不同環境的 URL 格式
         let baseUrl: string;
@@ -122,13 +123,17 @@ export class PineconeClient {
         }
         url = `${baseUrl}/query`;
         
-        console.log(`使用組合的 Pinecone API URL: ${url}`, {
-          索引: this.indexName,
-          環境: this.environment
+        vectorLogger.debug(`使用組合的 Pinecone API URL: ${url}`, {
+          indexName: this.indexName,
+          environment: this.environment
         });
       }
       
-      console.log(`開始查詢 Pinecone: "${query}" (limit=${limit}, threshold=${threshold})`);
+      vectorLogger.info('開始查詢 Pinecone', {
+        query,
+        limit,
+        threshold
+      });
       
       // 發送請求到 Pinecone
       const response = await fetch(url, {
@@ -150,22 +155,21 @@ export class PineconeClient {
         let errorMessage = `Pinecone API 錯誤: HTTP ${response.status}`;
         try {
           // 嘗試解析錯誤回應為 JSON
-          const errorData = await response.json();
-          errorMessage += ` - ${JSON.stringify(errorData)}`;
-        } catch (e) {
-          // 如果無法解析 JSON，則獲取文本內容
+          const responseBody = await response.json();
+          vectorLogger.error('收到 Pinecone 錯誤回應詳情', responseBody);
+          errorMessage += ` - ${responseBody.message || '未知錯誤'}`;
+        } catch (jsonError) {
+          vectorLogger.error('Pinecone 回應解析錯誤', jsonError);
           errorMessage += ` - ${await response.text()}`;
         }
         throw new Error(errorMessage);
       }
       
-      // 解析回應為 JSON
+      // 解析回應數據
       const data = await response.json();
-      
-      // 記錄原始回應
-      console.log(`Pinecone 原始回應:`, {
-        總結果數: data.matches?.length || 0,
-        命名空間: data.namespace
+      vectorLogger.info('收到 Pinecone 回應', {
+        matchesCount: data.matches?.length || 0,
+        namespace: data.namespace
       });
       
       // 記錄第一個結果的詳細資訊（如果有）
@@ -180,7 +184,7 @@ export class PineconeClient {
       }
       
       // 過濾並映射結果，只保留相似度高於閾值的結果
-      const results = data.matches
+      const filteredResults = data.matches
         .filter((match: any) => match.score >= threshold)
         .map((match: any) => ({
           id: match.id,
@@ -191,12 +195,11 @@ export class PineconeClient {
           tags: match.metadata.tags || []
         }));
       
-      console.log(`過濾後返回 ${results.length} 個結果 (閾值=${threshold})`);
+      vectorLogger.debug(`結果過濾: 在相似度閾值 ${threshold} 之上的有 ${filteredResults.length} 個結果`);
       
-      return results;
+      return filteredResults;
     } catch (error) {
-      // 記錄並重新拋出錯誤
-      console.error('Pinecone 搜尋錯誤:', error);
+      vectorLogger.error('在 Pinecone 搜索過程中發生錯誤', error);
       throw error;
     }
   }
@@ -221,8 +224,13 @@ export class PineconeClient {
         throw new Error('未設置 Pinecone 索引名稱');
       }
       
-      // 生成問題的向量嵌入
+      // 生成向量嵌入
       const embedding = await generateEmbedding(faq.question, this.env);
+      vectorLogger.info('已為 FAQ 生成向量嵌入', {
+        id: faq.id,
+        embeddingLength: embedding.length,
+        question: faq.question.substring(0, 50) + (faq.question.length > 50 ? '...' : '')
+      });
       
       // 構建 API URL
       const baseUrl = `https://${this.indexName}-${this.environment}.svc.${this.environment}.pinecone.io`;
@@ -257,9 +265,8 @@ export class PineconeClient {
       
       return true;
     } catch (error) {
-      // 記錄並重新拋出錯誤
-      console.error('添加 FAQ 錯誤:', error);
-      throw error;
+      vectorLogger.error('在添加 FAQ 到 Pinecone 過程中發生錯誤', error);
+      return false;
     }
   }
-} 
+}

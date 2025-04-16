@@ -3,6 +3,7 @@ import { corsHeaders, getCorsHeadersForRequest } from '../utils/cors';
 import { PineconeClient } from '../services/pinecone';
 import type { FaqSearchResult } from './../types/chat';
 import { createSuccessResponse, createErrorResponse, handleError, ValidationError } from '../utils/errorHandler';
+import { faqLogger } from '../utils/logger';
 
 /**
  * 處理 FAQ 查詢請求
@@ -12,7 +13,9 @@ import { createSuccessResponse, createErrorResponse, handleError, ValidationErro
  */
 export async function handleFaq(request: Request, env: Env): Promise<Response> {
   const requestId = crypto.randomUUID();
-  console.log(`❓ [${requestId}] 開始處理 FAQ 查詢請求`);
+  const logger = faqLogger.forRequest(requestId);
+  
+  logger.info('開始處理 FAQ 查詢請求');
   
   try {
     // 驗證請求方法
@@ -43,7 +46,7 @@ export async function handleFaq(request: Request, env: Env): Promise<Response> {
     // 使用 topK 或 limit（兼容兩種端點）
     const resultLimit = topK || limit;
     
-    console.log(`❓ [${requestId}] 搜索參數:`, {
+    logger.info('搜索參數', {
       query,
       limit: resultLimit,
       threshold,
