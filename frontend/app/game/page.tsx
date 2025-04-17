@@ -17,7 +17,7 @@ const games = [
   },
   {
     id: "puzzle",
-    name: "記憶拼圖",
+    name: "拼圖",
     description: "訓練記憶力與專注力",
     imageUrl: "/images/puzzle.png",
     path: "/game/puzzle",
@@ -25,7 +25,7 @@ const games = [
   {
     id: "breathe",
     name: "呼吸遊戲",
-    description: "訓練記憶力與專注力",
+    description: "深呼吸，放輕鬆",
     imageUrl: "/images/breathe.png",
     path: "/game/breathe",
   },
@@ -44,11 +44,11 @@ const games = [
     path: "/game/whack-a-mole",
   },
   {
-    id: "",
-    name: "打地鼠",
-    description: "訓練反應力",
-    imageUrl: "/images/whack-a-mole.png",
-    path: "/game/whack-a-mole",
+    id: "memory-game",
+    name: "記憶遊戲",
+    description: "訓練記憶力",
+    imageUrl: "/images/memory-game.png",
+    path: "/game/memory-game",
   },
 ];
 
