@@ -100,8 +100,10 @@ export interface FaqSearchResult {
   question: string;
   /** 答案 */
   answer: string;
-  /** 相似度分數 */
+  /** 相似度分數 (可能經過後處理調整) */
   score: number;
+  /** 原始相似度分數 (向量搜尋原始分數，用於調試) */
+  originalScore?: number;
   /** 分類 (可選) */
   category?: string;
   /** 標籤 (可選) */

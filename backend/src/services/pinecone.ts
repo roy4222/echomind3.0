@@ -171,13 +171,90 @@ export class PineconeClient {
    * @param threshold 相似度閾值
    * @returns FAQ 搜尋結果
    */
+  /**
+   * 處理查詢預處理，提取關鍵詞
+   * @param query 原始查詢文本
+   * @returns 處理後的查詢文本
+   */
+  private preprocessQuery(query: string): string {
+    // 簡單的停用詞列表 (可擴充)
+    const stopwords = ['的', '了', '和', '與', '在', '是', '我', '有', '這', '那', '怎麼', '如何', '請問', '可以', '嗎'];
+    
+    // 移除標點符號
+    let processedQuery = query.replace(/[.,。，、！？!?;；:：()（）{}「」""]/g, ' ');
+    
+    // 分詞並移除停用詞 (簡易版)
+    let words = processedQuery.split(/\s+/).filter(word => word.length > 0);
+    words = words.filter(word => !stopwords.includes(word));
+    
+    // 如果過濾後的詞太少，回退到原始查詢
+    if (words.length < 2) {
+      vectorLogger.debug('預處理後關鍵詞太少，使用原始查詢', { 
+        originalQuery: query, 
+        processedWords: words 
+      });
+      return query;
+    }
+    
+    // 重組查詢
+    const processedQueryText = words.join(' ');
+    
+    vectorLogger.debug('查詢預處理完成', { 
+      originalQuery: query, 
+      processedQuery: processedQueryText,
+      keywordsExtracted: words
+    });
+    
+    return processedQueryText;
+  }
+  
+  /**
+   * 動態計算相似度閾值
+   * @param query 查詢文本
+   * @param baseThreshold 基礎閾值
+   * @returns 調整後的閾值
+   */
+  private calculateDynamicThreshold(query: string, baseThreshold: number): number {
+    // 基於查詢長度的動態閾值調整
+    const queryLength = query.length;
+    let dynamicThreshold = baseThreshold;
+    
+    // 短查詢需要更高的閾值來減少誤匹配
+    if (queryLength < 5) {
+      dynamicThreshold = baseThreshold * 1.5;
+    } 
+    // 中等長度查詢使用基礎閾值
+    else if (queryLength >= 5 && queryLength <= 20) {
+      dynamicThreshold = baseThreshold;
+    } 
+    // 長查詢降低閾值以獲取更多相關結果
+    else {
+      // 最低不低於基礎閾值的 70%
+      dynamicThreshold = Math.max(baseThreshold * 0.7, 0.07);
+    }
+    
+    vectorLogger.debug('計算動態閾值', { 
+      originalThreshold: baseThreshold, 
+      dynamicThreshold: dynamicThreshold,
+      queryLength: queryLength
+    });
+    
+    return dynamicThreshold;
+  }
+
   async searchFaqs(query: string, limit: number = 5, threshold: number = 0.1): Promise<FaqSearchResult[]> {
     // 檢查必要的配置
     if (!this.apiKey) {
       throw new Error('未設置 Pinecone API 金鑰');
     }
     
-    // 建立快取鍵
+    // 查詢預處理，提取關鍵詞
+    const processedQuery = this.preprocessQuery(query);
+    
+    // 計算動態閾值
+    const dynamicThreshold = this.calculateDynamicThreshold(processedQuery, threshold);
+    
+    // 建立快取鍵 (使用原始查詢，確保快取一致性)
     const cacheKey = createCacheKey('pinecone-search', query, limit, threshold);
     
     // 如果啟用快取，嘗試從快取中獲取結果
@@ -186,6 +263,7 @@ export class PineconeClient {
       if (cachedResult) {
         vectorLogger.info('從快取獲取 Pinecone 查詢結果', {
           query: query.substring(0, 50) + (query.length > 50 ? '...' : ''),
+          processedQuery: processedQuery !== query ? processedQuery : '同原始查詢',
           limit,
           cacheHit: true
         });
@@ -228,6 +306,23 @@ export class PineconeClient {
         threshold
       });
       
+      // 準備向量搜尋參數
+      const searchParams = {
+        vector: embedding,
+        topK: Math.min(limit * 2, 20), // 獲取更多候選項，以便進行後處理篩選
+        includeMetadata: true,
+        includeValues: false,
+        namespace: '', // 確保在未指定命名空間時使用默認空間
+        filter: {}, // 可以根據實際需求添加過濾條件
+        sparseVector: undefined // 用於混合搜索，目前未使用
+      };
+      
+      vectorLogger.debug('Pinecone 搜索參數配置', {
+        topK: searchParams.topK,
+        originalLimit: limit,
+        dynamicThreshold
+      });
+      
       // 發送請求到 Pinecone
       const response = await fetch(url, {
         method: 'POST',
@@ -235,12 +330,7 @@ export class PineconeClient {
           'Content-Type': 'application/json',
           'Api-Key': this.apiKey
         },
-        body: JSON.stringify({
-          vector: embedding,
-          topK: limit,
-          includeMetadata: true,
-          includeValues: false
-        })
+        body: JSON.stringify(searchParams)
       });
       
       // 檢查回應狀態
@@ -300,18 +390,58 @@ export class PineconeClient {
       const results: FaqSearchResult[] = [];
       
       if (data.matches && data.matches.length > 0) {
-        for (const match of data.matches) {
-          // 只保留超過相似度閾值的結果
-          if (match.score >= threshold) {
-            const result: FaqSearchResult = {
-              id: match.id,
-              question: match.metadata.question || '',
-              answer: match.metadata.answer || '',
-              metadata: match.metadata,
-              score: match.score
-            };
-            results.push(result);
+        // 定義 Pinecone 匹配項介面
+        interface PineconeMatch {
+          id: string;
+          score: number;
+          metadata: Record<string, any>;
+          values?: number[];
+        }
+        
+        // 首先收集所有符合動態閾值的匹配項
+        const validMatches = data.matches.filter((match: PineconeMatch) => match.score >= dynamicThreshold);
+        
+        // 記錄篩選結果
+        vectorLogger.debug('動態閾值篩選結果', {
+          totalMatches: data.matches.length,
+          matchesAboveThreshold: validMatches.length,
+          dynamicThreshold,
+          originalThreshold: threshold
+        });
+        
+        // 對結果進行後處理和增強
+        for (const match of validMatches as PineconeMatch[]) {
+          // 計算文本相似度增強因子 (簡單示例)
+          let textSimilarityBoost = 1.0;
+          const queryLower = query.toLowerCase();
+          const questionLower = (match.metadata.question || '').toLowerCase();
+          
+          // 如果問題中包含原始查詢的關鍵詞，增加分數
+          if (queryLower.length > 3 && questionLower.includes(queryLower)) {
+            textSimilarityBoost = 1.2;
           }
+          
+          // 最終分數是向量相似度與文本相似度增強的組合
+          const finalScore = match.score * textSimilarityBoost;
+          
+          // 創建結果對象
+          const result: FaqSearchResult = {
+            id: match.id,
+            question: match.metadata.question || '',
+            answer: match.metadata.answer || '',
+            metadata: match.metadata,
+            score: finalScore,
+            originalScore: match.score // 保存原始分數用於調試
+          };
+          results.push(result);
+        }
+        
+        // 根據最終分數重新排序結果
+        results.sort((a, b) => b.score - a.score);
+        
+        // 截取到用戶要求的限制數量
+        if (results.length > limit) {
+          results.splice(limit);
         }
       }
       
@@ -320,7 +450,9 @@ export class PineconeClient {
         this.queryCache.set(cacheKey, results);
         vectorLogger.debug('Pinecone 查詢結果已快取', { 
           cacheKey,
-          resultsCount: results.length 
+          resultsCount: results.length,
+          processedQuery: processedQuery !== query ? processedQuery : '同原始查詢',
+          dynamicThreshold
         });
       }
       
