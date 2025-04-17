@@ -5,6 +5,8 @@ import { generateEmbedding } from './../services/embedding';
 import type { FaqSearchResult } from './../types/chat';
 import { Env } from '../index';
 import { vectorLogger, LogLevel } from '../utils/logger';
+import { ExternalApiError } from '../utils/errorHandler';
+import { withRetry, serviceDegradation } from '../utils/retry';
 
 /**
  * Pinecone 客戶端
@@ -96,12 +98,13 @@ export class PineconeClient {
    * @returns FAQ 搜尋結果
    */
   async searchFaqs(query: string, limit: number = 5, threshold: number = 0.1): Promise<FaqSearchResult[]> {
-    try {
-      // 檢查必要的配置
-      if (!this.apiKey) {
-        throw new Error('未設置 Pinecone API 金鑰');
-      }
-      
+    // 檢查必要的配置
+    if (!this.apiKey) {
+      throw new Error('未設置 Pinecone API 金鑰');
+    }
+
+    // 將搜尋邏輯封裝為函數，以方便重試
+    const performSearch = async (): Promise<FaqSearchResult[]> => {
       // 生成查詢文本的向量嵌入
       const embedding = await generateEmbedding(query, this.env);
       
@@ -152,17 +155,34 @@ export class PineconeClient {
       
       // 檢查回應狀態
       if (!response.ok) {
-        let errorMessage = `Pinecone API 錯誤: HTTP ${response.status}`;
+        let errorDetails: any;
+        const statusCode = response.status;
+        let errorMessage = `Pinecone API 錯誤: HTTP ${statusCode}`;
+
         try {
           // 嘗試解析錯誤回應為 JSON
           const responseBody = await response.json();
+          errorDetails = responseBody;
           vectorLogger.error('收到 Pinecone 錯誤回應詳情', responseBody);
           errorMessage += ` - ${responseBody.message || '未知錯誤'}`;
         } catch (jsonError) {
           vectorLogger.error('Pinecone 回應解析錯誤', jsonError);
-          errorMessage += ` - ${await response.text()}`;
+          const textResponse = await response.text();
+          errorDetails = { rawResponse: textResponse };
+          errorMessage += ` - ${textResponse}`;
         }
-        throw new Error(errorMessage);
+        
+        // 判斷是否應該重試
+        // 5xx 是服務器錯誤，429 是請求超出限制，這兩種情況可以重試
+        const retryable = statusCode >= 500 || statusCode === 429;
+        
+        throw new ExternalApiError(
+          errorMessage,
+          'Pinecone',
+          statusCode,
+          retryable,
+          errorDetails
+        );
       }
       
       // 解析回應數據
@@ -172,15 +192,24 @@ export class PineconeClient {
         namespace: data.namespace
       });
       
+      // 報告服務成功
+      serviceDegradation.reportSuccess('Pinecone');
+      
       // 記錄第一個結果的詳細資訊（如果有）
       if (data.matches?.length > 0) {
-        console.log(`第一個結果:`, {
+        vectorLogger.debug(`第一個結果:`, {
           id: data.matches[0].id,
           score: data.matches[0].score,
           metadata: data.matches[0].metadata ? Object.keys(data.matches[0].metadata) : '無'
         });
       } else {
-        console.log(`沒有找到匹配的結果`);
+        vectorLogger.debug(`沒有找到匹配的結果`);
+      }
+      
+      // 檢查是否有匹配結果
+      if (!data.matches || !Array.isArray(data.matches)) {
+        // 如果沒有匹配結果，返回空數組
+        return [];
       }
       
       // 過濾並映射結果，只保留相似度高於閾值的結果
@@ -188,19 +217,35 @@ export class PineconeClient {
         .filter((match: any) => match.score >= threshold)
         .map((match: any) => ({
           id: match.id,
-          question: match.metadata.question,
-          answer: match.metadata.answer,
+          question: match.metadata?.question || '',
+          answer: match.metadata?.answer || '',
           score: match.score,
-          category: match.metadata.category,
-          tags: match.metadata.tags || []
+          category: match.metadata?.category || '',
+          tags: match.metadata?.tags || []
         }));
       
       vectorLogger.debug(`結果過濾: 在相似度閾值 ${threshold} 之上的有 ${filteredResults.length} 個結果`);
       
       return filteredResults;
+    };
+    
+    try {
+      // 使用重試機制調用搜尋函數
+      return await withRetry(performSearch, {
+        maxRetries: 3,
+        initialDelay: 500,
+        maxDelay: 5000,
+        logPrefix: 'Pinecone'
+      });
     } catch (error) {
-      vectorLogger.error('在 Pinecone 搜索過程中發生錯誤', error);
-      throw error;
+      // 報告服務失敗
+      serviceDegradation.reportFailure('Pinecone', error instanceof Error ? error : new Error(String(error)));
+      
+      // 記錄錯誤
+      vectorLogger.error('在 Pinecone 搜索過程中發生錯誤，返回空結果', error);
+      
+      // 降級策略：如果錯誤，返回空結果
+      return [];
     }
   }
   
@@ -210,62 +255,145 @@ export class PineconeClient {
    * @returns 操作結果
    */
   async addFaq(faq: { id: string; question: string; answer: string; category?: string; tags?: string[] }): Promise<boolean> {
+    // 檢查必要的配置
+    if (!this.apiKey) {
+      throw new Error('未設置 Pinecone API 金鑰');
+    }
+    
+    if (!this.environment) {
+      throw new Error('未設置 Pinecone 環境');
+    }
+    
+    if (!this.indexName) {
+      throw new Error('未設置 Pinecone 索引名稱');
+    }
+    
+    // 將添加 FAQ 的邏輯封裝為函數，以方便重試
+    const performAddFaq = async (): Promise<boolean> => {
+      try {
+        // 生成向量嵌入
+        const embedding = await generateEmbedding(faq.question, this.env);
+        vectorLogger.info('生成 FAQ 向量嵌入成功', {
+          id: faq.id,
+          embeddingLength: embedding.length,
+          question: faq.question.substring(0, 50) + (faq.question.length > 50 ? '...' : '')
+        });
+        
+        // 構建 API URL
+        let url: string;
+        if (this.fullApiUrl) {
+          // 使用完整的 API URL
+          url = `${this.fullApiUrl.replace(/\/$/, '')}/vectors/upsert`;
+          vectorLogger.debug(`使用完整 Pinecone API URL: ${url}`);
+        } else {
+          // 使用組合 URL
+          let baseUrl: string;
+          if (this.environment === 'gcp-starter') {
+            // GCP-Starter 環境使用不同的 URL 格式
+            baseUrl = `https://${this.indexName}.svc.${this.environment}.pinecone.io`;
+          } else {
+            // 標準環境格式
+            baseUrl = `https://${this.indexName}-${this.environment}.svc.${this.environment}.pinecone.io`;
+          }
+          url = `${baseUrl}/vectors/upsert`;
+        }
+        
+        vectorLogger.info('開始向 Pinecone 添加 FAQ', {
+          faqId: faq.id,
+          category: faq.category || 'general'
+        });
+        
+        // 發送添加請求
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Api-Key': this.apiKey
+          },
+          body: JSON.stringify({
+            vectors: [{
+              id: faq.id,
+              values: embedding,
+              metadata: {
+                question: faq.question,
+                answer: faq.answer,
+                category: faq.category || 'general',
+                tags: faq.tags || []
+              }
+            }]
+          })
+        });
+        
+        // 檢查回應狀態
+        if (!response.ok) {
+          let errorDetails: any;
+          const statusCode = response.status;
+          let errorMessage = `Pinecone API 錯誤: HTTP ${statusCode}`;
+          
+          try {
+            // 嘗試解析錯誤回應為 JSON
+            const errorData = await response.json();
+            errorDetails = errorData;
+            vectorLogger.error('收到 Pinecone 錯誤回應詳情', errorData);
+            errorMessage += ` - ${JSON.stringify(errorData)}`;
+          } catch (jsonError) {
+            // 如果無法解析為 JSON，則使用原始文本
+            const textResponse = await response.text();
+            errorDetails = { rawResponse: textResponse };
+            errorMessage += ` - ${textResponse}`;
+          }
+          
+          // 判斷是否應該重試
+          // 5xx 是服務器錯誤，429 是請求超出限制，這兩種情況可以重試
+          const retryable = statusCode >= 500 || statusCode === 429;
+          
+          throw new ExternalApiError(
+            errorMessage,
+            'Pinecone',
+            statusCode,
+            retryable,
+            errorDetails
+          );
+        }
+        
+        // 報告服務成功
+        serviceDegradation.reportSuccess('Pinecone');
+        vectorLogger.info('FAQ 添加到 Pinecone 成功', { faqId: faq.id });
+        
+        return true;
+      } catch (error) {
+        // 如果是 ExternalApiError，直接拋出以觸發重試
+        if (error instanceof ExternalApiError) {
+          throw error;
+        }
+        
+        // 將其他錯誤包裝為 ExternalApiError
+        vectorLogger.error('添加 FAQ 到 Pinecone 過程中發生態類錯誤', error);
+        throw new ExternalApiError(
+          `添加 FAQ 到 Pinecone 過程中發生錯誤: ${error instanceof Error ? error.message : String(error)}`,
+          'Pinecone',
+          500,
+          true // 假設其他錯誤可以重試
+        );
+      }
+    };
+    
     try {
-      // 檢查必要的配置
-      if (!this.apiKey) {
-        throw new Error('未設置 Pinecone API 金鑰');
-      }
-      
-      if (!this.environment) {
-        throw new Error('未設置 Pinecone 環境');
-      }
-      
-      if (!this.indexName) {
-        throw new Error('未設置 Pinecone 索引名稱');
-      }
-      
-      // 生成向量嵌入
-      const embedding = await generateEmbedding(faq.question, this.env);
-      vectorLogger.info('已為 FAQ 生成向量嵌入', {
-        id: faq.id,
-        embeddingLength: embedding.length,
-        question: faq.question.substring(0, 50) + (faq.question.length > 50 ? '...' : '')
+      // 使用重試機制調用添加 FAQ 函數
+      return await withRetry(performAddFaq, {
+        maxRetries: 3,
+        initialDelay: 500,
+        maxDelay: 5000,
+        logPrefix: 'Pinecone-AddFaq'
       });
-      
-      // 構建 API URL
-      const baseUrl = `https://${this.indexName}-${this.environment}.svc.${this.environment}.pinecone.io`;
-      const url = `${baseUrl}/vectors/upsert`;
-      
-      // 發送添加請求
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Api-Key': this.apiKey
-        },
-        body: JSON.stringify({
-          vectors: [{
-            id: faq.id,
-            values: embedding,
-            metadata: {
-              question: faq.question,
-              answer: faq.answer,
-              category: faq.category || 'general',
-              tags: faq.tags || []
-            }
-          }]
-        })
-      });
-      
-      // 檢查回應狀態
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Pinecone API 錯誤: ${JSON.stringify(errorData)}`);
-      }
-      
-      return true;
     } catch (error) {
-      vectorLogger.error('在添加 FAQ 到 Pinecone 過程中發生錯誤', error);
+      // 報告服務失敗
+      serviceDegradation.reportFailure('Pinecone', error instanceof Error ? error : new Error(String(error)));
+      
+      // 記錄錯誤
+      vectorLogger.error('在添加 FAQ 到 Pinecone 過程中失敗，所有重試都失敗', error);
+      
+      // 返回失敗結果
       return false;
     }
   }

@@ -62,8 +62,8 @@ export const MODEL_MAPPING: ModelMapping = {
     description: '知識豐富，適合複雜問題與深度理解任務'
   },
   creative: {
-    name: 'qwen-2.5-32b',
-    displayName: 'Qwen 2.5 32B',
+    name: 'qwen-qwq-32b',
+    displayName: 'Qwen QWQ 32B',
     temperature: 0.9,
     maxTokens: 3072,
     description: '平衡效能與資源，優秀的跨語言能力'

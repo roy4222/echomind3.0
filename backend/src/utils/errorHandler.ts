@@ -232,11 +232,48 @@ export class NotFoundError extends Error {
 export class ExternalApiError extends Error {
   statusCode: number;
   apiName: string;
+  retryable: boolean;
+  details?: any;
   
-  constructor(message: string, apiName: string, statusCode: number = 500) {
+  constructor(message: string, apiName: string, statusCode: number = 500, retryable?: boolean, details?: any) {
     super(message);
     this.name = 'ExternalApiError';
     this.apiName = apiName;
     this.statusCode = statusCode;
+    // 自動判斷是否可重試：5xx 和 429 (Too Many Requests) 通常可以重試
+    this.retryable = retryable ?? (statusCode >= 500 || statusCode === 429);
+    this.details = details;
+  }
+  
+  /**
+   * 判斷錯誤是否可重試
+   * @returns 是否可重試
+   */
+  isRetryable(): boolean {
+    return this.retryable;
+  }
+  
+  /**
+   * 創建一個可重試的 API 錯誤
+   * @param message 錯誤訊息
+   * @param apiName API 名稱
+   * @param statusCode HTTP 狀態碼
+   * @param details 錯誤詳情
+   * @returns ExternalApiError 實例
+   */
+  static retryable(message: string, apiName: string, statusCode: number = 500, details?: any): ExternalApiError {
+    return new ExternalApiError(message, apiName, statusCode, true, details);
+  }
+  
+  /**
+   * 創建一個不可重試的 API 錯誤
+   * @param message 錯誤訊息
+   * @param apiName API 名稱
+   * @param statusCode HTTP 狀態碼
+   * @param details 錯誤詳情
+   * @returns ExternalApiError 實例
+   */
+  static nonRetryable(message: string, apiName: string, statusCode: number = 500, details?: any): ExternalApiError {
+    return new ExternalApiError(message, apiName, statusCode, false, details);
   }
 }

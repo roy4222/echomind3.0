@@ -28,7 +28,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// .wrangler/tmp/bundle-Ldo5Yj/checked-fetch.js
+// .wrangler/tmp/bundle-Cr2rTk/checked-fetch.js
 function checkURL(request, init) {
   const url = request instanceof URL ? request : new URL(
     (typeof request === "string" ? new Request(request, init) : request).url
@@ -46,7 +46,7 @@ function checkURL(request, init) {
 }
 var urls;
 var init_checked_fetch = __esm({
-  ".wrangler/tmp/bundle-Ldo5Yj/checked-fetch.js"() {
+  ".wrangler/tmp/bundle-Cr2rTk/checked-fetch.js"() {
     "use strict";
     urls = /* @__PURE__ */ new Set();
     __name(checkURL, "checkURL");
@@ -2450,11 +2450,11 @@ var require_es5 = __commonJS({
   }
 });
 
-// .wrangler/tmp/bundle-Ldo5Yj/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-Cr2rTk/middleware-loader.entry.ts
 init_checked_fetch();
 init_modules_watch_stub();
 
-// .wrangler/tmp/bundle-Ldo5Yj/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-Cr2rTk/middleware-insertion-facade.js
 init_checked_fetch();
 init_modules_watch_stub();
 
@@ -14055,17 +14055,50 @@ var ValidationError = class extends Error {
     this.details = details;
   }
 };
-var ExternalApiError = class extends Error {
+var ExternalApiError = class _ExternalApiError extends Error {
   static {
     __name(this, "ExternalApiError");
   }
   statusCode;
   apiName;
-  constructor(message, apiName, statusCode = 500) {
+  retryable;
+  details;
+  constructor(message, apiName, statusCode = 500, retryable, details) {
     super(message);
     this.name = "ExternalApiError";
     this.apiName = apiName;
     this.statusCode = statusCode;
+    this.retryable = retryable ?? (statusCode >= 500 || statusCode === 429);
+    this.details = details;
+  }
+  /**
+   * 判斷錯誤是否可重試
+   * @returns 是否可重試
+   */
+  isRetryable() {
+    return this.retryable;
+  }
+  /**
+   * 創建一個可重試的 API 錯誤
+   * @param message 錯誤訊息
+   * @param apiName API 名稱
+   * @param statusCode HTTP 狀態碼
+   * @param details 錯誤詳情
+   * @returns ExternalApiError 實例
+   */
+  static retryable(message, apiName, statusCode = 500, details) {
+    return new _ExternalApiError(message, apiName, statusCode, true, details);
+  }
+  /**
+   * 創建一個不可重試的 API 錯誤
+   * @param message 錯誤訊息
+   * @param apiName API 名稱
+   * @param statusCode HTTP 狀態碼
+   * @param details 錯誤詳情
+   * @returns ExternalApiError 實例
+   */
+  static nonRetryable(message, apiName, statusCode = 500, details) {
+    return new _ExternalApiError(message, apiName, statusCode, false, details);
   }
 };
 
@@ -14416,8 +14449,8 @@ var MODEL_MAPPING = {
     description: "\u77E5\u8B58\u8C50\u5BCC\uFF0C\u9069\u5408\u8907\u96DC\u554F\u984C\u8207\u6DF1\u5EA6\u7406\u89E3\u4EFB\u52D9"
   },
   creative: {
-    name: "qwen-2.5-32b",
-    displayName: "Qwen 2.5 32B",
+    name: "qwen-qwq-32b",
+    displayName: "Qwen QWQ 32B",
     temperature: 0.9,
     maxTokens: 3072,
     description: "\u5E73\u8861\u6548\u80FD\u8207\u8CC7\u6E90\uFF0C\u512A\u79C0\u7684\u8DE8\u8A9E\u8A00\u80FD\u529B"
@@ -14457,13 +14490,197 @@ init_modules_watch_stub();
 // src/services/embedding.ts
 init_checked_fetch();
 init_modules_watch_stub();
+
+// src/utils/retry.ts
+init_checked_fetch();
+init_modules_watch_stub();
+var DEFAULT_RETRY_OPTIONS = {
+  maxRetries: 3,
+  initialDelay: 300,
+  maxDelay: 1e4,
+  factor: 2,
+  jitter: true,
+  logPrefix: "\u91CD\u8A66"
+};
+function isRetryableError(error) {
+  if (error instanceof ExternalApiError) {
+    return error.statusCode >= 500 || error.statusCode === 429;
+  }
+  if (error instanceof Error) {
+    const networkErrors = [
+      "ECONNRESET",
+      "ETIMEDOUT",
+      "ECONNREFUSED",
+      "EPIPE",
+      "ENOTFOUND",
+      "ENETUNREACH",
+      "EAI_AGAIN"
+    ];
+    for (const networkError of networkErrors) {
+      if (error.message.includes(networkError)) {
+        return true;
+      }
+    }
+    if (error.message.includes("timeout") || error.message.includes("timed out")) {
+      return true;
+    }
+  }
+  return false;
+}
+__name(isRetryableError, "isRetryableError");
+async function withRetry(fn, options = {}) {
+  const {
+    maxRetries = DEFAULT_RETRY_OPTIONS.maxRetries,
+    initialDelay = DEFAULT_RETRY_OPTIONS.initialDelay,
+    maxDelay = DEFAULT_RETRY_OPTIONS.maxDelay,
+    factor = DEFAULT_RETRY_OPTIONS.factor,
+    jitter = DEFAULT_RETRY_OPTIONS.jitter,
+    logPrefix = DEFAULT_RETRY_OPTIONS.logPrefix,
+    isRetryable = isRetryableError,
+    onRetry
+  } = options;
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (error) {
+      attempt++;
+      if (attempt >= maxRetries || !isRetryable(error)) {
+        throw error;
+      }
+      let delay = Math.min(initialDelay * Math.pow(factor, attempt - 1), maxDelay);
+      if (jitter) {
+        delay = delay * (0.5 + Math.random() * 0.5);
+      }
+      logger2.warn(`${logPrefix}: \u5617\u8A66\u91CD\u8A66 (${attempt}/${maxRetries})\uFF0C\u5EF6\u9072 ${Math.round(delay)}ms`, {
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorName: error instanceof Error ? error.name : "Unknown",
+        attempt,
+        delay: Math.round(delay)
+      });
+      if (onRetry) {
+        onRetry(error, attempt, delay);
+      }
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+}
+__name(withRetry, "withRetry");
+async function withFallback(primaryFn, fallbackFn, options = {}) {
+  const {
+    shouldFallback = /* @__PURE__ */ __name(() => true, "shouldFallback"),
+    onFallback,
+    logPrefix = "\u964D\u7D1A"
+  } = options;
+  try {
+    return await primaryFn();
+  } catch (error) {
+    if (shouldFallback(error)) {
+      logger2.warn(`${logPrefix}: \u4E3B\u8981\u7B56\u7565\u5931\u6557\uFF0C\u555F\u52D5\u964D\u7D1A\u6D41\u7A0B`, {
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorName: error instanceof Error ? error.name : "Unknown"
+      });
+      if (onFallback) {
+        onFallback(error);
+      }
+      return await fallbackFn();
+    }
+    throw error;
+  }
+}
+__name(withFallback, "withFallback");
+var ServiceDegradationManager = class {
+  static {
+    __name(this, "ServiceDegradationManager");
+  }
+  services = /* @__PURE__ */ new Map();
+  /**
+   * 報告服務錯誤
+   * @param serviceName 服務名稱
+   * @param error 錯誤對象
+   * @returns 當前服務狀態
+   */
+  reportFailure(serviceName, error) {
+    const service = this.getServiceState(serviceName);
+    service.failures++;
+    service.lastError = error;
+    if (service.failures >= service.recoveryThreshold) {
+      service.status = "unavailable";
+    } else if (service.failures > 0) {
+      service.status = "degraded";
+    }
+    service.lastCheck = Date.now();
+    this.services.set(serviceName, service);
+    logger2.warn(`\u670D\u52D9 ${serviceName} \u72C0\u614B\u66F4\u65B0\u70BA ${service.status}`, {
+      failures: service.failures,
+      threshold: service.recoveryThreshold,
+      errorMessage: error?.message
+    });
+    return service.status;
+  }
+  /**
+   * 報告服務成功
+   * @param serviceName 服務名稱
+   * @returns 當前服務狀態
+   */
+  reportSuccess(serviceName) {
+    const service = this.getServiceState(serviceName);
+    if (service.status !== "healthy") {
+      logger2.info(`\u670D\u52D9 ${serviceName} \u5DF2\u6062\u5FA9\u6B63\u5E38\u72C0\u614B`, {
+        previousStatus: service.status,
+        previousFailures: service.failures
+      });
+    }
+    service.failures = 0;
+    service.status = "healthy";
+    service.lastCheck = Date.now();
+    delete service.lastError;
+    this.services.set(serviceName, service);
+    return service.status;
+  }
+  /**
+   * 檢查服務狀態
+   * @param serviceName 服務名稱
+   * @returns 服務狀態
+   */
+  getStatus(serviceName) {
+    return this.getServiceState(serviceName).status;
+  }
+  /**
+   * 獲取服務狀態信息
+   * @param serviceName
+   * @returns 服務完整狀態
+   */
+  getServiceInfo(serviceName) {
+    return this.getServiceState(serviceName);
+  }
+  /**
+   * 獲取服務狀態
+   * @param serviceName 服務名稱
+   * @returns 服務狀態對象
+   */
+  getServiceState(serviceName) {
+    if (!this.services.has(serviceName)) {
+      this.services.set(serviceName, {
+        status: "healthy",
+        lastCheck: Date.now(),
+        failures: 0,
+        recoveryThreshold: 3
+      });
+    }
+    return this.services.get(serviceName);
+  }
+};
+var serviceDegradation = new ServiceDegradationManager();
+
+// src/services/embedding.ts
 async function generateEmbedding(text, env) {
   const cohereApiKey = env?.COHERE_API_KEY;
   if (!cohereApiKey) {
     vectorLogger.warn("\u672A\u8A2D\u5B9A Cohere API \u91D1\u9470\uFF0C\u5C07\u4F7F\u7528\u6A21\u64EC\u5D4C\u5165");
-    return Array(1024).fill(0).map(() => (Math.random() - 0.5) * 0.1);
+    return generateFallbackEmbedding(1024);
   }
-  try {
+  const fetchEmbedding = /* @__PURE__ */ __name(async () => {
     vectorLogger.info("\u6B63\u5728\u751F\u6210\u5D4C\u5165\u5411\u91CF", {
       textPreview: `${text.substring(0, 50)}${text.length > 50 ? "..." : ""}`,
       textLength: text.length
@@ -14494,12 +14711,22 @@ async function generateEmbedding(text, env) {
     if (!response.ok) {
       const errorData = await response.json();
       vectorLogger.error("Cohere API \u8FD4\u56DE\u932F\u8AA4", errorData);
-      throw new Error(`Cohere API \u932F\u8AA4: ${JSON.stringify(errorData)}`);
+      const statusCode = response.status;
+      const errorMessage = errorData.message || `HTTP \u932F\u8AA4 ${statusCode}`;
+      const retryable = statusCode >= 500 || statusCode === 429;
+      throw new ExternalApiError(
+        errorMessage,
+        "Cohere",
+        statusCode,
+        retryable,
+        errorData
+      );
     }
     const data = await response.json();
     vectorLogger.debug("Cohere API \u97FF\u61C9\u6210\u529F", {
       availableFields: Object.keys(data)
     });
+    serviceDegradation.reportSuccess("Cohere");
     let embedding;
     if (data.embeddings && Array.isArray(data.embeddings)) {
       vectorLogger.debug("\u4F7F\u7528\u820A\u7248 API \u683C\u5F0F (embeddings[])", {
@@ -14513,16 +14740,29 @@ async function generateEmbedding(text, env) {
       embedding = data.embeddings.float[0];
     } else {
       vectorLogger.error("\u7121\u6CD5\u5F9E\u56DE\u61C9\u4E2D\u7372\u53D6\u5D4C\u5165\u5411\u91CF", data);
-      throw new Error("\u7121\u6CD5\u89E3\u6790 Cohere API \u56DE\u61C9\u4E2D\u7684\u5D4C\u5165\u5411\u91CF");
+      throw new ExternalApiError("\u7121\u6CD5\u89E3\u6790 Cohere API \u56DE\u61C9\u4E2D\u7684\u5D4C\u5165\u5411\u91CF", "Cohere", 500, false);
     }
     return embedding;
+  }, "fetchEmbedding");
+  try {
+    return await withRetry(fetchEmbedding, {
+      maxRetries: 3,
+      initialDelay: 500,
+      maxDelay: 5e3,
+      logPrefix: "Cohere"
+    });
   } catch (error) {
-    vectorLogger.error("\u751F\u6210\u5D4C\u5165\u932F\u8AA4", error);
-    vectorLogger.warn("\u8FD4\u56DE\u6A21\u64EC\u5D4C\u5165");
-    return Array(1024).fill(0).map(() => (Math.random() - 0.5) * 0.1);
+    serviceDegradation.reportFailure("Cohere", error instanceof Error ? error : new Error(String(error)));
+    vectorLogger.error("\u751F\u6210\u5D4C\u5165\u5931\u6557\uFF0C\u555F\u52D5\u964D\u7D1A\u64CD\u4F5C", error);
+    vectorLogger.warn("\u8FD4\u56DE\u6A21\u64EC\u5D4C\u5165\u4F5C\u70BA\u964D\u7D1A\u65B9\u6848");
+    return generateFallbackEmbedding(1024);
   }
 }
 __name(generateEmbedding, "generateEmbedding");
+function generateFallbackEmbedding(dimension = 1024) {
+  return Array(dimension).fill(0).map(() => (Math.random() - 0.5) * 0.1);
+}
+__name(generateFallbackEmbedding, "generateFallbackEmbedding");
 
 // src/services/pinecone.ts
 var PineconeClient = class {
@@ -14595,10 +14835,10 @@ var PineconeClient = class {
    * @returns FAQ 搜尋結果
    */
   async searchFaqs(query, limit = 5, threshold = 0.1) {
-    try {
-      if (!this.apiKey) {
-        throw new Error("\u672A\u8A2D\u7F6E Pinecone API \u91D1\u9470");
-      }
+    if (!this.apiKey) {
+      throw new Error("\u672A\u8A2D\u7F6E Pinecone API \u91D1\u9470");
+    }
+    const performSearch = /* @__PURE__ */ __name(async () => {
       const embedding = await generateEmbedding(query, this.env);
       let url;
       if (this.fullApiUrl) {
@@ -14636,44 +14876,69 @@ var PineconeClient = class {
         })
       });
       if (!response.ok) {
-        let errorMessage = `Pinecone API \u932F\u8AA4: HTTP ${response.status}`;
+        let errorDetails;
+        const statusCode = response.status;
+        let errorMessage = `Pinecone API \u932F\u8AA4: HTTP ${statusCode}`;
         try {
           const responseBody = await response.json();
+          errorDetails = responseBody;
           vectorLogger.error("\u6536\u5230 Pinecone \u932F\u8AA4\u56DE\u61C9\u8A73\u60C5", responseBody);
           errorMessage += ` - ${responseBody.message || "\u672A\u77E5\u932F\u8AA4"}`;
         } catch (jsonError2) {
           vectorLogger.error("Pinecone \u56DE\u61C9\u89E3\u6790\u932F\u8AA4", jsonError2);
-          errorMessage += ` - ${await response.text()}`;
+          const textResponse = await response.text();
+          errorDetails = { rawResponse: textResponse };
+          errorMessage += ` - ${textResponse}`;
         }
-        throw new Error(errorMessage);
+        const retryable = statusCode >= 500 || statusCode === 429;
+        throw new ExternalApiError(
+          errorMessage,
+          "Pinecone",
+          statusCode,
+          retryable,
+          errorDetails
+        );
       }
       const data = await response.json();
       vectorLogger.info("\u6536\u5230 Pinecone \u56DE\u61C9", {
         matchesCount: data.matches?.length || 0,
         namespace: data.namespace
       });
+      serviceDegradation.reportSuccess("Pinecone");
       if (data.matches?.length > 0) {
-        console.log(`\u7B2C\u4E00\u500B\u7D50\u679C:`, {
+        vectorLogger.debug(`\u7B2C\u4E00\u500B\u7D50\u679C:`, {
           id: data.matches[0].id,
           score: data.matches[0].score,
           metadata: data.matches[0].metadata ? Object.keys(data.matches[0].metadata) : "\u7121"
         });
       } else {
-        console.log(`\u6C92\u6709\u627E\u5230\u5339\u914D\u7684\u7D50\u679C`);
+        vectorLogger.debug(`\u6C92\u6709\u627E\u5230\u5339\u914D\u7684\u7D50\u679C`);
+      }
+      if (!data.matches || !Array.isArray(data.matches)) {
+        return [];
       }
       const filteredResults = data.matches.filter((match) => match.score >= threshold).map((match) => ({
         id: match.id,
-        question: match.metadata.question,
-        answer: match.metadata.answer,
+        question: match.metadata?.question || "",
+        answer: match.metadata?.answer || "",
         score: match.score,
-        category: match.metadata.category,
-        tags: match.metadata.tags || []
+        category: match.metadata?.category || "",
+        tags: match.metadata?.tags || []
       }));
       vectorLogger.debug(`\u7D50\u679C\u904E\u6FFE: \u5728\u76F8\u4F3C\u5EA6\u95BE\u503C ${threshold} \u4E4B\u4E0A\u7684\u6709 ${filteredResults.length} \u500B\u7D50\u679C`);
       return filteredResults;
+    }, "performSearch");
+    try {
+      return await withRetry(performSearch, {
+        maxRetries: 3,
+        initialDelay: 500,
+        maxDelay: 5e3,
+        logPrefix: "Pinecone"
+      });
     } catch (error) {
-      vectorLogger.error("\u5728 Pinecone \u641C\u7D22\u904E\u7A0B\u4E2D\u767C\u751F\u932F\u8AA4", error);
-      throw error;
+      serviceDegradation.reportFailure("Pinecone", error instanceof Error ? error : new Error(String(error)));
+      vectorLogger.error("\u5728 Pinecone \u641C\u7D22\u904E\u7A0B\u4E2D\u767C\u751F\u932F\u8AA4\uFF0C\u8FD4\u56DE\u7A7A\u7D50\u679C", error);
+      return [];
     }
   }
   /**
@@ -14682,50 +14947,109 @@ var PineconeClient = class {
    * @returns 操作結果
    */
   async addFaq(faq) {
+    if (!this.apiKey) {
+      throw new Error("\u672A\u8A2D\u7F6E Pinecone API \u91D1\u9470");
+    }
+    if (!this.environment) {
+      throw new Error("\u672A\u8A2D\u7F6E Pinecone \u74B0\u5883");
+    }
+    if (!this.indexName) {
+      throw new Error("\u672A\u8A2D\u7F6E Pinecone \u7D22\u5F15\u540D\u7A31");
+    }
+    const performAddFaq = /* @__PURE__ */ __name(async () => {
+      try {
+        const embedding = await generateEmbedding(faq.question, this.env);
+        vectorLogger.info("\u751F\u6210 FAQ \u5411\u91CF\u5D4C\u5165\u6210\u529F", {
+          id: faq.id,
+          embeddingLength: embedding.length,
+          question: faq.question.substring(0, 50) + (faq.question.length > 50 ? "..." : "")
+        });
+        let url;
+        if (this.fullApiUrl) {
+          url = `${this.fullApiUrl.replace(/\/$/, "")}/vectors/upsert`;
+          vectorLogger.debug(`\u4F7F\u7528\u5B8C\u6574 Pinecone API URL: ${url}`);
+        } else {
+          let baseUrl;
+          if (this.environment === "gcp-starter") {
+            baseUrl = `https://${this.indexName}.svc.${this.environment}.pinecone.io`;
+          } else {
+            baseUrl = `https://${this.indexName}-${this.environment}.svc.${this.environment}.pinecone.io`;
+          }
+          url = `${baseUrl}/vectors/upsert`;
+        }
+        vectorLogger.info("\u958B\u59CB\u5411 Pinecone \u6DFB\u52A0 FAQ", {
+          faqId: faq.id,
+          category: faq.category || "general"
+        });
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Api-Key": this.apiKey
+          },
+          body: JSON.stringify({
+            vectors: [{
+              id: faq.id,
+              values: embedding,
+              metadata: {
+                question: faq.question,
+                answer: faq.answer,
+                category: faq.category || "general",
+                tags: faq.tags || []
+              }
+            }]
+          })
+        });
+        if (!response.ok) {
+          let errorDetails;
+          const statusCode = response.status;
+          let errorMessage = `Pinecone API \u932F\u8AA4: HTTP ${statusCode}`;
+          try {
+            const errorData = await response.json();
+            errorDetails = errorData;
+            vectorLogger.error("\u6536\u5230 Pinecone \u932F\u8AA4\u56DE\u61C9\u8A73\u60C5", errorData);
+            errorMessage += ` - ${JSON.stringify(errorData)}`;
+          } catch (jsonError2) {
+            const textResponse = await response.text();
+            errorDetails = { rawResponse: textResponse };
+            errorMessage += ` - ${textResponse}`;
+          }
+          const retryable = statusCode >= 500 || statusCode === 429;
+          throw new ExternalApiError(
+            errorMessage,
+            "Pinecone",
+            statusCode,
+            retryable,
+            errorDetails
+          );
+        }
+        serviceDegradation.reportSuccess("Pinecone");
+        vectorLogger.info("FAQ \u6DFB\u52A0\u5230 Pinecone \u6210\u529F", { faqId: faq.id });
+        return true;
+      } catch (error) {
+        if (error instanceof ExternalApiError) {
+          throw error;
+        }
+        vectorLogger.error("\u6DFB\u52A0 FAQ \u5230 Pinecone \u904E\u7A0B\u4E2D\u767C\u751F\u614B\u985E\u932F\u8AA4", error);
+        throw new ExternalApiError(
+          `\u6DFB\u52A0 FAQ \u5230 Pinecone \u904E\u7A0B\u4E2D\u767C\u751F\u932F\u8AA4: ${error instanceof Error ? error.message : String(error)}`,
+          "Pinecone",
+          500,
+          true
+          // 假設其他錯誤可以重試
+        );
+      }
+    }, "performAddFaq");
     try {
-      if (!this.apiKey) {
-        throw new Error("\u672A\u8A2D\u7F6E Pinecone API \u91D1\u9470");
-      }
-      if (!this.environment) {
-        throw new Error("\u672A\u8A2D\u7F6E Pinecone \u74B0\u5883");
-      }
-      if (!this.indexName) {
-        throw new Error("\u672A\u8A2D\u7F6E Pinecone \u7D22\u5F15\u540D\u7A31");
-      }
-      const embedding = await generateEmbedding(faq.question, this.env);
-      vectorLogger.info("\u5DF2\u70BA FAQ \u751F\u6210\u5411\u91CF\u5D4C\u5165", {
-        id: faq.id,
-        embeddingLength: embedding.length,
-        question: faq.question.substring(0, 50) + (faq.question.length > 50 ? "..." : "")
+      return await withRetry(performAddFaq, {
+        maxRetries: 3,
+        initialDelay: 500,
+        maxDelay: 5e3,
+        logPrefix: "Pinecone-AddFaq"
       });
-      const baseUrl = `https://${this.indexName}-${this.environment}.svc.${this.environment}.pinecone.io`;
-      const url = `${baseUrl}/vectors/upsert`;
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Api-Key": this.apiKey
-        },
-        body: JSON.stringify({
-          vectors: [{
-            id: faq.id,
-            values: embedding,
-            metadata: {
-              question: faq.question,
-              answer: faq.answer,
-              category: faq.category || "general",
-              tags: faq.tags || []
-            }
-          }]
-        })
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Pinecone API \u932F\u8AA4: ${JSON.stringify(errorData)}`);
-      }
-      return true;
     } catch (error) {
-      vectorLogger.error("\u5728\u6DFB\u52A0 FAQ \u5230 Pinecone \u904E\u7A0B\u4E2D\u767C\u751F\u932F\u8AA4", error);
+      serviceDegradation.reportFailure("Pinecone", error instanceof Error ? error : new Error(String(error)));
+      vectorLogger.error("\u5728\u6DFB\u52A0 FAQ \u5230 Pinecone \u904E\u7A0B\u4E2D\u5931\u6557\uFF0C\u6240\u6709\u91CD\u8A66\u90FD\u5931\u6557", error);
       return false;
     }
   }
@@ -14790,7 +15114,7 @@ var GroqService = class {
    * @returns Groq API 回應
    */
   async callGroqApi({ messages, model = DEFAULT_MODEL, temperature = DEFAULT_TEMPERATURE, maxTokens = DEFAULT_MAX_TOKENS, image }) {
-    try {
+    const callApi = /* @__PURE__ */ __name(async () => {
       const url = "https://api.groq.com/openai/v1/chat/completions";
       const envManager = createEnvironmentManager(this.env);
       let actualModel = DEFAULT_MODEL;
@@ -14919,8 +15243,25 @@ var GroqService = class {
         choicesCount: choices.length,
         responseTime: `${Date.now() - startTime}ms`
       });
+      serviceDegradation.reportSuccess("Groq");
       return result;
+    }, "callApi");
+    try {
+      return await withRetry(callApi, {
+        maxRetries: 3,
+        initialDelay: 500,
+        maxDelay: 5e3,
+        logPrefix: "Groq",
+        // 訂制重試條件，只重試服務器錯誤和速率限制
+        isRetryable: /* @__PURE__ */ __name((error) => {
+          if (error instanceof ExternalApiError) {
+            return error.statusCode >= 500 || error.statusCode === 429;
+          }
+          return false;
+        }, "isRetryable")
+      });
     } catch (error) {
+      serviceDegradation.reportFailure("Groq", error instanceof Error ? error : new Error(String(error)));
       if (error instanceof ExternalApiError) {
         throw error;
       }
@@ -14940,50 +15281,84 @@ var GroqService = class {
    * @returns Groq API 回應
    */
   async enhancedChat(options, limit = 3, threshold = 0.3) {
-    try {
+    const enhancedChatWithRAG = /* @__PURE__ */ __name(async () => {
       chatLogger.info("\u958B\u59CB\u589E\u5F37\u804A\u5929\u8655\u7406");
       let faqs = [];
       const userMessages = options.messages.filter((m2) => m2.role === "user");
-      if (userMessages.length > 0) {
-        const lastUserMessage = userMessages[userMessages.length - 1];
-        const query = typeof lastUserMessage.content === "string" ? lastUserMessage.content : "";
-        if (query) {
-          chatLogger.info("\u5617\u8A66\u67E5\u627E\u76F8\u95DCFAQ", {
-            queryPreview: `${query.substring(0, 50)}${query.length > 50 ? "..." : ""}`,
-            queryLength: query.length
-          });
-          try {
-            const pineconeClient = new PineconeClient(
-              this.env.PINECONE_API_KEY,
-              this.env.PINECONE_ENVIRONMENT,
-              this.env.PINECONE_INDEX || this.env.PINECONE_INDEX_NAME || "",
-              this.env,
-              this.env.PINECONE_API_URL
-            );
-            faqs = await pineconeClient.searchFaqs(query, limit, threshold);
-            chatLogger.info("FAQ \u641C\u7D22\u7D50\u679C", {
-              faqCount: faqs.length,
-              categories: faqs.map((f2) => f2.category).filter(Boolean)
-            });
-          } catch (error) {
-            chatLogger.error("FAQ \u641C\u7D22\u5931\u6557", error);
-          }
-        }
-        if (faqs.length > 0) {
-          const enhancedSystemPrompt = createEnhancedSystemPrompt(faqs);
-          const finalOptions = { ...options, messages: [enhancedSystemPrompt, ...options.messages] };
-          return this.callGroqApi(finalOptions);
-        } else {
-          return this.callGroqApi(options);
-        }
-      } else {
+      if (userMessages.length === 0) {
+        chatLogger.info("\u672A\u767C\u73FE\u7528\u6236\u6D88\u606F\uFF0C\u76F4\u63A5\u8ABF\u7528\u6A19\u6E96 API");
         return this.callGroqApi(options);
       }
-    } catch (error) {
-      chatLogger.error("\u8ABF\u7528 Groq API \u6642\u767C\u751F\u932F\u8AA4", error);
-      console.log("\u{1F504} RAG: \u589E\u5F37\u67E5\u8A62\u5931\u6557\uFF0C\u964D\u7D1A\u70BA\u6A19\u6E96\u67E5\u8A62");
-      return this.callGroqApi(options);
-    }
+      const lastUserMessage = userMessages[userMessages.length - 1];
+      const query = typeof lastUserMessage.content === "string" ? lastUserMessage.content : "";
+      if (!query) {
+        chatLogger.info("\u767C\u73FE\u7A7A\u67E5\u8A62\uFF0C\u8DF3\u904E FAQ \u641C\u7D22");
+        return this.callGroqApi(options);
+      }
+      chatLogger.info("\u5617\u8A66\u67E5\u627E\u76F8\u95DCFAQ", {
+        queryPreview: `${query.substring(0, 50)}${query.length > 50 ? "..." : ""}`,
+        queryLength: query.length
+      });
+      faqs = await withFallback(
+        async () => {
+          const pineconeClient = new PineconeClient(
+            this.env.PINECONE_API_KEY,
+            this.env.PINECONE_ENVIRONMENT,
+            this.env.PINECONE_INDEX || this.env.PINECONE_INDEX_NAME || "",
+            this.env,
+            this.env.PINECONE_API_URL
+          );
+          return await pineconeClient.searchFaqs(query, limit, threshold);
+        },
+        async () => {
+          chatLogger.warn("Pinecone \u641C\u7D22\u5931\u6557\uFF0C\u8FD4\u56DE\u7A7A\u7684\u641C\u7D22\u7D50\u679C");
+          return [];
+        },
+        {
+          shouldFallback: /* @__PURE__ */ __name((error) => {
+            chatLogger.error("FAQ \u641C\u7D22\u5931\u6557\uFF0C\u555F\u52D5\u964D\u7D1A\u7B56\u7565", {
+              error: error instanceof Error ? error.message : String(error),
+              errorType: error instanceof Error ? error.name : typeof error
+            });
+            return true;
+          }, "shouldFallback"),
+          logPrefix: "Pinecone-FAQ-Search"
+        }
+      );
+      chatLogger.info("FAQ \u641C\u7D22\u7D50\u679C", {
+        faqCount: faqs.length,
+        categories: faqs.map((f2) => f2.category).filter(Boolean)
+      });
+      if (faqs.length > 0) {
+        chatLogger.info("\u4F7F\u7528 RAG \u589E\u5F37\u7684\u63D0\u793A\u8A5E");
+        const enhancedSystemPrompt = createEnhancedSystemPrompt(faqs);
+        const finalOptions = { ...options, messages: [enhancedSystemPrompt, ...options.messages] };
+        return this.callGroqApi(finalOptions);
+      } else {
+        chatLogger.info("\u672A\u627E\u5230\u76F8\u95DC FAQ\uFF0C\u4F7F\u7528\u6A19\u6E96\u63D0\u793A\u8A5E");
+        return this.callGroqApi(options);
+      }
+    }, "enhancedChatWithRAG");
+    return withFallback(
+      // 主要策略：使用 RAG 增強的聊天
+      enhancedChatWithRAG,
+      // 降級策略 1：使用標準系統提示詞調用 API
+      async () => {
+        chatLogger.warn("\u5617\u8A66 RAG \u5931\u6557\uFF0C\u964D\u7D1A\u70BA\u6A19\u6E96\u67E5\u8A62");
+        return this.callGroqApi(options);
+      },
+      {
+        // 判斷何時需要降級
+        shouldFallback: /* @__PURE__ */ __name((error) => {
+          chatLogger.error("\u589E\u5F37\u804A\u5929\u5931\u6557\uFF0C\u555F\u52D5\u964D\u7D1A", {
+            error: error instanceof Error ? error.message : String(error),
+            errorType: error instanceof Error ? error.name : typeof error
+          });
+          return true;
+        }, "shouldFallback"),
+        logPrefix: "Groq-RAG-Fallback"
+      }
+    );
   }
   /**
    * 使用自定義系統提示詞調用 Groq API
@@ -15294,7 +15669,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-Ldo5Yj/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-Cr2rTk/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -15328,7 +15703,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-Ldo5Yj/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-Cr2rTk/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

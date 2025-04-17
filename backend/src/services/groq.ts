@@ -9,6 +9,7 @@ import type { ChatMessage, ChatCompletionOptions, GroqChatResponse, FaqSearchRes
 import { MODEL_MAPPING, getModelConfig, modelSupportsImages } from '../config/models';
 import { PineconeClient } from './pinecone';
 import { chatLogger } from '../utils/logger';
+import { withRetry, withFallback, serviceDegradation } from '../utils/retry';
 
 /**
  * 預設配置參數
@@ -83,7 +84,8 @@ export class GroqService {
   async callGroqApi(
     { messages, model = DEFAULT_MODEL, temperature = DEFAULT_TEMPERATURE, maxTokens = DEFAULT_MAX_TOKENS, image }: ChatCompletionOptions
   ): Promise<GroqChatResponse> {
-    try {
+    // 將 API 調用部分封裝為函數，方便重試
+    const callApi = async (): Promise<GroqChatResponse> => {
       const url = 'https://api.groq.com/openai/v1/chat/completions';
       
       // 建立環境變數管理器
@@ -255,10 +257,33 @@ export class GroqService {
         responseTime: `${Date.now() - startTime}ms`
       });
       
+      // 報告服務成功
+      serviceDegradation.reportSuccess('Groq');
+      
       // 返回 Groq API 回應
       return result;
-      
+    };
+    
+    try {
+      // 使用重試機制調用 API
+      return await withRetry(callApi, {
+        maxRetries: 3,
+        initialDelay: 500,
+        maxDelay: 5000,
+        logPrefix: 'Groq',
+        // 訂制重試條件，只重試服務器錯誤和速率限制
+        isRetryable: (error) => {
+          if (error instanceof ExternalApiError) {
+            // 5xx 或 429 (Too Many Requests) 才重試
+            return error.statusCode >= 500 || error.statusCode === 429;
+          }
+          return false;
+        }
+      });
     } catch (error) {
+      // 報告服務失敗
+      serviceDegradation.reportFailure('Groq', error instanceof Error ? error : new Error(String(error)));
+      
       // 如果是已知的外部 API 錯誤，直接重新拋出
       if (error instanceof ExternalApiError) {
         throw error;
@@ -286,7 +311,8 @@ export class GroqService {
     limit: number = 3,
     threshold: number = 0.3
   ): Promise<GroqChatResponse> {
-    try {
+    // 將整合的 RAG 整合邏輯封裝為函數
+    const enhancedChatWithRAG = async (): Promise<GroqChatResponse> => {
       chatLogger.info('開始增強聊天處理');
       
       // 獲取相關 FAQ 結果
@@ -294,60 +320,100 @@ export class GroqService {
       
       // 僅處理用戶角色的最後一條消息
       const userMessages = options.messages.filter(m => m.role === 'user');
-      if (userMessages.length > 0) {
-        const lastUserMessage = userMessages[userMessages.length - 1];
-        const query = typeof lastUserMessage.content === 'string' 
-          ? lastUserMessage.content 
-          : ''; // 如果不是字符串（如多模態消息），則使用空字符串
-        
-        if (query) {
-          chatLogger.info('嘗試查找相關FAQ', {
-            queryPreview: `${query.substring(0, 50)}${query.length > 50 ? '...' : ''}`,
-            queryLength: query.length
-          });
-          
-          try {
-            // 創建 Pinecone 客戶端
-            const pineconeClient = new PineconeClient(
-              this.env.PINECONE_API_KEY,
-              this.env.PINECONE_ENVIRONMENT,
-              this.env.PINECONE_INDEX || this.env.PINECONE_INDEX_NAME || '',
-              this.env,
-              this.env.PINECONE_API_URL
-            );
-            
-            // 搜索相關 FAQ
-            faqs = await pineconeClient.searchFaqs(query, limit, threshold);
-            chatLogger.info('FAQ 搜索結果', {
-              faqCount: faqs.length,
-              categories: faqs.map(f => f.category).filter(Boolean)
-            });
-          } catch (error) {
-            chatLogger.error('FAQ 搜索失敗', error);
-            // 即使 FAQ 搜索失敗，仍然繼續處理聊天
-          }
-        }
-        
-        // 如果找到相關 FAQ，創建增強的系統提示詞
-        if (faqs.length > 0) {
-          const enhancedSystemPrompt = createEnhancedSystemPrompt(faqs);
-          const finalOptions = { ...options, messages: [enhancedSystemPrompt, ...options.messages] };
-          return this.callGroqApi(finalOptions);
-        } else {
-          // 沒有找到相關 FAQ，使用基本系統提示詞
-          return this.callGroqApi(options);
-        }
-      } else {
+      if (userMessages.length === 0) {
         // 沒有用戶消息，直接調用 Groq API
+        chatLogger.info('未發現用戶消息，直接調用標準 API');
         return this.callGroqApi(options);
       }
-    } catch (error) {
-      chatLogger.error('調用 Groq API 時發生錯誤', error);
       
-      // 降級策略: 如果 RAG 增強失敗，回退到直接調用 Groq
-      console.log('🔄 RAG: 增強查詢失敗，降級為標準查詢');
-      return this.callGroqApi(options);
-    }
+      const lastUserMessage = userMessages[userMessages.length - 1];
+      const query = typeof lastUserMessage.content === 'string' 
+        ? lastUserMessage.content 
+        : ''; // 如果不是字符串（如多模態消息），則使用空字符串
+      
+      if (!query) {
+        // 沒有有效查詢，直接調用標準 API
+        chatLogger.info('發現空查詢，跳過 FAQ 搜索');
+        return this.callGroqApi(options);
+      }
+        
+      chatLogger.info('嘗試查找相關FAQ', {
+        queryPreview: `${query.substring(0, 50)}${query.length > 50 ? '...' : ''}`,
+        queryLength: query.length
+      });
+      
+      // 使用 withFallback 來處理 Pinecone 搜索失敗的情況
+      faqs = await withFallback<FaqSearchResult[]>(
+        async () => {
+          // 主要策略：使用 Pinecone 搜索
+          const pineconeClient = new PineconeClient(
+            this.env.PINECONE_API_KEY,
+            this.env.PINECONE_ENVIRONMENT,
+            this.env.PINECONE_INDEX || this.env.PINECONE_INDEX_NAME || '',
+            this.env,
+            this.env.PINECONE_API_URL
+          );
+          
+          // 搜索相關 FAQ
+          return await pineconeClient.searchFaqs(query, limit, threshold);
+        },
+        async () => {
+          // 降級策略：返回空數組
+          chatLogger.warn('Pinecone 搜索失敗，返回空的搜索結果');
+          return [];
+        },
+        {
+          shouldFallback: (error: any) => {
+            // 記錄錯誤
+            chatLogger.error('FAQ 搜索失敗，啟動降級策略', {
+              error: error instanceof Error ? error.message : String(error),
+              errorType: error instanceof Error ? error.name : typeof error
+            });
+            return true; // 總是啟動降級
+          },
+          logPrefix: 'Pinecone-FAQ-Search'
+        }
+      );
+      
+      chatLogger.info('FAQ 搜索結果', {
+        faqCount: faqs.length,
+        categories: faqs.map(f => f.category).filter(Boolean)
+      });
+      
+      // 如果找到相關 FAQ，創建增強的系統提示詞
+      if (faqs.length > 0) {
+        chatLogger.info('使用 RAG 增強的提示詞');
+        const enhancedSystemPrompt = createEnhancedSystemPrompt(faqs);
+        const finalOptions = { ...options, messages: [enhancedSystemPrompt, ...options.messages] };
+        return this.callGroqApi(finalOptions);
+      } else {
+        // 沒有找到相關 FAQ，使用基本系統提示詞
+        chatLogger.info('未找到相關 FAQ，使用標準提示詞');
+        return this.callGroqApi(options);
+      }
+    };
+    
+    // 實現多層降級策略
+    return withFallback<GroqChatResponse>(
+      // 主要策略：使用 RAG 增強的聊天
+      enhancedChatWithRAG,
+      // 降級策略 1：使用標準系統提示詞調用 API
+      async () => {
+        chatLogger.warn('嘗試 RAG 失敗，降級為標準查詢');
+        return this.callGroqApi(options);
+      },
+      {
+        // 判斷何時需要降級
+        shouldFallback: (error: any) => {
+          chatLogger.error('增強聊天失敗，啟動降級', {
+            error: error instanceof Error ? error.message : String(error),
+            errorType: error instanceof Error ? error.name : typeof error
+          });
+          return true; // 正式環境中總是降級，以確保用戶體驗
+        },
+        logPrefix: 'Groq-RAG-Fallback'
+      }
+    );
   }
   
   /**
@@ -356,7 +422,7 @@ export class GroqService {
    * @param systemPrompt 自定義系統提示詞
    * @returns Groq API 回應
    */
-  private async callGroqApiWithSystemPrompt(
+  async callGroqApiWithSystemPrompt(
     options: ChatCompletionOptions,
     systemPrompt: ChatMessage
   ): Promise<GroqChatResponse> {

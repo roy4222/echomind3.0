@@ -1,5 +1,7 @@
 import { Env } from '../index';
 import { vectorLogger } from '../utils/logger';
+import { ExternalApiError } from '../utils/errorHandler';
+import { withRetry, serviceDegradation } from '../utils/retry';
 
 /**
  * 生成文本的向量嵌入
@@ -17,10 +19,11 @@ export async function generateEmbedding(text: string, env?: Env): Promise<number
     // 如果沒有 API 金鑰，記錄警告並返回隨機生成的模擬嵌入向量
     vectorLogger.warn('未設定 Cohere API 金鑰，將使用模擬嵌入');
     // 生成 1024 維的隨機向量，值在 -0.05 到 0.05 之間
-    return Array(1024).fill(0).map(() => (Math.random() - 0.5) * 0.1);
+    return generateFallbackEmbedding(1024);
   }
   
-  try {
+  // 將基本的嵌入部分抽取為一個函數，方便重試
+  const fetchEmbedding = async (): Promise<number[]> => {
     // 記錄正在處理的文本（顯示前 50 個字符，超過則顯示省略號）
     vectorLogger.info('正在生成嵌入向量', {
       textPreview: `${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`,
@@ -49,7 +52,22 @@ export async function generateEmbedding(text: string, env?: Env): Promise<number
       // 如果回應不成功，解析錯誤信息並拋出異常
       const errorData = await response.json();
       vectorLogger.error('Cohere API 返回錯誤', errorData);
-      throw new Error(`Cohere API 錯誤: ${JSON.stringify(errorData)}`);
+      
+      // 使用 ExternalApiError 拋出較詳細的錯誤訊息
+      const statusCode = response.status;
+      const errorMessage = errorData.message || `HTTP 錯誤 ${statusCode}`;
+      
+      // 判斷是否應該重試
+      // 5xx 是服務器錯誤，429 是請求超出限制，這兩種情況可以重試
+      const retryable = statusCode >= 500 || statusCode === 429;
+      
+      throw new ExternalApiError(
+        errorMessage,
+        'Cohere',
+        statusCode,
+        retryable,
+        errorData
+      );
     }
     
     // 解析 API 回應
@@ -58,6 +76,9 @@ export async function generateEmbedding(text: string, env?: Env): Promise<number
     vectorLogger.debug('Cohere API 響應成功', {
       availableFields: Object.keys(data)
     });
+    
+    // 報告服務成功
+    serviceDegradation.reportSuccess('Cohere');
     
     // 處理不同版本 API 的回應格式
     let embedding;
@@ -76,17 +97,39 @@ export async function generateEmbedding(text: string, env?: Env): Promise<number
     } else {
       // 如果無法識別回應格式，拋出錯誤
       vectorLogger.error('無法從回應中獲取嵌入向量', data);
-      throw new Error('無法解析 Cohere API 回應中的嵌入向量');
+      throw new ExternalApiError('無法解析 Cohere API 回應中的嵌入向量', 'Cohere', 500, false);
     }
     
     // 返回生成的嵌入向量
     return embedding;
+  };
+  
+  try {
+    // 使用重試機制調用嵌入重試函數
+    return await withRetry(fetchEmbedding, {
+      maxRetries: 3,
+      initialDelay: 500,
+      maxDelay: 5000,
+      logPrefix: 'Cohere'
+    });
   } catch (error) {
+    // 報告服務失敗
+    serviceDegradation.reportFailure('Cohere', error instanceof Error ? error : new Error(String(error)));
+    
     // 捕獲並記錄任何錯誤
-    vectorLogger.error('生成嵌入錯誤', error);
+    vectorLogger.error('生成嵌入失敗，啟動降級操作', error);
     
     // 發生錯誤時返回一個模擬嵌入（1024 維隨機向量）
-    vectorLogger.warn('返回模擬嵌入');
-    return Array(1024).fill(0).map(() => (Math.random() - 0.5) * 0.1);
+    vectorLogger.warn('返回模擬嵌入作為降級方案');
+    return generateFallbackEmbedding(1024);
   }
-} 
+}
+
+/**
+ * 生成模擬嵌入向量（降級方案）
+ * @param dimension 向量維度
+ * @returns 模擬嵌入向量
+ */
+function generateFallbackEmbedding(dimension: number = 1024): number[] {
+  return Array(dimension).fill(0).map(() => (Math.random() - 0.5) * 0.1);
+}
