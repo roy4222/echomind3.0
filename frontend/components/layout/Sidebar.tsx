@@ -97,7 +97,7 @@ const sidebarItems: SidebarItem[] = [
       </svg>
     ),
     label: '小遊戲',
-    href: '/#games',
+    href: '/game',
   },
 ];
 

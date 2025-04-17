@@ -1,36 +1,54 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { motion } from 'framer-motion';
-import { ArrowRight, Home } from 'lucide-react';
+import { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { motion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 
 // 遊戲列表數據
 const games = [
   {
-    id: 'muyu',
-    name: '電子木魚',
-    description: '修身養性，積德行善',
-    imageUrl: '/muyu.png',
-    path: '/game/muyu',
-    comingSoon: false,
+    id: "typing",
+    name: "打字遊戲",
+    description: "快打旋風",
+    imageUrl: "/images/typing.png",
+    path: "/game/typing",
   },
   {
-    id: 'puzzle',
-    name: '記憶拼圖',
-    description: '訓練記憶力與專注力',
-    imageUrl: '/images/puzzle.png',
-    path: '/game/puzzle',
-    comingSoon: true,
+    id: "puzzle",
+    name: "記憶拼圖",
+    description: "訓練記憶力與專注力",
+    imageUrl: "/images/puzzle.png",
+    path: "/game/puzzle",
   },
   {
-    id: 'quiz',
-    name: '輔大知識王',
-    description: '測試你對輔大的了解',
-    imageUrl: '/images/quiz.png',
-    path: '/game/quiz',
-    comingSoon: true,
+    id: "breathe",
+    name: "呼吸遊戲",
+    description: "訓練記憶力與專注力",
+    imageUrl: "/images/breathe.png",
+    path: "/game/breathe",
+  },
+  {
+    id: "muyu",
+    name: "敲木魚",
+    description: "歐趴木魚敲到歐趴",
+    imageUrl: "/images/image.png",
+    path: "/game/muyu",
+  },
+  {
+    id: "whack-a-mole",
+    name: "打地鼠",
+    description: "訓練反應力",
+    imageUrl: "/images/whack-a-mole.png",
+    path: "/game/whack-a-mole",
+  },
+  {
+    id: "",
+    name: "打地鼠",
+    description: "訓練反應力",
+    imageUrl: "/images/whack-a-mole.png",
+    path: "/game/whack-a-mole",
   },
 ];
 
@@ -40,8 +58,6 @@ export default function GamePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 pt-8 pb-16">
       <div className="container mx-auto px-4">
-        
-        
         <h1 className="text-4xl font-bold text-center mb-4 text-indigo-700 dark:text-indigo-300">
           EchoMind 遊戲中心
         </h1>
@@ -60,21 +76,15 @@ export default function GamePage() {
             >
               <div className="h-48 bg-gray-200 dark:bg-gray-700 relative">
                 {game.imageUrl && (
-                  <div className="w-full h-full flex items-center justify-center">
-                    {/* 遊戲圖片替代方案 */}
-                    <div className="w-24 h-24 bg-indigo-600 dark:bg-indigo-500 rounded-full flex items-center justify-center text-white text-4xl font-bold">
-                      {game.name.charAt(0)}
-                    </div>
-                  </div>
-                )}
-                
-                {game.comingSoon && (
-                  <div className="absolute top-4 right-4 bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                    即將推出
-                  </div>
+                  <Image
+                    src={game.imageUrl}
+                    alt={game.name}
+                    fill
+                    className="object-cover"
+                  />
                 )}
               </div>
-              
+
               <div className="p-6">
                 <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
                   {game.name}
@@ -82,17 +92,14 @@ export default function GamePage() {
                 <p className="text-gray-600 dark:text-gray-300 mb-4">
                   {game.description}
                 </p>
-                
-                {!game.comingSoon ? (
-                  <Link href={game.path} className="inline-flex items-center text-indigo-600 dark:text-indigo-400 font-medium">
-                    開始遊戲
-                    <ArrowRight size={16} className="ml-2" />
-                  </Link>
-                ) : (
-                  <span className="inline-flex items-center text-gray-500 dark:text-gray-400 font-medium cursor-not-allowed">
-                    敬請期待
-                  </span>
-                )}
+
+                <Link
+                  href={game.path}
+                  className="inline-flex items-center text-indigo-600 dark:text-indigo-400 font-medium"
+                >
+                  開始遊戲
+                  <ArrowRight size={16} className="ml-2" />
+                </Link>
               </div>
             </motion.div>
           ))}
