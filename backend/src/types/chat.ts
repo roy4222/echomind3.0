@@ -102,10 +102,12 @@ export interface FaqSearchResult {
   answer: string;
   /** 相似度分數 */
   score: number;
-  /** 分類 */
+  /** 分類 (可選) */
   category?: string;
-  /** 標籤 */
+  /** 標籤 (可選) */
   tags?: string[];
-  /** 重要程度 (1-5) */
+  /** 重要性 (可選) */
   importance?: number;
+  /** 元數據 (可選) */
+  metadata?: Record<string, any>;
 }

@@ -10,6 +10,7 @@ import { MODEL_MAPPING, getModelConfig, modelSupportsImages } from '../config/mo
 import { PineconeClient } from './pinecone';
 import { chatLogger } from '../utils/logger';
 import { withRetry, withFallback, serviceDegradation } from '../utils/retry';
+import { MemoryCache, createCacheKey } from '../utils/cache';
 
 /**
  * 預設配置參數
@@ -17,6 +18,30 @@ import { withRetry, withFallback, serviceDegradation } from '../utils/retry';
 const DEFAULT_MODEL = getModelConfig('default').name;
 const DEFAULT_TEMPERATURE = getModelConfig('default').temperature;
 const DEFAULT_MAX_TOKENS = getModelConfig('default').maxTokens;
+
+/**
+ * Groq 快取配置
+ */
+export interface GroqCacheConfig {
+  /** 是否啟用快取 */
+  enabled: boolean;
+  /** 快取存活時間 (毫秒) */
+  ttl: number;
+  /** 最大快取項目數量 */
+  maxSize: number;
+  /** 是否快取 RAG 結果 */
+  cacheRagResults: boolean;
+}
+
+/**
+ * 預設快取配置
+ */
+const DEFAULT_CACHE_CONFIG: GroqCacheConfig = {
+  enabled: true,
+  ttl: 15 * 60 * 1000, // 15 分鐘
+  maxSize: 500,
+  cacheRagResults: true
+};
 
 /**
  * 系統提示詞設定
@@ -66,14 +91,43 @@ function createEnhancedSystemPrompt(faqs: FaqSearchResult[]): ChatMessage {
  * Groq 服務類別
  */
 export class GroqService {
+  /**
+   * 環境變數
+   */
   private env: Env;
   
   /**
+   * 回應快取
+   */
+  private responseCache: MemoryCache<GroqChatResponse>;
+  
+  /**
+   * 快取配置
+   */
+  private cacheConfig: GroqCacheConfig;
+
+  /**
    * 建立 Groq 服務
    * @param env 環境變數
+   * @param cacheConfig 快取配置
    */
-  constructor(env: Env) {
+  constructor(env: Env, cacheConfig?: Partial<GroqCacheConfig>) {
     this.env = env;
+    
+    // 初始化快取配置
+    this.cacheConfig = { ...DEFAULT_CACHE_CONFIG, ...cacheConfig };
+    
+    // 初始化回應快取
+    this.responseCache = new MemoryCache<GroqChatResponse>({
+      ttl: this.cacheConfig.ttl,
+      maxSize: this.cacheConfig.maxSize
+    });
+    
+    chatLogger.info('初始化 Groq 服務和快取', {
+      cacheEnabled: this.cacheConfig.enabled,
+      cacheTtl: this.cacheConfig.ttl / 1000 / 60 + '分鐘',
+      cacheMaxSize: this.cacheConfig.maxSize
+    });
   }
   
   /**
@@ -84,6 +138,28 @@ export class GroqService {
   async callGroqApi(
     { messages, model = DEFAULT_MODEL, temperature = DEFAULT_TEMPERATURE, maxTokens = DEFAULT_MAX_TOKENS, image }: ChatCompletionOptions
   ): Promise<GroqChatResponse> {
+    // 建立快取鍵
+    // 我們只快取非串流的請求，並忽略圖片請求
+    if (this.cacheConfig.enabled && !image) {
+      const cacheKey = createCacheKey(
+        'groq-api',
+        model,
+        temperature,
+        maxTokens,
+        messages.map(m => `${m.role}:${m.content.substring(0, 100)}`)
+      );
+      
+      // 嘗試從快取中獲取結果
+      const cachedResponse = this.responseCache.get(cacheKey);
+      if (cachedResponse) {
+        chatLogger.info('從快取獲取 Groq 回應', {
+          model,
+          cacheHit: true,
+          messageCount: messages.length
+        });
+        return cachedResponse;
+      }
+    }
     // 將 API 調用部分封裝為函數，方便重試
     const callApi = async (): Promise<GroqChatResponse> => {
       const url = 'https://api.groq.com/openai/v1/chat/completions';
@@ -260,6 +336,20 @@ export class GroqService {
       // 報告服務成功
       serviceDegradation.reportSuccess('Groq');
       
+      // 如果啟用快取且非圖片請求，將結果存入快取
+      if (this.cacheConfig.enabled && !image) {
+        const cacheKey = createCacheKey(
+          'groq-api',
+          model,
+          temperature,
+          maxTokens,
+          messages.map(m => `${m.role}:${m.content.substring(0, 100)}`)
+        );
+        
+        this.responseCache.set(cacheKey, result);
+        chatLogger.debug('Groq 回應已快取', { cacheKey });
+      }
+      
       // 返回 Groq API 回應
       return result;
     };
@@ -311,6 +401,30 @@ export class GroqService {
     limit: number = 3,
     threshold: number = 0.3
   ): Promise<GroqChatResponse> {
+    // 如果快取啟用且適合快取 RAG 結果 (非圖片查詢)
+    if (this.cacheConfig.enabled && this.cacheConfig.cacheRagResults && !options.image) {
+      // 為 RAG 查詢建立快取鍵
+      const cacheKey = createCacheKey(
+        'groq-rag',
+        options.model || DEFAULT_MODEL,
+        options.temperature || DEFAULT_TEMPERATURE,
+        options.maxTokens || DEFAULT_MAX_TOKENS,
+        limit,
+        threshold,
+        options.messages.map(m => `${m.role}:${m.content.substring(0, 100)}`)
+      );
+      
+      // 嘗試從快取中獲取 RAG 結果
+      const cachedResponse = this.responseCache.get(cacheKey);
+      if (cachedResponse) {
+        chatLogger.info('從快取獲取 RAG 增強聊天結果', {
+          model: options.model || DEFAULT_MODEL,
+          cacheHit: true,
+          messageCount: options.messages.length
+        });
+        return cachedResponse;
+      }
+    }
     // 將整合的 RAG 整合邏輯封裝為函數
     const enhancedChatWithRAG = async (): Promise<GroqChatResponse> => {
       chatLogger.info('開始增強聊天處理');
@@ -385,7 +499,26 @@ export class GroqService {
         chatLogger.info('使用 RAG 增強的提示詞');
         const enhancedSystemPrompt = createEnhancedSystemPrompt(faqs);
         const finalOptions = { ...options, messages: [enhancedSystemPrompt, ...options.messages] };
-        return this.callGroqApi(finalOptions);
+        const response = await this.callGroqApiWithSystemPrompt(options, enhancedSystemPrompt);
+        
+        // 如果快取啟用且適合快取 RAG 結果 (非圖片查詢)
+        if (this.cacheConfig.enabled && this.cacheConfig.cacheRagResults && !options.image) {
+          // 為 RAG 查詢建立快取鍵
+          const cacheKey = createCacheKey(
+            'groq-rag',
+            options.model || DEFAULT_MODEL,
+            options.temperature || DEFAULT_TEMPERATURE,
+            options.maxTokens || DEFAULT_MAX_TOKENS,
+            limit,
+            threshold,
+            options.messages.map(m => `${m.role}:${m.content.substring(0, 100)}`)
+          );
+          
+          this.responseCache.set(cacheKey, response);
+          chatLogger.debug('RAG 增強聊天結果已快取', { cacheKey });
+        }
+        
+        return response;
       } else {
         // 沒有找到相關 FAQ，使用基本系統提示詞
         chatLogger.info('未找到相關 FAQ，使用標準提示詞');
@@ -414,6 +547,40 @@ export class GroqService {
         logPrefix: 'Groq-RAG-Fallback'
       }
     );
+  }
+  
+  /**
+   * 清理資源
+   */
+  cleanup(): void {
+    // 清理快取資源
+    this.responseCache.shutdown();
+    chatLogger.debug('清理 Groq 服務資源');
+  }
+  
+  /**
+   * 清除回應快取
+   * @returns 清除的快取項目數量
+   */
+  clearResponseCache(): number {
+    const size = this.responseCache.size();
+    this.responseCache.clear();
+    chatLogger.info('已清除 Groq 回應快取', { clearedItems: size });
+    return size;
+  }
+  
+  /**
+   * 獲取快取統計資訊
+   * @returns 快取統計資訊
+   */
+  getCacheStats(): { size: number, enabled: boolean, ttl: number, maxSize: number, cacheRagResults: boolean } {
+    return {
+      size: this.responseCache.size(),
+      enabled: this.cacheConfig.enabled,
+      ttl: this.cacheConfig.ttl,
+      maxSize: this.cacheConfig.maxSize,
+      cacheRagResults: this.cacheConfig.cacheRagResults
+    };
   }
   
   /**

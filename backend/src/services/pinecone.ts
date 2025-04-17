@@ -7,6 +7,28 @@ import { Env } from '../index';
 import { vectorLogger, LogLevel } from '../utils/logger';
 import { ExternalApiError } from '../utils/errorHandler';
 import { withRetry, serviceDegradation } from '../utils/retry';
+import { MemoryCache, createCacheKey } from '../utils/cache';
+
+/**
+ * Pinecone 客戶端快取配置
+ */
+export interface PineconeCacheConfig {
+  /** 是否啟用快取 */
+  enabled: boolean;
+  /** 快取存活時間 (毫秒) */
+  ttl: number;
+  /** 最大快取項目數量 */
+  maxSize: number;
+}
+
+/**
+ * Pinecone 客戶端默認快取配置
+ */
+const DEFAULT_CACHE_CONFIG: PineconeCacheConfig = {
+  enabled: true,
+  ttl: 30 * 60 * 1000, // 30 分鐘
+  maxSize: 1000
+};
 
 /**
  * Pinecone 客戶端
@@ -39,6 +61,16 @@ export class PineconeClient {
   private fullApiUrl?: string;
   
   /**
+   * 查詢結果快取
+   */
+  private queryCache: MemoryCache<FaqSearchResult[]>;
+  
+  /**
+   * 快取配置
+   */
+  private cacheConfig: PineconeCacheConfig;
+  
+  /**
    * 建立 Pinecone 客戶端
    * @param apiKey Pinecone API 金鑰
    * @param environment Pinecone 環境
@@ -46,7 +78,7 @@ export class PineconeClient {
    * @param env 環境變數
    * @param fullApiUrl 完整的 Pinecone API URL (可選)
    */
-  constructor(apiKey: string, environment: string, indexName: string, env?: Env, fullApiUrl?: string) {
+  constructor(apiKey: string, environment: string, indexName: string, env?: Env, fullApiUrl?: string, cacheConfig?: Partial<PineconeCacheConfig>) {
     // 驗證 API 金鑰是否存在
     if (!apiKey) {
       throw new Error('未設置 Pinecone API 金鑰');
@@ -81,6 +113,15 @@ export class PineconeClient {
     this.indexName = indexName;
     this.env = env;
     
+    // 初始化快取配置
+    this.cacheConfig = { ...DEFAULT_CACHE_CONFIG, ...cacheConfig };
+    
+    // 初始化快取
+    this.queryCache = new MemoryCache<FaqSearchResult[]>({
+      ttl: this.cacheConfig.ttl,
+      maxSize: this.cacheConfig.maxSize
+    });
+    
     // 記錄初始化信息，但不顯示完整 API 密鑰
     vectorLogger.info('初始化 Pinecone 客戶端', {
       environment,
@@ -88,6 +129,39 @@ export class PineconeClient {
       apiKey: apiKey ? `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}` : '未提供',
       fullApiUrl: this.fullApiUrl || '未提供'
     });
+  }
+  
+  /**
+   * 清理資源
+   */
+  cleanup(): void {
+    // 清理快取資源
+    this.queryCache.shutdown();
+    vectorLogger.debug('清理 Pinecone 客戶端資源');
+  }
+  
+  /**
+   * 清除查詢快取
+   * @returns 清除的快取項目數量
+   */
+  clearQueryCache(): number {
+    const size = this.queryCache.size();
+    this.queryCache.clear();
+    vectorLogger.info('已清除 Pinecone 查詢快取', { clearedItems: size });
+    return size;
+  }
+  
+  /**
+   * 獲取快取統計資訊
+   * @returns 快取統計資訊
+   */
+  getCacheStats(): { size: number, enabled: boolean, ttl: number, maxSize: number } {
+    return {
+      size: this.queryCache.size(),
+      enabled: this.cacheConfig.enabled,
+      ttl: this.cacheConfig.ttl,
+      maxSize: this.cacheConfig.maxSize
+    };
   }
   
   /**
@@ -101,6 +175,22 @@ export class PineconeClient {
     // 檢查必要的配置
     if (!this.apiKey) {
       throw new Error('未設置 Pinecone API 金鑰');
+    }
+    
+    // 建立快取鍵
+    const cacheKey = createCacheKey('pinecone-search', query, limit, threshold);
+    
+    // 如果啟用快取，嘗試從快取中獲取結果
+    if (this.cacheConfig.enabled) {
+      const cachedResult = this.queryCache.get(cacheKey);
+      if (cachedResult) {
+        vectorLogger.info('從快取獲取 Pinecone 查詢結果', {
+          query: query.substring(0, 50) + (query.length > 50 ? '...' : ''),
+          limit,
+          cacheHit: true
+        });
+        return cachedResult;
+      }
     }
 
     // 將搜尋邏輯封裝為函數，以方便重試
@@ -200,33 +290,41 @@ export class PineconeClient {
         vectorLogger.debug(`第一個結果:`, {
           id: data.matches[0].id,
           score: data.matches[0].score,
-          metadata: data.matches[0].metadata ? Object.keys(data.matches[0].metadata) : '無'
+          metadata: data.matches[0].metadata
         });
       } else {
         vectorLogger.debug(`沒有找到匹配的結果`);
       }
       
-      // 檢查是否有匹配結果
-      if (!data.matches || !Array.isArray(data.matches)) {
-        // 如果沒有匹配結果，返回空數組
-        return [];
+      // 處理結果
+      const results: FaqSearchResult[] = [];
+      
+      if (data.matches && data.matches.length > 0) {
+        for (const match of data.matches) {
+          // 只保留超過相似度閾值的結果
+          if (match.score >= threshold) {
+            const result: FaqSearchResult = {
+              id: match.id,
+              question: match.metadata.question || '',
+              answer: match.metadata.answer || '',
+              metadata: match.metadata,
+              score: match.score
+            };
+            results.push(result);
+          }
+        }
       }
       
-      // 過濾並映射結果，只保留相似度高於閾值的結果
-      const filteredResults = data.matches
-        .filter((match: any) => match.score >= threshold)
-        .map((match: any) => ({
-          id: match.id,
-          question: match.metadata?.question || '',
-          answer: match.metadata?.answer || '',
-          score: match.score,
-          category: match.metadata?.category || '',
-          tags: match.metadata?.tags || []
-        }));
+      // 如果啟用快取，將結果存入快取
+      if (this.cacheConfig.enabled) {
+        this.queryCache.set(cacheKey, results);
+        vectorLogger.debug('Pinecone 查詢結果已快取', { 
+          cacheKey,
+          resultsCount: results.length 
+        });
+      }
       
-      vectorLogger.debug(`結果過濾: 在相似度閾值 ${threshold} 之上的有 ${filteredResults.length} 個結果`);
-      
-      return filteredResults;
+      return results;
     };
     
     try {

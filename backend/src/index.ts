@@ -4,6 +4,7 @@
 import { handleUpload } from './handlers/upload';
 import { handleChat } from './handlers/chat';
 import { handleFaq } from './handlers/faq';
+import { clearAllCaches, getCacheStats } from './handlers/cache';
 import { corsHeaders, handleCors, getCorsHeadersForRequest } from './utils/cors';
 import { createEnvironmentManager } from './utils/environment';
 import { handleError } from './utils/errorHandler';
@@ -99,6 +100,16 @@ export default {
         // 處理檔案上傳 API 請求
         requestLogger.info('處理上傳請求');
         response = await handleUpload(request, env);
+      }
+      // 快取管理 API - 清除快取
+      else if (url.pathname === '/api/cache/clear') {
+        requestLogger.info('處理快取清除請求');
+        response = await clearAllCaches(request, env);
+      }
+      // 快取管理 API - 獲取快取統計資訊
+      else if (url.pathname === '/api/cache/stats') {
+        requestLogger.info('處理快取統計請求');
+        response = await getCacheStats(request, env);
       }
       // 健康檢查端點 - 用於監控系統狀態
       else if (url.pathname === '/api/health') {
