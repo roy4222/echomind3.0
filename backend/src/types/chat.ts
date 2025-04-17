@@ -100,16 +100,26 @@ export interface FaqSearchResult {
   question: string;
   /** 答案 */
   answer: string;
-  /** 相似度分數 (可能經過後處理調整) */
+  /** 相似度分數 (經過加權和校準調整) */
   score: number;
-  /** 原始相似度分數 (向量搜尋原始分數，用於調試) */
+  /** 原始相似度分數 (向量搜尋原始分數) */
   originalScore?: number;
-  /** 分類 (可選) */
+  /** 文本匹配分數 */
+  textMatchScore?: number;
+  /** 語義相似度分數 */
+  semanticScore?: number;
+  /** 標籤提升因子 */
+  tagBoost?: number;
+  /** 分類 */
   category?: string;
-  /** 標籤 (可選) */
+  /** 標籤 */
   tags?: string[];
-  /** 重要性 (可選) */
+  /** 重要性 */
   importance?: number;
-  /** 元數據 (可選) */
+  /** 是否已整合 */
+  integrated?: boolean;
+  /** 整合來源 */
+  integratedFrom?: string[];
+  /** 元數據 */
   metadata?: Record<string, any>;
 }

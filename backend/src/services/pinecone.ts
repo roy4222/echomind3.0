@@ -241,6 +241,278 @@ export class PineconeClient {
     
     return dynamicThreshold;
   }
+  
+  /**
+   * 使用 sigmoid 函數校準相關性分數
+   * @param score 原始分數
+   * @returns 校準後的分數 (0-1 範圍)
+   */
+  private calibrateScore(score: number): number {
+    // 參數調整
+    const scaleFactor = 8.0; // 控制 sigmoid 函數的陡陡度
+    const midPoint = 0.5;    // 控制 sigmoid 函數的中點
+    
+    // 使用 sigmoid 函數進行分數校準
+    // sigmoid(x) = 1 / (1 + e^(-k * (x - midPoint)))
+    const calibrated = 1.0 / (1.0 + Math.exp(-scaleFactor * (score - midPoint)));
+    
+    // 調整範圍使分數分布更均勻
+    // 將 sigmoid 函數轉換為 0.1-0.9 的範圍，避免極端值
+    const minOutput = 0.1;
+    const maxOutput = 0.95;
+    const scaledOutput = minOutput + calibrated * (maxOutput - minOutput);
+    
+    vectorLogger.debug('分數校準', {
+      originalScore: score,
+      calibratedScore: calibrated,
+      finalScore: scaledOutput
+    });
+    
+    return scaledOutput;
+  }
+  
+  /**
+   * 整合相似的 FAQ 結果
+   * @param results 原始 FAQ 搜尋結果
+   * @returns 整合後的結果
+   */
+  private integrateSimilarFaqs(results: FaqSearchResult[]): FaqSearchResult[] {
+    if (results.length <= 1) {
+      return results;
+    }
+    
+    // 評估整合的閾值 - 問題相似度至少要達到這個相似度才考慮整合
+    const INTEGRATION_THRESHOLD = 0.65;
+    const MAX_RESULTS_TO_INTEGRATE = 5; // 限制整合的最大數量
+    
+    // 存儲已經被整合的結果 ID
+    const integratedIds = new Set<string>();
+    
+    // 存儲整合後的結果
+    const integratedResults: FaqSearchResult[] = [];
+    
+    // 先根據分數排序，確保我們先處理更相關的結果
+    const sortedResults = [...results].sort((a: FaqSearchResult, b: FaqSearchResult) => b.score - a.score);
+    
+    for (let i = 0; i < sortedResults.length; i++) {
+      const currentFaq = sortedResults[i];
+      
+      // 如果當前 FAQs 已經被整合到其他結果中，則跳過
+      if (integratedIds.has(currentFaq.id)) {
+        continue;
+      }
+      
+      // 初始化新的整合結果
+      const integratedFaq: FaqSearchResult = {
+        ...currentFaq,
+        integrated: false,
+        integratedFrom: []
+      };
+      
+      let integratedCount = 0;
+      
+      // 尋找可以整合的其他相似 FAQ
+      for (let j = i + 1; j < sortedResults.length; j++) {
+        // 限制整合數量
+        if (integratedCount >= MAX_RESULTS_TO_INTEGRATE) {
+          break;
+        }
+        
+        const otherFaq = sortedResults[j];
+        
+        // 如果已經被整合，則跳過
+        if (integratedIds.has(otherFaq.id)) {
+          continue;
+        }
+        
+        // 計算問題相似度 - 簡單的詞彙重疊分析
+        const similarity = this.calculateQuestionSimilarity(currentFaq.question, otherFaq.question);
+        
+        // 也可以根據分類和標籤判斷相關性
+        let categoryMatch = false;
+        if (currentFaq.category && otherFaq.category && 
+            currentFaq.category === otherFaq.category) {
+          categoryMatch = true;
+        }
+        
+        // 如果相似度超過閾值或分類相匹配，進行整合
+        if (similarity > INTEGRATION_THRESHOLD || categoryMatch) {
+          // 結合答案，移除重復內容
+          // 注意：這裡我們可以實現更先進的文本組合邏輯
+          const integratedAnswer = this.combineAnswers(integratedFaq.answer, otherFaq.answer);
+          
+          // 更新整合結果
+          integratedFaq.answer = integratedAnswer;
+          integratedFaq.integrated = true;
+          
+          // 記錄整合來源
+          if (!integratedFaq.integratedFrom) {
+            integratedFaq.integratedFrom = [];
+          }
+          integratedFaq.integratedFrom.push(otherFaq.id);
+          
+          // 記錄已整合的 ID
+          integratedIds.add(otherFaq.id);
+          integratedCount++;
+          
+          vectorLogger.debug('整合相似 FAQs', {
+            primaryId: currentFaq.id,
+            integratedId: otherFaq.id,
+            similarity: similarity,
+            categoryMatch: categoryMatch
+          });
+        }
+      }
+      
+      // 將整合的結果添加到結果列表
+      integratedResults.push(integratedFaq);
+    }
+    
+    vectorLogger.info('FAQ 整合完成', {
+      originalResults: results.length,
+      integratedResults: integratedResults.length,
+      reductionRate: (results.length - integratedResults.length) / results.length
+    });
+    
+    return integratedResults;
+  }
+  
+  /**
+   * 計算兩個問題的相似度
+   * @param question1 第一個問題
+   * @param question2 第二個問題
+   * @returns 相似度分數 (0-1)
+   */
+  private calculateQuestionSimilarity(question1: string, question2: string): number {
+    // 將問題轉換為小寫並分詞
+    const words1 = question1.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+    const words2 = question2.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+    
+    // 計算共同詞彙
+    const commonWords = words1.filter(word => words2.includes(word));
+    
+    // 計算 Jaccard 相似度
+    const union = new Set([...words1, ...words2]);
+    const jaccardSimilarity = union.size > 0 ? commonWords.length / union.size : 0;
+    
+    // 計算字元相同比例 (對於中文特別有用)
+    // 將兩個問題轉換為字元數組
+    const chars1 = [...question1.toLowerCase()];
+    const chars2 = [...question2.toLowerCase()];
+    
+    // 尋找共同字元
+    const commonChars = chars1.filter(char => chars2.includes(char));
+    
+    // 計算字元相似度 (Dice 係數)
+    const charSimilarity = (chars1.length + chars2.length) > 0 ? 
+        (2 * commonChars.length) / (chars1.length + chars2.length) : 0;
+    
+    // 結合兩種相似度，給予詞彙相似度更高的權重
+    const combinedSimilarity = (jaccardSimilarity * 0.7) + (charSimilarity * 0.3);
+    
+    return combinedSimilarity;
+  }
+  
+  /**
+   * 將兩個答案組合成一個更完整的答案
+   * @param primaryAnswer 主要答案
+   * @param secondaryAnswer 次要答案
+   * @returns 組合後的答案
+   */
+  private combineAnswers(primaryAnswer: string, secondaryAnswer: string): string {
+    // 如果兩個答案完全相同，直接返回主要答案
+    if (primaryAnswer === secondaryAnswer) {
+      return primaryAnswer;
+    }
+    
+    // 如果主要答案包含次要答案，返回主要答案
+    if (primaryAnswer.includes(secondaryAnswer)) {
+      return primaryAnswer;
+    }
+    
+    // 如果次要答案包含主要答案，返回次要答案
+    if (secondaryAnswer.includes(primaryAnswer)) {
+      return secondaryAnswer;
+    }
+    
+    // 拆分答案為句子
+    const primarySentences = primaryAnswer.split(/[.，,.!！？?]\s*/).filter(s => s.trim());
+    const secondarySentences = secondaryAnswer.split(/[.，,.!！？?]\s*/).filter(s => s.trim());
+    
+    // 管理防止重複句子
+    const uniqueSentences = new Set<string>(primarySentences);
+    
+    // 添加非重複的次要句子
+    for (const sentence of secondarySentences) {
+      let isDuplicate = false;
+      
+      // 檢查是否包含相似句子
+      for (const existingSentence of uniqueSentences) {
+        // 使用精確字串匹配或計算相似度
+        if (existingSentence.includes(sentence) || 
+            sentence.includes(existingSentence) ||
+            this.calculateStringSimilarity(existingSentence, sentence) > 0.7) {
+          isDuplicate = true;
+          break;
+        }
+      }
+      
+      if (!isDuplicate) {
+        uniqueSentences.add(sentence);
+      }
+    }
+    
+    // 將精選的句子重新組合為答案
+    return Array.from(uniqueSentences).join('. ') + '.';
+  }
+  
+  /**
+   * 計算兩個字串的相似度
+   * @param str1 第一個字串
+   * @param str2 第二個字串
+   * @returns 相似度分數 (0-1)
+   */
+  private calculateStringSimilarity(str1: string, str2: string): number {
+    // 如果字串相同，直接返回 1.0
+    if (str1 === str2) return 1.0;
+    
+    // 如果其中一個字串為空，返回 0
+    if (!str1 || !str2) return 0.0;
+    
+    // 轉換為小寫並去除過多空白
+    const s1 = str1.toLowerCase().trim().replace(/\s+/g, ' ');
+    const s2 = str2.toLowerCase().trim().replace(/\s+/g, ' ');
+    
+    // 計算 Levenshtein 距離 (編輯距離)
+    const len1 = s1.length;
+    const len2 = s2.length;
+    
+    // 初始化距離矩陣
+    const dp: number[][] = Array(len1 + 1).fill(null).map(() => Array(len2 + 1).fill(0));
+    
+    // 基本情況初始化
+    for (let i = 0; i <= len1; i++) dp[i][0] = i;
+    for (let j = 0; j <= len2; j++) dp[0][j] = j;
+    
+    // 動態規劃計算
+    for (let i = 1; i <= len1; i++) {
+      for (let j = 1; j <= len2; j++) {
+        const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+        dp[i][j] = Math.min(
+          dp[i - 1][j] + 1,      // 刪除
+          dp[i][j - 1] + 1,      // 插入
+          dp[i - 1][j - 1] + cost // 替換
+        );
+      }
+    }
+    
+    // 計算正規化的相似度分數
+    const maxLen = Math.max(len1, len2);
+    if (maxLen === 0) return 1.0; // 兩個均為空字串
+    
+    // 將編輯距離轉換為相似度分數
+    return 1.0 - (dp[len1][len2] / maxLen);
+  }
 
   async searchFaqs(query: string, limit: number = 5, threshold: number = 0.1): Promise<FaqSearchResult[]> {
     // 檢查必要的配置
@@ -411,38 +683,104 @@ export class PineconeClient {
         
         // 對結果進行後處理和增強
         for (const match of validMatches as PineconeMatch[]) {
-          // 計算文本相似度增強因子 (簡單示例)
-          let textSimilarityBoost = 1.0;
-          const queryLower = query.toLowerCase();
+          // 獲取問題和分類信息
           const questionLower = (match.metadata.question || '').toLowerCase();
+          const category = match.metadata.category || 'general';
+          const tags = match.metadata.tags || [];
+          const importance = match.metadata.importance || 1.0;
           
-          // 如果問題中包含原始查詢的關鍵詞，增加分數
-          if (queryLower.length > 3 && questionLower.includes(queryLower)) {
-            textSimilarityBoost = 1.2;
+          // 1. 改進的文本相似度計算
+          const queryLower = query.toLowerCase();
+          const queryWords = queryLower.split(/\s+/).filter(w => w.length > 1);
+          
+          // 計算精確詞彙匹配率
+          let wordMatchCount = 0;
+          for (const word of queryWords) {
+            if (questionLower.includes(word)) {
+              wordMatchCount++;
+            }
           }
           
-          // 最終分數是向量相似度與文本相似度增強的組合
-          const finalScore = match.score * textSimilarityBoost;
+          const wordMatchRatio = queryWords.length > 0 ? wordMatchCount / queryWords.length : 0;
+          
+          // 2. 加權因子計算
+          // 精確文本匹配加權: 0.4
+          // 語義相似度加權: 0.5
+          // 重要性加權: 0.1 
+          const textMatchWeight = 0.4;
+          const semanticWeight = 0.5;
+          const importanceWeight = 0.1;
+          
+          // 計算各組成部分的分數
+          let textMatchScore = 0;
+          
+          // 檢查是否有完全匹配
+          if (questionLower === queryLower) {
+            textMatchScore = 1.0; // 完全匹配給予最高分
+          } 
+          // 檢查是否包含完整查詢
+          else if (questionLower.includes(queryLower)) {
+            textMatchScore = 0.8; // 包含整個查詢字串給予高分
+          }
+          // 檢查詞彙匹配率
+          else {
+            textMatchScore = wordMatchRatio * 0.6; // 基於詞彙匹配率給分
+          }
+          
+          // 使用原始向量相似度作為語義相似度
+          const semanticScore = match.score;
+          
+          // 計算標籤相關性分數
+          let tagBoost = 1.0;
+          // 檢查查詢與標籤的相關性
+          for (const tag of tags) {
+            if (queryLower.includes(tag.toLowerCase())) {
+              tagBoost += 0.1; // 每個匹配的標籤增加 0.1 的提升
+            }
+          }
+          
+          // 3. 最終加權相似度計算
+          const weightedScore = (
+            textMatchScore * textMatchWeight +
+            semanticScore * semanticWeight +
+            (importance * importanceWeight)
+          ) * tagBoost;
+          
+          // 4. 相關性分數校準 (使用 sigmoid 函數)
+          const scaledScore = this.calibrateScore(weightedScore);
           
           // 創建結果對象
           const result: FaqSearchResult = {
             id: match.id,
             question: match.metadata.question || '',
             answer: match.metadata.answer || '',
+            category: category,
+            tags: tags,
+            importance: importance,
             metadata: match.metadata,
-            score: finalScore,
-            originalScore: match.score // 保存原始分數用於調試
+            score: scaledScore,
+            originalScore: match.score, // 保存原始分數用於調試
+            textMatchScore: textMatchScore, // 保存文本匹配分數
+            semanticScore: semanticScore, // 保存語義相似度分數
+            tagBoost: tagBoost // 保存標籤提升因子
           };
           results.push(result);
         }
         
+        // 5. 進行內容整合，合併相似問題的答案
+        const mergedResults = this.integrateSimilarFaqs(results);
+        
         // 根據最終分數重新排序結果
-        results.sort((a, b) => b.score - a.score);
+        mergedResults.sort((a, b) => b.score - a.score);
         
         // 截取到用戶要求的限制數量
-        if (results.length > limit) {
-          results.splice(limit);
+        if (mergedResults.length > limit) {
+          mergedResults.splice(limit);
         }
+        
+        // 將整合後的結果賦值回 results
+        results.length = 0;
+        results.push(...mergedResults);
       }
       
       // 如果啟用快取，將結果存入快取
