@@ -88,7 +88,7 @@ const sidebarItems: SidebarItem[] = [
   {
     icon: MessageSquare,
     label: '匿名留言板',
-    href: '/#anonymous',
+    href: '/board',
   },
   {
     icon: () => (

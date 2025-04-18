@@ -59,7 +59,7 @@ type Theme = {
 const themes: Record<string, Theme> = {
   light: {
     name: "Light",
-    background: "bg-gray-100",
+    background: "bg-gray-50",
     containerBg: "bg-white",
     text: "text-gray-700",
     primary: "text-blue-600",
