@@ -72,8 +72,8 @@ export default function GamePage() {
   // 根據當前主題選擇圖片
   const getImageUrl = (game: any) => {
     if (!mounted) return game.imageUrl; // 默認返回亮色模式圖片
-    
-    const isDarkMode = theme === 'dark' || resolvedTheme === 'dark';
+
+    const isDarkMode = theme === "dark" || resolvedTheme === "dark";
     return isDarkMode && game.darkImageUrl ? game.darkImageUrl : game.imageUrl;
   };
 

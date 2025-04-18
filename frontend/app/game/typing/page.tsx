@@ -1,6 +1,7 @@
 "use client"; // 標記為客戶端組件
 
 import { useState, useEffect, useRef } from "react";
+import { useTheme } from "next-themes";
 
 // 定義單字列表類型
 type WordList = {
@@ -181,6 +182,9 @@ const themes: Record<string, Theme> = {
 export default function Home() {
   // DOM引用
   const inputRef = useRef<HTMLInputElement>(null); // 輸入框引用
+  
+  // 獲取系統主題
+  const { theme: systemTheme } = useTheme();
 
   // 狀態管理
   const [words, setWords] = useState<string[]>([]); // 當前遊戲中的單詞列表
@@ -195,7 +199,7 @@ export default function Home() {
   const [gameEnded, setGameEnded] = useState(false); // 遊戲是否結束
   const [selectedDuration, setSelectedDuration] = useState(15); // 選擇的遊戲時長
   const [currentWordCorrect, setCurrentWordCorrect] = useState(true); // 當前單詞是否正確
-  const [currentTheme, setCurrentTheme] = useState("dark"); // 當前主題，默認為莫蘭迪
+  const [currentTheme, setCurrentTheme] = useState(systemTheme === "light" ? "morandi" : "dark"); // 當前主題
   const [showThemeSelector, setShowThemeSelector] = useState(false); // 是否顯示主題選擇器
   const [currentWordList, setCurrentWordList] = useState(0); // 當前選擇的單字列表索引
   const [showWordListSelector, setShowWordListSelector] = useState(false); // 是否顯示單字列表選擇器
@@ -352,6 +356,9 @@ export default function Home() {
     const savedTheme = localStorage.getItem("typing-theme");
     if (savedTheme && themes[savedTheme]) {
       setCurrentTheme(savedTheme);
+    } else {
+      // 如果沒有保存的主題，根據系統主題設置默認主題
+      setCurrentTheme(systemTheme === "light" ? "morandi" : "dark");
     }
 
     // 從本地存儲加載單字列表
@@ -363,7 +370,14 @@ export default function Home() {
         setWords(shuffleWords(wordLists[index].words).split(" "));
       }
     }
-  }, []);
+  }, []); // 只在組件初始化時執行一次
+
+  // systemTheme 變化時更新主題
+  useEffect(() => {
+    if (!localStorage.getItem("typing-theme")) {
+      setCurrentTheme(systemTheme === "light" ? "morandi" : "dark");
+    }
+  }, [systemTheme]);
 
   // 計時器邏輯
   useEffect(() => {
@@ -433,28 +447,28 @@ export default function Home() {
   // 渲染 UI
   return (
     <div
-      className={`min-h-screen ${themes[currentTheme].background} flex flex-col items-center justify-center pt-20 transition-colors duration-300`}
+      className={`min-h-screen ${themes[currentTheme].background} flex flex-col items-center justify-center py-10 px-4 transition-colors duration-300`}
       tabIndex={0}
     >
-      <div className="flex flex-col items-center w-full max-w-3xl">
+      <div className="flex flex-col items-center w-full max-w-2xl lg:max-w-3xl">
         <h1
-          className={`font-bold ${themes[currentTheme].text} mb-7`}
+          className={`font-bold ${themes[currentTheme].text} mb-5 md:mb-7 text-center`}
           style={{
-            fontSize: "2.8rem",
+            fontSize: "clamp(2rem, 5vw, 2.8rem)",
             fontFamily: "monospace",
           }}
         >
           ⌨️Typing Game🖱️
         </h1>
 
-        <div className="flex justify-between w-full mb-4">
+        <div className="flex justify-between items-center w-full mb-4 flex-wrap gap-2">
           {/* 時間選擇按鈕 */}
-          <div className="space-x-2">
+          <div className="flex space-x-1 md:space-x-2">
             {[15, 30, 60].map((sec) => (
               <button
                 key={sec}
                 onClick={() => startGame(sec)}
-                className={`px-3 py-2 rounded-xl cursor-pointer ${
+                className={`px-2 md:px-3 py-1 md:py-2 rounded-xl text-sm md:text-base cursor-pointer ${
                   selectedDuration === sec
                     ? `${themes[currentTheme].accent} text-white`
                     : `${themes[currentTheme].buttonBg} ${themes[currentTheme].buttonText} ${themes[currentTheme].buttonHover}`
@@ -470,7 +484,7 @@ export default function Home() {
             <div className="relative wordlist-selector">
               <button
                 onClick={() => setShowWordListSelector(!showWordListSelector)}
-                className={`px-4 py-2 rounded-xl ${themes[currentTheme].buttonBg} ${themes[currentTheme].buttonText} flex items-center cursor-pointer`}
+                className={`px-2 md:px-4 py-1 md:py-2 rounded-xl text-sm md:text-base ${themes[currentTheme].buttonBg} ${themes[currentTheme].buttonText} flex items-center cursor-pointer`}
               >
                 {wordLists[currentWordList].name}
               </button>
@@ -500,7 +514,7 @@ export default function Home() {
             <div className="relative theme-selector">
               <button
                 onClick={() => setShowThemeSelector(!showThemeSelector)}
-                className={`px-4 py-2 rounded-xl ${themes[currentTheme].accent} text-white flex items-center cursor-pointer`}
+                className={`px-2 md:px-4 py-1 md:py-2 rounded-xl text-sm md:text-base ${themes[currentTheme].accent} text-white flex items-center cursor-pointer`}
               >
                 <span className="mr-1">🎨</span> {themes[currentTheme].name}
               </button>
@@ -551,12 +565,13 @@ export default function Home() {
 
       {/* 主遊戲區域 */}
       <div
-        className={`shadow-md rounded p-6 w-full max-w-3xl mb-4 rounded-xl ${themes[currentTheme].containerBg}`}
+        className={`shadow-md p-4 sm:p-6 w-full max-w-2xl lg:max-w-3xl mb-4 rounded-xl ${themes[currentTheme].containerBg}`}
       >
         <div
           className={`mb-4 leading-relaxed ${themes[currentTheme].text}`}
           style={{
-            height: "170px",
+            height: "150px",
+            overflowY: "auto",
           }}
         >
           {renderWords()}
@@ -585,7 +600,7 @@ export default function Home() {
         &nbsp; ✍️ Speed：<span className="font-semibold">{wpm}</span> WPM
       </div>
       <div
-        className={`text-lg ${themes[currentTheme].secondary} mt-8 mb-2 text-center`}
+        className={`text-lg ${themes[currentTheme].secondary} mt-5 text-center`}
         style={{
           opacity: 0.7,
         }}
