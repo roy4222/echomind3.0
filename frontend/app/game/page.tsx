@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -16,6 +16,7 @@ const games = [
     imageUrl: "/images/typing.png",
     darkImageUrl: "/images/typing-dark.png",
     path: "/game/typing",
+    introPath: "/game/introduction?game=typing",
   },
   {
     id: "puzzle",
@@ -24,6 +25,7 @@ const games = [
     imageUrl: "/images/puzzle.png",
     darkImageUrl: "/images/puzzle-dark.png",
     path: "/game/puzzle",
+    introPath: "/game/introduction?game=puzzle",
   },
   {
     id: "breathe",
@@ -32,6 +34,7 @@ const games = [
     imageUrl: "/images/breathe.png",
     darkImageUrl: "/images/breathe-dark.png",
     path: "/game/breathe",
+    introPath: "/game/introduction?game=breathe",
   },
   {
     id: "muyu",
@@ -40,6 +43,7 @@ const games = [
     imageUrl: "/images/woodenfish.png",
     darkImageUrl: "/images/woodenfish-dark.png",
     path: "/game/muyu",
+    introPath: "/game/introduction?game=muyu",
   },
   {
     id: "whack-a-mole",
@@ -48,6 +52,7 @@ const games = [
     imageUrl: "/images/whack-a-mole.png",
     darkImageUrl: "/images/whack-a-mole-dark.png",
     path: "/game/whack-a-mole",
+    introPath: "/game/introduction?game=whack-a-mole",
   },
   {
     id: "memory-game",
@@ -56,6 +61,16 @@ const games = [
     imageUrl: "/images/memory-game.png",
     darkImageUrl: "/images/memory-game-dark.png",
     path: "/game/memory-game",
+    introPath: "/game/introduction?game=memory-game",
+  },
+  {
+    id: "circle-circle",
+    name: "圈圈差差",
+    description: "訓練邏輯",
+    imageUrl: "/images/circle-circle.png",
+    darkImageUrl: "/images/circle-circle-dark.png",
+    path: "/game/circle-circle",
+    introPath: "/game/introduction?game=circle-circle",
   },
 ];
 
@@ -63,16 +78,107 @@ export default function GamePage() {
   const [hoveredGame, setHoveredGame] = useState<string | null>(null);
   const { theme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [startScroll, setStartScroll] = useState(0);
+  const [autoScroll, setAutoScroll] = useState(true);
 
   // 確保僅在客戶端渲染後才獲取主題資訊
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // 自動滾動效果
+  useEffect(() => {
+    if (!scrollContainerRef.current || !autoScroll) return;
+
+    const cardWidth = 256; // w-64 = 16rem = 256px
+    const gap = 28; // space-x-7 = 1.75rem = 28px
+    const totalWidth = cardWidth + gap;
+    const numCards = games.length;
+
+    const interval = setInterval(() => {
+      setScrollPosition((prev) => {
+        const newPosition = prev + 1;
+        if (newPosition >= totalWidth * numCards) {
+          setIsTransitioning(true);
+          setTimeout(() => {
+            setScrollPosition(0);
+            setIsTransitioning(false);
+          }, 0);
+          return 0;
+        }
+        return newPosition;
+      });
+    }, 10);
+
+    return () => clearInterval(interval);
+  }, [autoScroll]);
+
+  // 滑鼠事件處理
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setStartX(e.clientX);
+    setStartScroll(scrollPosition);
+    setAutoScroll(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    
+    const deltaX = e.clientX - startX;
+    const newPosition = startScroll - deltaX;
+    
+    const cardWidth = 256;
+    const gap = 28;
+    const totalWidth = cardWidth + gap;
+    const numCards = games.length;
+    
+    if (newPosition < 0) {
+      setScrollPosition(0);
+    } else if (newPosition >= totalWidth * numCards) {
+      setScrollPosition(totalWidth * numCards);
+    } else {
+      setScrollPosition(newPosition);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    setAutoScroll(true);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    setAutoScroll(false);
+    
+    const cardWidth = 256;
+    const gap = 28;
+    const totalWidth = cardWidth + gap;
+    const numCards = games.length;
+    
+    const newPosition = scrollPosition + e.deltaY;
+    
+    if (newPosition < 0) {
+      setScrollPosition(0);
+    } else if (newPosition >= totalWidth * numCards) {
+      setScrollPosition(totalWidth * numCards);
+    } else {
+      setScrollPosition(newPosition);
+    }
+    
+    // 重置自動滾動計時器
+    setTimeout(() => {
+      setAutoScroll(true);
+    }, 3000);
+  };
+
   // 根據當前主題選擇圖片
   const getImageUrl = (game: any) => {
-    if (!mounted) return game.imageUrl; // 默認返回亮色模式圖片
-
+    if (!mounted) return game.imageUrl;
+    
     const isDarkMode = theme === "dark" || resolvedTheme === "dark";
     return isDarkMode && game.darkImageUrl ? game.darkImageUrl : game.imageUrl;
   };
@@ -87,14 +193,107 @@ export default function GamePage() {
           在學習之餘，享受一些休閒時光。透過遊戲放鬆心情，提升專注力。
         </p>
 
+        {/* 自動滾動的遊戲選單 */}
+        <div 
+          className="mb-16 overflow-hidden relative"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onWheel={handleWheel}
+          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+        >
+          <div
+            ref={scrollContainerRef}
+            className="flex space-x-7 py-4"
+            style={{
+              transform: `translateX(-${scrollPosition}px)`,
+              transition: isTransitioning ? "none" : "transform 0.01s linear",
+            }}
+          >
+            {/* 第一組遊戲卡片 */}
+            {games.map((game) => (
+              <motion.div
+                key={game.id}
+                className="flex-shrink-0 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden cursor-pointer"
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => window.location.href = game.introPath}
+              >
+                <div className="h-40 bg-gray-200 dark:bg-gray-700 relative">
+                  {(game.imageUrl || game.darkImageUrl) && mounted && (
+                    <Image
+                      src={getImageUrl(game)}
+                      alt={game.name}
+                      fill
+                      className="object-cover"
+                    />
+                  )}
+                </div>
+                <div className="p-4">
+                  <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-1">
+                    {game.name}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                    {game.description}
+                  </p>
+                  <div
+                    className="inline-flex items-center text-indigo-600 dark:text-indigo-400 text-sm font-medium"
+                  >
+                    查看詳情
+                    <ArrowRight size={14} className="ml-1" />
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+            {/* 第二組遊戲卡片（用於無縫循環） */}
+            {games.map((game) => (
+              <motion.div
+                key={`${game.id}-clone`}
+                className="flex-shrink-0 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden cursor-pointer"
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => window.location.href = game.introPath}
+              >
+                <div className="h-40 bg-gray-200 dark:bg-gray-700 relative">
+                  {(game.imageUrl || game.darkImageUrl) && mounted && (
+                    <Image
+                      src={getImageUrl(game)}
+                      alt={game.name}
+                      fill
+                      className="object-cover"
+                    />
+                  )}
+                </div>
+                <div className="p-4">
+                  <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-1">
+                    {game.name}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                    {game.description}
+                  </p>
+                  <div
+                    className="inline-flex items-center text-indigo-600 dark:text-indigo-400 text-sm font-medium"
+                  >
+                    查看詳情
+                    <ArrowRight size={14} className="ml-1" />
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        {/* 原有的網格選單 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {games.map((game) => (
             <motion.div
               key={game.id}
-              className="relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-2xl"
+              className="relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-2xl cursor-pointer"
               whileHover={{ y: -5 }}
               onMouseEnter={() => setHoveredGame(game.id)}
               onMouseLeave={() => setHoveredGame(null)}
+              onClick={() => window.location.href = game.introPath}
             >
               <div className="h-48 bg-gray-200 dark:bg-gray-700 relative">
                 {(game.imageUrl || game.darkImageUrl) && mounted && (
@@ -115,13 +314,12 @@ export default function GamePage() {
                   {game.description}
                 </p>
 
-                <Link
-                  href={game.path}
+                <div
                   className="inline-flex items-center text-indigo-600 dark:text-indigo-400 font-medium"
                 >
-                  開始遊戲
+                  查看詳情
                   <ArrowRight size={16} className="ml-2" />
-                </Link>
+                </div>
               </div>
             </motion.div>
           ))}
