@@ -2,6 +2,6 @@ llama-index-core>=0.10.0
 llama-index-vector-stores-pinecone>=0.1.3
 llama-index-embeddings-cohere>=0.1.4
 python-dotenv>=1.0.0
-pinecone-client>=2.2.4
+pinecone
 cohere>=4.20
 tqdm>=4.65.0 
