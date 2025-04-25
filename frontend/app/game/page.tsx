@@ -74,6 +74,14 @@ const games = [
   },
 ];
 
+// 在樣式部分添加防止文字選擇的 CSS 類
+const noSelectStyles = {
+  WebkitUserSelect: "none",
+  MozUserSelect: "none",
+  msUserSelect: "none",
+  userSelect: "none",
+};
+
 export default function GamePage() {
   const [hoveredGame, setHoveredGame] = useState<string | null>(null);
   const { theme, resolvedTheme } = useTheme();
@@ -85,6 +93,8 @@ export default function GamePage() {
   const [startX, setStartX] = useState(0);
   const [startScroll, setStartScroll] = useState(0);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [hasDragged, setHasDragged] = useState(false);
+  const [dragStartTime, setDragStartTime] = useState(0);
 
   // 確保僅在客戶端渲染後才獲取主題資訊
   useEffect(() => {
@@ -124,19 +134,25 @@ export default function GamePage() {
     setStartX(e.clientX);
     setStartScroll(scrollPosition);
     setAutoScroll(false);
+    setHasDragged(false);
+    setDragStartTime(Date.now());
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging) return;
-    
+
     const deltaX = e.clientX - startX;
+    if (Math.abs(deltaX) > 5) {
+      setHasDragged(true);
+    }
+
     const newPosition = startScroll - deltaX;
-    
+
     const cardWidth = 256;
     const gap = 28;
     const totalWidth = cardWidth + gap;
     const numCards = games.length;
-    
+
     if (newPosition < 0) {
       setScrollPosition(0);
     } else if (newPosition >= totalWidth * numCards) {
@@ -148,19 +164,23 @@ export default function GamePage() {
 
   const handleMouseUp = () => {
     setIsDragging(false);
-    setAutoScroll(true);
+    const isDragGesture = hasDragged || Date.now() - dragStartTime > 200;
+
+    setTimeout(() => {
+      setAutoScroll(true);
+    }, 50);
   };
 
   const handleWheel = (e: React.WheelEvent) => {
     setAutoScroll(false);
-    
+
     const cardWidth = 256;
     const gap = 28;
     const totalWidth = cardWidth + gap;
     const numCards = games.length;
-    
+
     const newPosition = scrollPosition + e.deltaY;
-    
+
     if (newPosition < 0) {
       setScrollPosition(0);
     } else if (newPosition >= totalWidth * numCards) {
@@ -168,17 +188,28 @@ export default function GamePage() {
     } else {
       setScrollPosition(newPosition);
     }
-    
+
     // 重置自動滾動計時器
     setTimeout(() => {
       setAutoScroll(true);
     }, 3000);
   };
 
+  // 新增卡片點擊處理函數
+  const handleCardClick = (path: string, e: React.MouseEvent) => {
+    if (hasDragged) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
+    window.location.href = path;
+  };
+
   // 根據當前主題選擇圖片
   const getImageUrl = (game: any) => {
     if (!mounted) return game.imageUrl;
-    
+
     const isDarkMode = theme === "dark" || resolvedTheme === "dark";
     return isDarkMode && game.darkImageUrl ? game.darkImageUrl : game.imageUrl;
   };
@@ -189,23 +220,28 @@ export default function GamePage() {
         <h1 className="text-4xl font-bold text-center mb-4 text-indigo-700 dark:text-indigo-300">
           EchoMind 遊戲中心
         </h1>
-        <p className="text-lg text-center mb-12 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+        <p className="text-lg text-center mb-9 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
           在學習之餘，享受一些休閒時光。透過遊戲放鬆心情，提升專注力。
+        </p>
+        <p className="text-lg text-center mb-1 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+          手動拖移遊戲卡片
         </p>
 
         {/* 自動滾動的遊戲選單 */}
-        <div 
-          className="mb-16 overflow-hidden relative"
+        <div
+          className="mb-16 overflow-hidden relative select-none"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
           onWheel={handleWheel}
-          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+          style={{
+            cursor: isDragging ? "grabbing" : "grab",
+          }}
         >
           <div
             ref={scrollContainerRef}
-            className="flex space-x-7 py-4"
+            className="flex space-x-7 py-4 select-none"
             style={{
               transform: `translateX(-${scrollPosition}px)`,
               transition: isTransitioning ? "none" : "transform 0.01s linear",
@@ -215,31 +251,30 @@ export default function GamePage() {
             {games.map((game) => (
               <motion.div
                 key={game.id}
-                className="flex-shrink-0 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden cursor-pointer"
+                className="flex-shrink-0 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden cursor-pointer select-none"
                 whileHover={{ scale: 1.05 }}
                 transition={{ duration: 0.2 }}
-                onClick={() => window.location.href = game.introPath}
+                onClick={(e) => handleCardClick(game.introPath, e)}
               >
-                <div className="h-40 bg-gray-200 dark:bg-gray-700 relative">
+                <div className="h-40 bg-gray-200 dark:bg-gray-700 relative select-none">
                   {(game.imageUrl || game.darkImageUrl) && mounted && (
                     <Image
                       src={getImageUrl(game)}
                       alt={game.name}
                       fill
-                      className="object-cover"
+                      className="object-cover select-none"
+                      draggable="false"
                     />
                   )}
                 </div>
-                <div className="p-4">
+                <div className="p-4 select-none">
                   <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-1">
                     {game.name}
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
                     {game.description}
                   </p>
-                  <div
-                    className="inline-flex items-center text-indigo-600 dark:text-indigo-400 text-sm font-medium"
-                  >
+                  <div className="inline-flex items-center text-indigo-600 dark:text-indigo-400 text-sm font-medium">
                     查看詳情
                     <ArrowRight size={14} className="ml-1" />
                   </div>
@@ -250,31 +285,30 @@ export default function GamePage() {
             {games.map((game) => (
               <motion.div
                 key={`${game.id}-clone`}
-                className="flex-shrink-0 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden cursor-pointer"
+                className="flex-shrink-0 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden cursor-pointer select-none"
                 whileHover={{ scale: 1.05 }}
                 transition={{ duration: 0.2 }}
-                onClick={() => window.location.href = game.introPath}
+                onClick={(e) => handleCardClick(game.introPath, e)}
               >
-                <div className="h-40 bg-gray-200 dark:bg-gray-700 relative">
+                <div className="h-40 bg-gray-200 dark:bg-gray-700 relative select-none">
                   {(game.imageUrl || game.darkImageUrl) && mounted && (
                     <Image
                       src={getImageUrl(game)}
                       alt={game.name}
                       fill
-                      className="object-cover"
+                      className="object-cover select-none"
+                      draggable="false"
                     />
                   )}
                 </div>
-                <div className="p-4">
+                <div className="p-4 select-none">
                   <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-1">
                     {game.name}
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
                     {game.description}
                   </p>
-                  <div
-                    className="inline-flex items-center text-indigo-600 dark:text-indigo-400 text-sm font-medium"
-                  >
+                  <div className="inline-flex items-center text-indigo-600 dark:text-indigo-400 text-sm font-medium">
                     查看詳情
                     <ArrowRight size={14} className="ml-1" />
                   </div>
@@ -293,7 +327,7 @@ export default function GamePage() {
               whileHover={{ y: -5 }}
               onMouseEnter={() => setHoveredGame(game.id)}
               onMouseLeave={() => setHoveredGame(null)}
-              onClick={() => window.location.href = game.introPath}
+              onClick={() => (window.location.href = game.introPath)}
             >
               <div className="h-48 bg-gray-200 dark:bg-gray-700 relative">
                 {(game.imageUrl || game.darkImageUrl) && mounted && (
@@ -314,9 +348,7 @@ export default function GamePage() {
                   {game.description}
                 </p>
 
-                <div
-                  className="inline-flex items-center text-indigo-600 dark:text-indigo-400 font-medium"
-                >
+                <div className="inline-flex items-center text-indigo-600 dark:text-indigo-400 font-medium">
                   查看詳情
                   <ArrowRight size={16} className="ml-2" />
                 </div>
