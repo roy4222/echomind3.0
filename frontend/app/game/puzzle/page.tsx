@@ -42,7 +42,7 @@ export default function HomePage() {
       
       {/* 主題選擇區塊 - 中央內容區域 */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 mb-12">
-        <h2 className="text-2xl font-semibold text-center mb-6 text-gray-800">選擇主題</h2>
+        <h2 className="text-2xl font-semibold text-center  mb-6 text-gray-800">選擇主題</h2>
         {/* 主題網格：在小螢幕顯示 2 欄，中等以上顯示 4 欄 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
           {/* 遍歷並渲染每個主題選項 */}

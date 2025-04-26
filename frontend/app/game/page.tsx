@@ -28,6 +28,15 @@ const games = [
     introPath: "/game/introduction?game=puzzle",
   },
   {
+    id: "SnakeGame",
+    name: "貪吃蛇",
+    description: "歐趴貪吃蛇吃到歐趴",
+    imageUrl: "/images/SnakeGame.png",
+    darkImageUrl: "/images/Snake-dark.png",
+    path: "/game/Snake",
+    introPath: "/game/introduction?game=SnakeGame",
+  },
+  {
     id: "breathe",
     name: "呼吸遊戲",
     description: "訓練記憶力與專注力",
@@ -64,13 +73,13 @@ const games = [
     introPath: "/game/introduction?game=memory-game",
   },
   {
-    id: "circle-circle",
-    name: "圈圈差差",
-    description: "訓練邏輯",
-    imageUrl: "/images/circle-circle.png",
+    id: "Gomoku",
+    name: "五子棋",
+    description: "",
+    imageUrl: "/images/Gomoku.png",
     darkImageUrl: "/images/circle-circle-dark.png",
     path: "/game/circle-circle",
-    introPath: "/game/introduction?game=circle-circle",
+    introPath: "/game/introduction?game=Gomoku",
   },
 ];
 

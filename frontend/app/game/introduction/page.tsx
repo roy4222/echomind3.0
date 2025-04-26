@@ -43,6 +43,15 @@ const gameInfo: Record<string, GameInfo> = {
     imageUrl: "/images/puzzle.png",
     darkImageUrl: "/images/puzzle-dark.png",
   },
+  SnakeGame: {
+    name: "貪吃蛇",
+    description: "歐趴貪吃蛇吃到歐趴",
+    longDescription:
+      "經典貪吃蛇遊戲，放鬆身心，享受遊戲的樂趣。",
+    features: ["多種模式", "可調整難度", "計時挑戰", "進度保存"],
+    imageUrl: "/images/SnakeGame.png",
+    darkImageUrl: "/images/Snake-dark.png",
+  },
   breathe: {
     name: "呼吸遊戲",
     description: "訓練記憶力與專注力",
@@ -70,22 +79,13 @@ const gameInfo: Record<string, GameInfo> = {
     imageUrl: "/images/whack-a-mole.png",
     darkImageUrl: "/images/whack-a-mole-dark.png",
   },
-  "memory-game": {
-    name: "記憶拼圖",
-    description: "訓練記憶力與專注力",
-    longDescription:
-      "考驗記憶力的翻牌遊戲，需要記住卡片的位置並配對相同的圖案。適合所有年齡層的玩家。",
-    features: ["多種圖案主題", "難度調整", "計時模式", "配對動畫"],
-    imageUrl: "/images/memory-game.png",
-    darkImageUrl: "/images/memory-game-dark.png",
-  },
-  "circle-circle": {
-    name: "圈圈差差",
+  "Gomoku": {
+    name: "五子棋",
     description: "訓練邏輯",
     longDescription:
-      "經典的圈圈叉叉遊戲，加入了新的玩法和特殊規則。可以和電腦對戰或和朋友一起玩。",
-    features: ["AI對戰", "多人模式", "特殊規則", "戰績統計"],
-    imageUrl: "/images/circle-circle.png",
+      "經典的五子棋遊戲，加入了新的玩法和特殊規則。可以和電腦對戰或和朋友一起玩。",
+    features: ["AI對戰", "特殊規則", "戰績統計"],
+    imageUrl: "/images/Gomoku.png",
     darkImageUrl: "/images/circle-circle-dark.png",
   },
 };
