@@ -9,8 +9,8 @@ def count_questions(obj):
             count += 1
         # 遍歷字典中的每個鍵值對
         for key, value in obj.items():
-            # 如果鍵名為 "問題列表" 或 "QA"，且值為列表，遞迴處理每個項目
-            if key in ["問題列表", "QA"] and isinstance(value, list):
+            # 如果鍵名為 "問題列表"、"QA" 或 ("問題" 且值為列表)，遞迴處理每個項目
+            if (key in ["問題列表", "QA"] or (key == "問題" and isinstance(value, list))) and isinstance(value, list):
                 for item in value:
                     count += count_questions(item)
             # 如果值是字典或列表，遞迴處理
@@ -19,7 +19,13 @@ def count_questions(obj):
     # 如果是列表，遞迴處理每個項目
     elif isinstance(obj, list):
         for item in obj:
-            count += count_questions(item)
+            # 處理列表內可能直接包含字串的情況
+            if isinstance(item, str):
+                # 如果字串看起來像是問題（含有問號），可以考慮計數
+                if "？" in item or "?" in item:
+                    count += 1
+            else:
+                count += count_questions(item)
     return count
 
 # 開啟 JSON 檔案並讀取內容
