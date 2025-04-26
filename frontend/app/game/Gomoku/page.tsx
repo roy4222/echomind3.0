@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from 'next/dynamic';
+import BackButton from "./src/components/BackButton";
 
 // 動態導入App組件，關閉SSR以避免伺服器端渲染問題
 const GomokuApp = dynamic(() => import('./src/App'), {
@@ -13,5 +14,7 @@ const GomokuApp = dynamic(() => import('./src/App'), {
 });
 
 export default function GomokuPage() {
-  return <GomokuApp />;
+  return (
+      <GomokuApp />
+  );
 } 
