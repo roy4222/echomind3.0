@@ -43,14 +43,14 @@ const gameInfo: Record<string, GameInfo> = {
     imageUrl: "/images/puzzle.png",
     darkImageUrl: "/images/puzzle-dark.png",
   },
-  breathe: {
+  Breath: {
     name: "呼吸遊戲",
-    description: "訓練記憶力與專注力",
+    description: "訓練放鬆與專注力",
     longDescription:
       "透過引導式的呼吸練習，幫助您放鬆心情、減輕壓力。配合視覺和聲音效果，讓呼吸練習更加輕鬆有趣。",
-    features: ["多種呼吸模式", "自定義節奏", "放鬆音樂", "練習統計"],
-    imageUrl: "/images/breathe.png",
-    darkImageUrl: "/images/breathe-dark.png",
+    features: ["多種呼吸模式", "自定義節奏", "放鬆音樂"],
+    imageUrl: "/images/Breath-light.png",
+    darkImageUrl: "/images/Breath-dark.png",
   },
   muyu: {
     name: "敲木魚",

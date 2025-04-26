@@ -30,11 +30,11 @@ const games = [
   {
     id: "breathe",
     name: "呼吸遊戲",
-    description: "訓練記憶力與專注力",
-    imageUrl: "/images/breathe.png",
-    darkImageUrl: "/images/breathe-dark.png",
-    path: "/game/breathe",
-    introPath: "/game/introduction?game=breathe",
+    description: "訓練放鬆與專注力",
+    imageUrl: "/images/Breath-light.png",
+    darkImageUrl: "/images/Breath-dark.png",
+    path: "/game/Breath",
+    introPath: "/game/introduction?game=Breath",
   },
   {
     id: "muyu",
