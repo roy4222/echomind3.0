@@ -262,7 +262,7 @@ export const PuzzleGame = ({ theme, difficulty }: PuzzleGameProps) => {
   return (
     <div className="w-full max-w-5xl mx-auto">
       <div className="text-center mb-6">
-        <h2 className="text-2xl md:text-3xl font-bold mb-4 text-gray-800">
+        <h2 className="text-2xl md:text-3xl font-bold mb-4 text-gray-800 dark:text-gray-200">
           {themeData.title} - {difficulty}x{difficulty}
         </h2>
         {!gameStarted ? (
@@ -273,18 +273,18 @@ export const PuzzleGame = ({ theme, difficulty }: PuzzleGameProps) => {
             開始遊戲
           </button>
         ) : isCompleted ? (
-          <div className="text-center p-4 rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 shadow-md mb-6">
-            <div className="text-2xl font-bold text-gray-800 mb-2">
+          <div className="text-center p-4 rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 shadow-md mb-6">
+            <div className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2">
               恭喜完成！
             </div>
             <div className="flex justify-center gap-8 items-center">
               <div className="flex flex-col items-center">
-                <span className="text-sm font-medium text-gray-600">總用時</span>
-                <span className="text-xl font-bold text-gray-800">{Math.floor(time / 60)}分{time % 60}秒</span>
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">總用時</span>
+                <span className="text-xl font-bold text-gray-800 dark:text-gray-200">{Math.floor(time / 60)}分{time % 60}秒</span>
               </div>
               <div className="flex flex-col items-center">
-                <span className="text-sm font-medium text-gray-600">移動次數</span>
-                <span className="text-xl font-bold text-gray-800">{moves}</span>
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">移動次數</span>
+                <span className="text-xl font-bold text-gray-800 dark:text-gray-200">{moves}</span>
               </div>
             </div>
           </div>
@@ -329,7 +329,7 @@ export const PuzzleGame = ({ theme, difficulty }: PuzzleGameProps) => {
       <div className="flex flex-col md:flex-row gap-8 justify-center items-center md:items-start">
         {/* 拼圖遊戲區域 - 移除暫停時的視覺效果，只保留功能限制 */}
         <div
-          className="grid gap-1 bg-gradient-to-br from-gray-50 to-gray-100 p-3 rounded-xl shadow-xl relative"
+          className="grid gap-1 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 p-3 rounded-xl shadow-xl relative"
           style={{
             gridTemplateColumns: `repeat(${difficulty}, 1fr)`,
             aspectRatio: '1/1',
@@ -358,7 +358,7 @@ export const PuzzleGame = ({ theme, difficulty }: PuzzleGameProps) => {
                 data-piece-id={pieceAtPosition.id}
               >
                 <div
-                  className="absolute inset-0 bg-cover bg-center border border-gray-300 shadow-sm rounded-sm"
+                  className="absolute inset-0 bg-cover bg-center border border-gray-300 dark:border-gray-500 shadow-sm rounded-sm"
                   style={{
                     backgroundImage: `url(${themeData.image})`,
                     backgroundSize: `${difficulty * 100}%`,
@@ -372,8 +372,8 @@ export const PuzzleGame = ({ theme, difficulty }: PuzzleGameProps) => {
         
         {/* 可選：顯示原始圖片作為參考 */}
         {gameStarted && (
-          <div className="hidden md:block bg-gray-50 p-4 rounded-xl shadow-lg">
-            <h3 className="text-lg font-medium mb-3 text-center text-gray-800">參考圖片</h3>
+          <div className="hidden md:block bg-gray-50 dark:bg-gray-700 p-4 rounded-xl shadow-lg">
+            <h3 className="text-lg font-medium mb-3 text-center text-gray-800 dark:text-gray-200">參考圖片</h3>
             <div className="relative w-52 h-52 shadow-md rounded-lg overflow-hidden">
               <Image
                 src={themeData.image}

@@ -34,15 +34,15 @@ export default function HomePage() {
 
   return (
     // 主容器：全寬，只有垂直方向上的間距，使用動畫效果
-    <div className={`w-full bg-gradient-to-b from-gray-50 to-gray-100 min-h-screen transition-all duration-700 ${animation ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>
+    <div className={`w-full bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 min-h-screen transition-all duration-700 ${animation ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>
       {/* 頁面標題：懸停時變色效果，精確控制陰影 */}
-      <div className="bg-white/90 backdrop-blur-sm shadow-md py-6 mb-8">
-        <h1 className="text-4xl font-bold text-center text-gray-800 transition-all duration-500 hover:scale-105">拼圖遊戲</h1>
+      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-md py-6 mb-8">
+        <h1 className="text-4xl font-bold text-center text-gray-800 dark:text-gray-200 transition-all duration-500 hover:scale-105">拼圖遊戲</h1>
       </div>
       
       {/* 主題選擇區塊 - 中央內容區域 */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 mb-12">
-        <h2 className="text-2xl font-semibold text-center  mb-6 text-gray-800">選擇主題</h2>
+        <h2 className="text-2xl font-semibold text-center mb-6 text-gray-800 dark:text-gray-200">選擇主題</h2>
         {/* 主題網格：在小螢幕顯示 2 欄，中等以上顯示 4 欄 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
           {/* 遍歷並渲染每個主題選項 */}
@@ -51,8 +51,8 @@ export default function HomePage() {
               key={theme.id}
               onClick={() => setSelectedTheme(theme.id)}
               // 條件式類名：選中時套用深灰色邊框和背景，未選中時有 hover 效果
-              className={`p-4 border rounded-lg cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-lg bg-white ${
-                selectedTheme === theme.id ? 'border-gray-800 shadow-md bg-gray-50' : 'border-gray-200 hover:border-gray-400'
+              className={`p-4 border rounded-lg cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-lg bg-white dark:bg-gray-700 ${
+                selectedTheme === theme.id ? 'border-gray-800 dark:border-gray-400 shadow-md bg-gray-50 dark:bg-gray-600' : 'border-gray-200 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
               }`}
             >
               {/* 圖片容器：固定高度並處理溢出 */}
@@ -69,15 +69,15 @@ export default function HomePage() {
                 />
               </div>
               {/* 主題名稱 */}
-              <p className="text-center font-medium text-gray-800 text-lg">{theme.name}</p>
+              <p className="text-center font-medium text-gray-800 dark:text-gray-200 text-lg">{theme.name}</p>
             </div>
           ))}
         </div>
       </div>
       
       {/* 難度選擇區塊 */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 mb-12 bg-white/80 backdrop-blur-sm rounded-xl shadow-md py-6">
-        <h2 className="text-2xl font-semibold text-center mb-6 text-gray-800">選擇難度</h2>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 mb-12 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm rounded-xl shadow-md py-6">
+        <h2 className="text-2xl font-semibold text-center mb-6 text-gray-800 dark:text-gray-200">選擇難度</h2>
         {/* 彈性布局，在中心對齊並添加間距 */}
         <div className="flex flex-wrap justify-center gap-4">
           {/* 遍歷並渲染每個難度選項 */}
@@ -89,7 +89,7 @@ export default function HomePage() {
               className={`px-5 py-3 rounded-full transition-all duration-300 ${
                 difficulty === diffItem.value 
                   ? 'bg-gradient-to-r from-gray-700 to-gray-800 text-white font-bold shadow-md transform scale-105' 
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                  : 'bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-500 hover:border-gray-400 dark:hover:border-gray-400'
               }`}
             >
               {diffItem.label}
@@ -107,7 +107,7 @@ export default function HomePage() {
           className={`px-10 py-4 rounded-full text-lg font-bold transition-all duration-300 transform ${
             selectedTheme 
               ? 'bg-gradient-to-r from-gray-700 to-gray-800 text-white shadow-lg hover:shadow-xl hover:scale-105 hover:from-gray-800 hover:to-gray-900' 
-              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500 cursor-not-allowed'
           }`}
           aria-disabled={!selectedTheme} // 無障礙屬性，指示按鈕是否可用
         >
@@ -125,7 +125,7 @@ export default function HomePage() {
       </div>
       
       {/* 頁腳 */}
-      <footer className="bg-white/90 backdrop-blur-sm shadow-inner py-4 text-center text-gray-600">
+      <footer className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-inner py-4 text-center text-gray-600 dark:text-gray-400">
         <div className="max-w-7xl mx-auto px-4">
           <p>&copy; {new Date().getFullYear()} 拼圖遊戲 - 使用 Next.js 開發</p>
         </div>

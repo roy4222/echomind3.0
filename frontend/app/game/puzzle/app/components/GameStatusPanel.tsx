@@ -8,15 +8,15 @@ export const GameStatusPanel = ({
   onRestart
 }: GameStatusPanelProps) => {
   return (
-    <div className="bg-gradient-to-r from-white to-gray-50 rounded-xl shadow-md p-4 mb-4 flex flex-wrap justify-between items-center gap-4 w-full">
+    <div className="bg-gradient-to-r from-white to-gray-50 dark:from-gray-700 dark:to-gray-600 rounded-xl shadow-md p-4 mb-4 flex flex-wrap justify-between items-center gap-4 w-full">
       <div className="flex items-center space-x-6">
-        <div className="text-center bg-gray-100/80 backdrop-blur-sm rounded-lg px-4 py-2 shadow-sm">
-          <div className="text-sm font-semibold text-gray-700">時間</div>
-          <div className="text-xl font-bold text-gray-800">{formatTime(time)}</div>
+        <div className="text-center bg-gray-100/80 dark:bg-gray-600/80 backdrop-blur-sm rounded-lg px-4 py-2 shadow-sm">
+          <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">時間</div>
+          <div className="text-xl font-bold text-gray-800 dark:text-gray-200">{formatTime(time)}</div>
         </div>
-        <div className="text-center bg-gray-100/80 backdrop-blur-sm rounded-lg px-4 py-2 shadow-sm">
-          <div className="text-sm font-semibold text-gray-700">步數</div>
-          <div className="text-xl font-bold text-gray-800">{moves}</div>
+        <div className="text-center bg-gray-100/80 dark:bg-gray-600/80 backdrop-blur-sm rounded-lg px-4 py-2 shadow-sm">
+          <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">步數</div>
+          <div className="text-xl font-bold text-gray-800 dark:text-gray-200">{moves}</div>
         </div>
       </div>
 
