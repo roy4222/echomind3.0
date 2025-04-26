@@ -50,7 +50,7 @@ const gameInfo: Record<string, GameInfo> = {
       "經典貪吃蛇遊戲，放鬆身心，享受遊戲的樂趣。",
     features: ["多種模式", "可調整難度", "計時挑戰", "進度保存"],
     imageUrl: "/images/SnakeGame.png",
-    darkImageUrl: "/images/Snake-dark.png",
+    darkImageUrl: "/images/SnakeGame-dark.png",
   },
   breathe: {
     name: "呼吸遊戲",

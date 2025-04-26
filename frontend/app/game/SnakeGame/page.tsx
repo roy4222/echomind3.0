@@ -7,7 +7,7 @@ const SnakeGameApp = dynamic(() => import('./src/App'), {
   ssr: false,
   loading: () => (
     <div className="w-screen h-screen flex items-center justify-center">
-      <div className="text-2xl font-bold text-gray-600">載入中...</div>
+      <div className="text-2xl font-bold text-gray-600 dark:text-gray-300">載入中...</div>
     </div>
   )
 });

@@ -32,7 +32,7 @@ const games = [
     name: "貪吃蛇",
     description: "歐趴貪吃蛇吃到歐趴",
     imageUrl: "/images/SnakeGame.png",
-    darkImageUrl: "/images/Snake-dark.png",
+    darkImageUrl: "/images/SnakeGame-dark.png",
     path: "/game/Snake",
     introPath: "/game/introduction?game=SnakeGame",
   },

@@ -186,11 +186,11 @@ const SnakeGame = () => {
         grid.push(
           <div
             key={`${x}-${y}`}
-            className={`w-6 h-6 border border-gray-100 transition-colors duration-100 ${
-              isSnakeHead ? 'bg-gray-800' : // 蛇頭顏色
-              isSnake ? 'bg-gray-700' : // 蛇身體顏色
-              isFood ? 'bg-red-500' : // 食物顏色
-              'bg-gray-50' // 背景顏色
+            className={`w-6 h-6 border border-gray-100 dark:border-gray-700 transition-colors duration-100 ${
+              isSnakeHead ? 'bg-gray-800 dark:bg-gray-900' : // 蛇頭顏色
+              isSnake ? 'bg-gray-700 dark:bg-gray-800' : // 蛇身體顏色
+              isFood ? 'bg-red-500 dark:bg-red-600' : // 食物顏色
+              'bg-gray-50 dark:bg-gray-700' // 背景顏色
             }`}
           />
         );
@@ -201,29 +201,29 @@ const SnakeGame = () => {
 
   // 渲染遊戲介面
   return (
-    <div className={`w-full min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex flex-col items-center py-8 px-4 transition-all duration-700 ${animation ? 'opacity-100' : 'opacity-0'}`}>
+    <div className={`w-full min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 flex flex-col items-center py-8 px-4 transition-all duration-700 ${animation ? 'opacity-100' : 'opacity-0'}`}>
       {/* <div className="bg-white/90 backdrop-blur-sm shadow-md py-6 px-8 rounded-xl w-full max-w-2xl mb-8 text-center">
         <h1 className="text-3xl font-bold text-gray-800">貪吃蛇遊戲</h1>
       </div> */}
       
-      <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 max-w-2xl w-full mb-6">
+      <div className="bg-white/90 dark:bg-gray-700/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 max-w-2xl w-full mb-6">
         <div className="flex justify-between items-center mb-6">
-          <div className="text-center bg-gray-50 rounded-lg px-4 py-2 shadow-sm w-36">
-            <div className="text-sm font-semibold text-gray-700">分數</div>
-            <div className="text-2xl font-bold text-gray-800">{score}</div>
+          <div className="text-center bg-gray-50 dark:bg-gray-600 rounded-lg px-4 py-2 shadow-sm w-36">
+            <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">分數</div>
+            <div className="text-2xl font-bold text-gray-800 dark:text-gray-200">{score}</div>
           </div>
           
          
           
-          <div className="text-gray-700 text-lg font-medium">
-            {isGameOver && <span className="text-red-600">遊戲結束</span>}
+          <div className="text-gray-700 dark:text-gray-300 text-lg font-medium">
+            {isGameOver && <span className="text-red-600 dark:text-red-500">遊戲結束</span>}
           </div>
         </div>
       
         {/* 遊戲區域 */}
         <div 
           ref={gameRef}
-          className="grid bg-gray-50 rounded-lg shadow-inner p-3 mx-auto mb-4"
+          className="grid bg-gray-50 dark:bg-gray-800 rounded-lg shadow-inner p-3 mx-auto mb-4"
           style={{ 
             gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`,
             width: '550px',
@@ -235,29 +235,29 @@ const SnakeGame = () => {
 
         <div className="flex justify-between items-center mt-10">
            {/* 速度控制器 */}
-           <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 shadow-sm">
+           <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-600 rounded-lg px-3 py-2 shadow-sm">
             <button 
               onClick={decreaseSpeed}
               disabled={speed <= MIN_SPEED}
               className={`flex items-center justify-center w-8 h-8 rounded-full font-bold ${
                 speed <= MIN_SPEED 
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                  : 'bg-gray-700 text-white hover:bg-gray-800 transition-colors'
+                  ? 'bg-gray-200 dark:bg-gray-500 text-gray-400 dark:text-gray-300 cursor-not-allowed' 
+                  : 'bg-gray-700 dark:bg-gray-900 text-white hover:bg-gray-800 dark:hover:bg-black transition-colors'
               }`}
             >
               -
             </button>
             <div className="w-20 text-center">
-              <div className="text-sm font-semibold text-gray-700">速度</div>
-              <div className="text-xl font-bold text-gray-800">{speed}</div>
+              <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">速度</div>
+              <div className="text-xl font-bold text-gray-800 dark:text-gray-200">{speed}</div>
             </div>
             <button 
               onClick={increaseSpeed}
               disabled={speed >= MAX_SPEED}
               className={`flex items-center justify-center w-8 h-8 rounded-full font-bold ${
                 speed >= MAX_SPEED
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                  : 'bg-gray-700 text-white hover:bg-gray-800 transition-colors'
+                  ? 'bg-gray-200 dark:bg-gray-500 text-gray-400 dark:text-gray-300 cursor-not-allowed' 
+                  : 'bg-gray-700 dark:bg-gray-900 text-white hover:bg-gray-800 dark:hover:bg-black transition-colors'
               }`}
             >
               +
@@ -302,30 +302,30 @@ const SnakeGame = () => {
         </div>
         
         {/* 操作說明 */}
-        <div className="mt-6 bg-gray-50 rounded-lg p-3 text-sm text-gray-700">
+        <div className="mt-6 bg-gray-50 dark:bg-gray-600 rounded-lg p-3 text-sm text-gray-700 dark:text-gray-200">
           <p className="font-medium text-center mb-2">操作說明</p>
           <div className="grid grid-cols-3 gap-2">
             <div className="flex items-center gap-2">
-              <span className="bg-gray-200 px-2 py-1 rounded shadow-sm">↑</span>
+              <span className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded shadow-sm">↑</span>
               <span>向上移動</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="bg-gray-200 px-2 py-1 rounded shadow-sm">↓</span>
+              <span className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded shadow-sm">↓</span>
               <span>向下移動</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="bg-gray-200 px-2 py-1 rounded shadow-sm">←</span>
+              <span className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded shadow-sm">←</span>
               <span>向左移動</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="bg-gray-200 px-2 py-1 rounded shadow-sm">→</span>
+              <span className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded shadow-sm">→</span>
               <span>向右移動</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="bg-gray-200 px-2 py-1 rounded shadow-sm whitespace-nowrap">Space</span>
+              <span className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded shadow-sm whitespace-nowrap">Space</span>
               <span>暫停/繼續</span>
             </div>
-            <div className="text-gray-600 text-sm bg-gray-50 px-3 py-1 rounded-full shadow-sm">
+            <div className="text-gray-600 dark:text-gray-300 text-sm bg-gray-50 dark:bg-gray-700 px-3 py-1 rounded-full shadow-sm">
              穿牆模式：蛇可以穿過邊界
            </div>
           </div>
