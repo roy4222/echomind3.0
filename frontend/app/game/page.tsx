@@ -223,7 +223,7 @@ export default function GamePage() {
         <p className="text-lg text-center mb-9 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
           在學習之餘，享受一些休閒時光。透過遊戲放鬆心情，提升專注力。
         </p>
-        <p className="text-lg text-center mb-1 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+        <p className="text-base text-center mb-1 text-gray-400 dark:text-gray-700 opacity-60 mx-auto">
           手動拖移遊戲卡片
         </p>
 

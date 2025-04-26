@@ -24,12 +24,12 @@ const gameInfo: Record<string, GameInfo> = {
     name: "打字遊戲",
     description: "快打旋風",
     longDescription:
-      "透過有趣的打字遊戲提升您的打字速度和準確度。遊戲會根據您的程度自動調整難度，讓您在享受遊戲的同時不斷進步。",
+      "透過有趣的打字遊戲提升您的打字速度和準確度。可以根據自己的程度選擇難度，讓您在享受遊戲的同時不斷進步。",
     features: [
       "即時速度和準確度統計",
-      "多種難度等級",
+      "多種速度等級",
       "自定義文字練習",
-      "競賽模式",
+      "多種主題",
     ],
     imageUrl: "/images/typing.png",
     darkImageUrl: "/images/typing-dark.png",
@@ -57,7 +57,7 @@ const gameInfo: Record<string, GameInfo> = {
     description: "歐趴木魚敲到歐趴",
     longDescription:
       "現代化的電子木魚體驗，結合傳統與科技。每次敲擊都會產生優美的音效，幫助您沉澱心靈。",
-    features: ["真實音效", "計數統計", "成就系統", "排行榜"],
+    features: ["真實音效", "計數統計", "十分解壓", "多種主題"],
     imageUrl: "/images/woodenfish.png",
     darkImageUrl: "/images/woodenfish-dark.png",
   },
@@ -96,20 +96,21 @@ export default function GameIntroduction() {
   const game = gameId ? gameInfo[gameId] : null;
   const { theme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  
+
   // 確保僅在客戶端渲染後才獲取主題資訊
   useEffect(() => {
     setMounted(true);
   }, []);
-  
+
   // 根據當前主題選擇圖片
   const getImageUrl = (game: GameInfo) => {
     if (!mounted) return game.imageUrl;
-    
+
     const isDarkMode = theme === "dark" || resolvedTheme === "dark";
     return isDarkMode && game.darkImageUrl ? game.darkImageUrl : game.imageUrl;
   };
 
+  // 若找不到遊戲資訊，顯示錯誤頁面
   if (!game) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
@@ -130,31 +131,36 @@ export default function GameIntroduction() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-12">
-      <div className="container mx-auto px-4">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-4">
+      <div className="container mx-auto px-40">
+        {/* 返回按鈕 */}
         <Link
           href="/game"
-          className="inline-flex items-center text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 mb-8"
+          className="inline-flex items-center text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 mb-4"
         >
-          <ArrowLeft className="mr-2" size={20} />
+          <ArrowLeft className="mr-1" size={20} />
           返回遊戲列表
         </Link>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
-          <div className="relative h-64 md:h-96">
+        {/* 遊戲卡片 - 添加max-w-4xl使卡片變小並居中 */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl overflow-hidden max-w-6xl mx-auto">
+          {/* 遊戲封面圖片 */}
+          <div className="relative h-60 md:h-52">
             {mounted && (
               <Image
                 src={getImageUrl(game)}
                 alt={game.name}
                 fill
-                className="object-cover"
+                className="object-contain"
               />
             )}
           </div>
 
-          <div className="p-8">
+          {/* 遊戲詳細信息 */}
+          <div className="p-6">
+            {/* 遊戲標題 - 使用動畫效果 */}
             <motion.h1
-              className="text-4xl font-bold text-gray-800 dark:text-white mb-4"
+              className="text-3xl font-bold text-gray-800 dark:text-white mb-3"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -162,8 +168,9 @@ export default function GameIntroduction() {
               {game.name}
             </motion.h1>
 
+            {/* 遊戲描述 - 使用動畫效果 */}
             <motion.p
-              className="text-xl text-gray-600 dark:text-gray-300 mb-8"
+              className="text-lg text-gray-600 dark:text-gray-300 mb-6"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
@@ -171,19 +178,21 @@ export default function GameIntroduction() {
               {game.longDescription}
             </motion.p>
 
+            {/* 遊戲特色區塊 - 使用動畫效果 */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-3">
                 遊戲特色
               </h2>
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 特色列表 - 網格排列 */}
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {game.features.map((feature: string, index: number) => (
                   <motion.li
                     key={index}
-                    className="flex items-center bg-gray-50 dark:bg-gray-700 rounded-lg p-4"
+                    className="flex items-center bg-gray-50 dark:bg-gray-700 rounded-xl p-3"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
@@ -195,15 +204,16 @@ export default function GameIntroduction() {
               </ul>
             </motion.div>
 
+            {/* 開始遊戲按鈕 - 使用動畫效果 */}
             <motion.div
-              className="mt-8"
+              className="mt-6"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.6 }}
             >
               <Link
                 href={`/game/${gameId}`}
-                className="inline-flex items-center justify-center px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors duration-200"
+                className="inline-flex items-center justify-center px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors duration-200"
               >
                 開始遊戲
               </Link>
