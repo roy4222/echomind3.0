@@ -18,7 +18,7 @@
  */
 const GameStatus = ({ status, isBlackNext }) => (
   <div className="flex items-center justify-center gap-3 mb-4">
-    <div className="text-xl font-medium text-gray-800">
+    <div className="text-xl font-medium text-gray-800 dark:text-gray-200">
       {status}
     </div>
     
@@ -28,7 +28,7 @@ const GameStatus = ({ status, isBlackNext }) => (
         className={`w-6 h-6 rounded-full ${
           isBlackNext 
             ? 'bg-gray-800' 
-            : 'bg-white border border-gray-300'
+            : 'bg-white border border-gray-300 dark:border-gray-500'
         }`}
       />
     )}

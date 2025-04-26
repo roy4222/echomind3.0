@@ -177,7 +177,7 @@ function App() {
   const status = getGameStatus(winner, isBlackNext);
 
   return (
-    <div className="w-screen min-h-screen bg-gray-50 flex flex-col items-center justify-center py-8">
+    <div className="w-screen min-h-screen bg-gray-50 dark:bg-gray-800 flex flex-col items-center justify-center py-8">
       <GameTitle />
       
       <GameContainer 

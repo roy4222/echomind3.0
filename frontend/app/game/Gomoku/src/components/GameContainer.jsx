@@ -31,7 +31,7 @@ const GameContainer = ({
 }) => {
   return (
     <div className="flex flex-col items-center">
-      <div className="w-[900px] flex flex-row gap-6 bg-gradient-to-b from-gray-50 to-gray-100 rounded-xl p-5 shadow-lg border border-gray-200">
+      <div className="w-[900px] flex flex-row gap-6 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-5 shadow-lg border border-gray-200 dark:border-gray-700">
         {/* 左側：難度選擇器和遊戲規則 */}
         <div className="flex flex-col w-[280px] gap-4">
           {/* 難度選擇器 */}

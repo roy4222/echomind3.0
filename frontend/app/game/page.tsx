@@ -77,7 +77,7 @@ const games = [
     name: "五子棋",
     description: "",
     imageUrl: "/images/Gomoku.png",
-    darkImageUrl: "/images/circle-circle-dark.png",
+    darkImageUrl: "/images/Gomoku-dark.png",
     path: "/game/circle-circle",
     introPath: "/game/introduction?game=Gomoku",
   },

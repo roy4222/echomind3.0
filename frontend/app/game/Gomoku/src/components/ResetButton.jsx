@@ -36,8 +36,8 @@ const ResetButton = ({ onClick }) => {
     <button 
       className={`px-6 py-3 rounded-lg shadow-md transition-all transform hover:scale-105 focus:outline-none active:scale-100 ${
         confirming 
-          ? 'bg-gray-700 text-white hover:bg-gray-800' 
-          : 'bg-gray-800 text-white hover:bg-gray-900'
+          ? 'bg-gray-700 text-white hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700' 
+          : 'bg-gray-800 text-white hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600'
       }`}
       onClick={handleClick}
     >

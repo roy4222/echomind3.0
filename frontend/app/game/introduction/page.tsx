@@ -86,7 +86,7 @@ const gameInfo: Record<string, GameInfo> = {
       "經典的五子棋遊戲，加入了新的玩法和特殊規則。可以和電腦對戰或和朋友一起玩。",
     features: ["AI對戰", "特殊規則", "戰績統計"],
     imageUrl: "/images/Gomoku.png",
-    darkImageUrl: "/images/circle-circle-dark.png",
+    darkImageUrl: "/images/Gomoku-dark.png",
   },
 };
 
