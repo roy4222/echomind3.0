@@ -28,7 +28,7 @@ const gameInfo: Record<string, GameInfo> = {
     features: [
       "即時速度和準確度統計",
       "多種速度等級",
-      "自定義文字練習",
+      "文字模式可選",
       "多種主題",
     ],
     imageUrl: "/images/typing.png",
@@ -77,7 +77,7 @@ const gameInfo: Record<string, GameInfo> = {
       "經典貪吃蛇遊戲，放鬆身心，享受遊戲的樂趣。",
     features: ["多種模式", "可調整難度", "計時挑戰", "進度保存"],
     imageUrl: "/images/SnakeGame.png",
-    darkImageUrl: "/images/Snake-dark.png",
+    darkImageUrl: "/images/SnakeGame-dark.png",
   },
   "Gomoku": {
     name: "五子棋",
@@ -86,7 +86,7 @@ const gameInfo: Record<string, GameInfo> = {
       "經典的五子棋遊戲，加入了新的玩法和特殊規則。可以和電腦對戰或和朋友一起玩。",
     features: ["AI對戰", "特殊規則", "戰績統計"],
     imageUrl: "/images/Gomoku.png",
-    darkImageUrl: "/images/circle-circle-dark.png",
+    darkImageUrl: "/images/Gomoku-dark.png",
   },
 };
 
