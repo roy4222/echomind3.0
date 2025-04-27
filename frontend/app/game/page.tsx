@@ -217,7 +217,7 @@ export default function GamePage() {
           在學習之餘，享受一些休閒時光。透過遊戲放鬆心情，提升專注力。
         </p>
         <p className="text-base text-center mb-1 text-gray-400 dark:text-gray-700 opacity-60 mx-auto">
-          手動拖移遊戲卡片
+          可按住拖移遊戲卡片
         </p>
 
         {/* 自動滾動的遊戲選單 */}
