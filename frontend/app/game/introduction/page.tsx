@@ -10,12 +10,12 @@ import { useState, useEffect } from "react";
 
 // 定義遊戲資訊類型
 interface GameInfo {
-  name: string;
-  description: string;
-  longDescription: string;
-  features: string[];
-  imageUrl: string;
-  darkImageUrl: string;
+  name: string;                  // 遊戲名稱
+  description: string;           // 遊戲簡短描述
+  longDescription: string;       // 遊戲詳細描述
+  features: string[];            // 遊戲特色列表
+  imageUrl: string;              // 一般模式下的遊戲圖片URL
+  darkImageUrl: string;          // 暗黑模式下的遊戲圖片URL
 }
 
 // 遊戲資訊
@@ -91,10 +91,14 @@ const gameInfo: Record<string, GameInfo> = {
 };
 
 export default function GameIntroduction() {
+  // 從URL參數獲取遊戲ID
   const searchParams = useSearchParams();
   const gameId = searchParams.get("game");
+  // 根據遊戲ID獲取遊戲資訊
   const game = gameId ? gameInfo[gameId] : null;
+  // 獲取當前主題設置
   const { theme, resolvedTheme } = useTheme();
+  // 用於確認組件是否已在客戶端掛載
   const [mounted, setMounted] = useState(false);
   
   // 確保僅在客戶端渲染後才獲取主題資訊
@@ -110,6 +114,7 @@ export default function GameIntroduction() {
     return isDarkMode && game.darkImageUrl ? game.darkImageUrl : game.imageUrl;
   };
 
+  // 如果找不到遊戲資訊，顯示錯誤頁面
   if (!game) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
@@ -129,9 +134,11 @@ export default function GameIntroduction() {
     );
   }
 
+  // 遊戲介紹頁面主體
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-12">
       <div className="container mx-auto px-4">
+        {/* 返回按鈕 */}
         <Link
           href="/game"
           className="inline-flex items-center text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 mb-8"
@@ -140,7 +147,9 @@ export default function GameIntroduction() {
           返回遊戲列表
         </Link>
 
+        {/* 遊戲資訊卡片 */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+          {/* 遊戲封面圖 */}
           <div className="relative h-64 md:h-96">
             {mounted && (
               <Image
@@ -153,6 +162,7 @@ export default function GameIntroduction() {
           </div>
 
           <div className="p-8">
+            {/* 遊戲標題 - 使用動畫效果 */}
             <motion.h1
               className="text-4xl font-bold text-gray-800 dark:text-white mb-4"
               initial={{ opacity: 0, y: 20 }}
@@ -162,6 +172,7 @@ export default function GameIntroduction() {
               {game.name}
             </motion.h1>
 
+            {/* 遊戲描述 - 使用動畫效果 */}
             <motion.p
               className="text-xl text-gray-600 dark:text-gray-300 mb-8"
               initial={{ opacity: 0, y: 20 }}
@@ -171,6 +182,7 @@ export default function GameIntroduction() {
               {game.longDescription}
             </motion.p>
 
+            {/* 遊戲特色區塊 - 使用動畫效果 */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -179,6 +191,7 @@ export default function GameIntroduction() {
               <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
                 遊戲特色
               </h2>
+              {/* 特色列表 - 格狀布局 */}
               <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {game.features.map((feature: string, index: number) => (
                   <motion.li
@@ -195,6 +208,7 @@ export default function GameIntroduction() {
               </ul>
             </motion.div>
 
+            {/* 開始遊戲按鈕 - 使用動畫效果 */}
             <motion.div
               className="mt-8"
               initial={{ opacity: 0, y: 20 }}
