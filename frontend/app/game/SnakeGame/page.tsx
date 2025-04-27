@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from 'next/dynamic';
+import BackButton from "./src/components/BackButton";
 
 // 動態導入App組件，關閉SSR以避免伺服器端渲染問題
 const SnakeGameApp = dynamic(() => import('./src/App'), {
@@ -13,5 +14,13 @@ const SnakeGameApp = dynamic(() => import('./src/App'), {
 });
 
 export default function SnakeGamePage() {
-  return <SnakeGameApp />;
+  return (
+    <div className="w-full relative">
+      <SnakeGameApp />
+
+      <div className="absolute top-4 left-4">
+        <BackButton text="返回遊戲介紹" />
+      </div>
+    </div>
+  );
 } 
