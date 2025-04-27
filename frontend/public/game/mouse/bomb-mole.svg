@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bombGlow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#2C2C2C"/>
+      <stop offset="100%" style="stop-color:#000000"/>
+    </radialGradient>
+    <filter id="redGlow">
+      <feColorMatrix type="matrix" values="1 0 0 0 0.5  0 0 0 0 0  0 0 0 0 0  0 0 0 0.5 0"/>
+      <feGaussianBlur stdDeviation="2"/>
+      <feComposite in2="SourceGraphic" operator="in"/>
+    </filter>
+  </defs>
+  
+  <!-- 身體 -->
+  <circle cx="100" cy="110" r="70" fill="url(#bombGlow)"/>
+  
+  <!-- 肚子 -->
+  <ellipse cx="100" cy="130" rx="45" ry="40" fill="#1A1A1A"/>
+  
+  <!-- 臉部 -->
+  <circle cx="100" cy="90" r="60" fill="#000000"/>
+  
+  <!-- 眼睛 -->
+  <circle cx="80" cy="80" r="12" fill="#FF0000" filter="url(#redGlow)"/>
+  <circle cx="120" cy="80" r="12" fill="#FF0000" filter="url(#redGlow)"/>
+  <circle cx="80" cy="80" r="6" fill="#FF3333"/>
+  <circle cx="120" cy="80" r="6" fill="#FF3333"/>
+  <!-- 眼睛反光 -->
+  <circle cx="83" cy="77" r="3" fill="#FF6666"/>
+  <circle cx="123" cy="77" r="3" fill="#FF6666"/>
+  
+  <!-- 臉頰 -->
+  <circle cx="70" cy="95" r="10" fill="#FF0000" opacity="0.4"/>
+  <circle cx="130" cy="95" r="10" fill="#FF0000" opacity="0.4"/>
+  
+  <!-- 鼻子 -->
+  <circle cx="100" cy="95" r="8" fill="#FF0000"/>
+  
+  <!-- 耳朵 -->
+  <path d="M50,50 Q60,20 80,40 Z" fill="#000000"/>
+  <path d="M150,50 Q140,20 120,40 Z" fill="#000000"/>
+  <path d="M55,45 Q62,25 75,40 Z" fill="#1A1A1A"/>
+  <path d="M145,45 Q138,25 125,40 Z" fill="#1A1A1A"/>
+  
+  <!-- 嘴巴（生氣表情）-->
+  <path d="M85,105 Q100,95 115,105" stroke="#FF0000" stroke-width="3" fill="none"/>
+  
+  <!-- 炸彈引信 -->
+  <path d="M90,30 Q100,20 110,30" stroke="#333333" stroke-width="4" fill="none"/>
+  <circle cx="110" cy="30" r="4" fill="#FF0000" filter="url(#redGlow)"/>
+  
+  <!-- 紅色光芒效果 -->
+  <circle cx="70" cy="60" r="2" fill="#FF0000" opacity="0.6" filter="url(#redGlow)"/>
+  <circle cx="130" cy="60" r="2" fill="#FF0000" opacity="0.6" filter="url(#redGlow)"/>
+  <circle cx="60" cy="100" r="2" fill="#FF0000" opacity="0.4" filter="url(#redGlow)"/>
+  <circle cx="140" cy="100" r="2" fill="#FF0000" opacity="0.4" filter="url(#redGlow)"/>
+</svg> 

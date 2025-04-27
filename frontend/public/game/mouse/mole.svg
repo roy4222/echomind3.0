@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- 身體 -->
+  <circle cx="100" cy="110" r="70" fill="#B87A56"/>
+  
+  <!-- 肚子 -->
+  <ellipse cx="100" cy="130" rx="45" ry="40" fill="#E6C19C"/>
+  
+  <!-- 臉部 -->
+  <circle cx="100" cy="90" r="60" fill="#C98B60"/>
+  
+  <!-- 眼睛 -->
+  <circle cx="80" cy="80" r="12" fill="white"/>
+  <circle cx="120" cy="80" r="12" fill="white"/>
+  <circle cx="80" cy="80" r="6" fill="black"/>
+  <circle cx="120" cy="80" r="6" fill="black"/>
+  <!-- 眼睛反光 -->
+  <circle cx="83" cy="77" r="3" fill="white"/>
+  <circle cx="123" cy="77" r="3" fill="white"/>
+  
+  <!-- 臉頰 -->
+  <circle cx="70" cy="95" r="10" fill="#FFB3B3" opacity="0.6"/>
+  <circle cx="130" cy="95" r="10" fill="#FFB3B3" opacity="0.6"/>
+  
+  <!-- 鼻子 -->
+  <circle cx="100" cy="95" r="8" fill="#FF9999"/>
+  
+  <!-- 耳朵 -->
+  <path d="M50,50 Q60,20 80,40 Z" fill="#C98B60"/>
+  <path d="M150,50 Q140,20 120,40 Z" fill="#C98B60"/>
+  <path d="M55,45 Q62,25 75,40 Z" fill="#E6C19C"/>
+  <path d="M145,45 Q138,25 125,40 Z" fill="#E6C19C"/>
+  
+  <!-- 嘴巴 -->
+  <path d="M90,100 Q100,110 110,100" stroke="#8B4513" stroke-width="3" fill="none"/>
+</svg> 
