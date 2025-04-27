@@ -15,6 +15,16 @@ const GomokuApp = dynamic(() => import('./src/App'), {
 
 export default function GomokuPage() {
   return (
-      <GomokuApp />
+    <div className="w-full relative">
+      {/* 五子棋遊戲主體 */}
+      <div className="w-full">
+        <GomokuApp />
+      </div>
+      
+      {/* 左上角返回按鈕 - 使用絕對定位 */}
+      <div className="absolute top-4 left-4">
+        <BackButton text="返回遊戲介紹" />
+      </div>
+    </div>
   );
 } 
