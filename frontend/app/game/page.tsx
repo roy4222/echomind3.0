@@ -44,8 +44,8 @@ const games = [
   {
     id: "whack-a-mole",
     name: "打地鼠",
-    description: "歐趴打地鼠打到歐趴",
-    imageUrl: "/images/whack-a-mole.png",
+    description: "訓練反應力",
+    imageUrl: "/images/whack-a-mole-light.png",
     darkImageUrl: "/images/whack-a-mole-dark.png",
     introPath: "/game/introduction?game=whack-a-mole",
   },
@@ -64,6 +64,14 @@ const games = [
     imageUrl: "/images/Gomoku.png",
     darkImageUrl: "/images/Gomoku-dark.png",
     introPath: "/game/introduction?game=Gomoku",
+  },
+  {
+    id: "bingo",
+    name: "賓果",
+    description: "訓練專注力",
+    imageUrl: "/images/bingo-light.png",
+    darkImageUrl: "/images/bingo-dark.png",
+    introPath: "/game/introduction?game=bingo",
   },
 ];
 

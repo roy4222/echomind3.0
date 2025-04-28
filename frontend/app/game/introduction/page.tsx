@@ -67,10 +67,10 @@ const gameInfo: Record<string, GameInfo> = {
     longDescription:
       "經典的打地鼠遊戲，考驗您的反應速度和手眼協調能力。遊戲難度會隨著您的表現逐漸提升。",
     features: ["多種難度模式", "計分系統", "特殊道具", "排行榜"],
-    imageUrl: "/images/whack-a-mole.png",
+    imageUrl: "/images/whack-a-mole-light.png",
     darkImageUrl: "/images/whack-a-mole-dark.png",
   },
-  "SnakeGame": {
+  SnakeGame: {
     name: "貪吃蛇",
     description: "歐趴貪吃蛇吃到歐趴",
     longDescription:
@@ -79,14 +79,23 @@ const gameInfo: Record<string, GameInfo> = {
     imageUrl: "/images/SnakeGame.png",
     darkImageUrl: "/images/SnakeGame-dark.png",
   },
-  "Gomoku": {
+  Gomoku: {
     name: "五子棋",
     description: "訓練邏輯",
     longDescription:
-      "經典的五子棋遊戲，加入了新的玩法和特殊規則。可以和電腦對戰或和朋友一起玩。",
+      "經典的五子棋遊戲，加入了新的玩法和特殊規則。可以和電腦對戰一起玩。",
     features: ["AI對戰", "特殊規則", "戰績統計"],
     imageUrl: "/images/Gomoku.png",
     darkImageUrl: "/images/Gomoku-dark.png",
+  },
+  bingo: {
+    name: "賓果",
+    description: "訓練專注力",
+    longDescription:
+      "經典的賓果遊戲，透過隨機抽號碼並標記數字，看誰最快連成一條線獲勝。",
+    features: ["經典模式", "快速模式", "挑戰模式", "連線動畫"],
+    imageUrl: "/images/bingo-light.png",
+    darkImageUrl: "/images/bingo-dark.png",
   },
 };
 
