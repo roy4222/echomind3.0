@@ -15,26 +15,23 @@ const games = [
     description: "快打旋風",
     imageUrl: "/images/typing.png",
     darkImageUrl: "/images/typing-dark.png",
-    path: "/game/typing",
     introPath: "/game/introduction?game=typing",
   },
   {
     id: "puzzle",
     name: "拼圖",
-    description: "訓練記憶力與專注力",
+    description: "歐趴拼圖拼到歐趴",
     imageUrl: "/images/puzzle.png",
     darkImageUrl: "/images/puzzle-dark.png",
-    path: "/game/puzzle",
     introPath: "/game/introduction?game=puzzle",
   },
   {
     id: "breathe",
     name: "呼吸遊戲",
-    description: "訓練記憶力與專注力",
-    imageUrl: "/images/breathe.png",
-    darkImageUrl: "/images/breathe-dark.png",
-    path: "/game/breathe",
-    introPath: "/game/introduction?game=breathe",
+    description: "訓練放鬆與專注力",
+    imageUrl: "/images/Breath-light.png",
+    darkImageUrl: "/images/Breath-dark.png",
+    introPath: "/game/introduction?game=Breath",
   },
   {
     id: "muyu",
@@ -42,35 +39,39 @@ const games = [
     description: "歐趴木魚敲到歐趴",
     imageUrl: "/images/woodenfish.png",
     darkImageUrl: "/images/woodenfish-dark.png",
-    path: "/game/muyu",
     introPath: "/game/introduction?game=muyu",
   },
   {
     id: "whack-a-mole",
     name: "打地鼠",
     description: "訓練反應力",
-    imageUrl: "/images/whack-a-mole.png",
+    imageUrl: "/images/whack-a-mole-light.png",
     darkImageUrl: "/images/whack-a-mole-dark.png",
-    path: "/game/whack-a-mole",
     introPath: "/game/introduction?game=whack-a-mole",
   },
   {
-    id: "memory-game",
-    name: "記憶拼圖",
-    description: "訓練記憶力與專注力",
-    imageUrl: "/images/memory-game.png",
-    darkImageUrl: "/images/memory-game-dark.png",
-    path: "/game/memory-game",
-    introPath: "/game/introduction?game=memory-game",
+    id: "SnakeGame",
+    name: "貪吃蛇",
+    description: "歐趴貪吃蛇吃到歐趴",
+    imageUrl: "/images/SnakeGame.png",
+    darkImageUrl: "/images/SnakeGame-dark.png",
+    introPath: "/game/introduction?game=SnakeGame",
   },
   {
-    id: "circle-circle",
-    name: "圈圈差差",
-    description: "訓練邏輯",
-    imageUrl: "/images/circle-circle.png",
-    darkImageUrl: "/images/circle-circle-dark.png",
-    path: "/game/circle-circle",
-    introPath: "/game/introduction?game=circle-circle",
+    id: "Gomoku",
+    name: "五子棋",
+    description: "歐趴五子棋下到歐趴",
+    imageUrl: "/images/Gomoku.png",
+    darkImageUrl: "/images/Gomoku-dark.png",
+    introPath: "/game/introduction?game=Gomoku",
+  },
+  {
+    id: "bingo",
+    name: "賓果",
+    description: "訓練專注力",
+    imageUrl: "/images/bingo-light.png",
+    darkImageUrl: "/images/bingo-dark.png",
+    introPath: "/game/introduction?game=bingo",
   },
 ];
 
@@ -223,8 +224,8 @@ export default function GamePage() {
         <p className="text-lg text-center mb-9 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
           在學習之餘，享受一些休閒時光。透過遊戲放鬆心情，提升專注力。
         </p>
-        <p className="text-lg text-center mb-1 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-          手動拖移遊戲卡片
+        <p className="text-base text-center mb-1 text-gray-400 dark:text-gray-700 opacity-60 mx-auto">
+          可按住拖移遊戲卡片
         </p>
 
         {/* 自動滾動的遊戲選單 */}
