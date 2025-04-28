@@ -1,30 +1,30 @@
 import { useEffect, useState } from "react";
-import { PuzzleGameProps, PuzzlePiece } from '../types';
+import { PuzzleGameProps, PuzzlePiece } from '@/lib/types/puzzle';
 import { puzzleThemes } from '../constants/puzzleThemes';
 import { GameStatusPanel } from './GameStatusPanel';
 import { initializePuzzlePieces, checkGameCompletion } from '../utils/gameUtils';
 import Image from "next/image";
 
-export const PuzzleGame = ({ theme, difficulty }: PuzzleGameProps) => {
+export const PuzzleGame = ({ theme, difficulty = 3 }: PuzzleGameProps) => {
   const [pieces, setPieces] = useState<PuzzlePiece[]>([]);
   const [isCompleted, setIsCompleted] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
   const [time, setTime] = useState(0);
   const [moves, setMoves] = useState(0);
-  const [draggedPiece, setDraggedPiece] = useState<number | null>(null);
+  const [draggedPiece, setDraggedPiece] = useState<number>(-1);
   const [isPaused, setIsPaused] = useState(false);
 
-  const themeData = puzzleThemes.find(t => t.id === theme);
+  const themeData = puzzleThemes.find(t => t.id === theme.id);
 
   // 初始化遊戲
   const initializeGame = () => {
-    if (!themeData) return;
+    if (!themeData || !difficulty) return;
     const shuffledPieces = initializePuzzlePieces(difficulty);
     setPieces(shuffledPieces);
     setMoves(0);
     setTime(0);
     setIsCompleted(false);
-    setDraggedPiece(null);
+    setDraggedPiece(-1);
     setIsPaused(false);
   };
 
@@ -98,8 +98,8 @@ export const PuzzleGame = ({ theme, difficulty }: PuzzleGameProps) => {
     
     // 確保在拖曳結束時重設狀態
     setTimeout(() => {
-      if (draggedPiece !== null) {
-        setDraggedPiece(null);
+      if (draggedPiece !== -1) {
+        setDraggedPiece(-1);
       }
     }, 100);
   };
@@ -140,7 +140,7 @@ export const PuzzleGame = ({ theme, difficulty }: PuzzleGameProps) => {
     e.currentTarget.classList.remove('bg-blue-100');
     
     // 嘗試從多種來源獲取拖曳索引
-    let dragIndex: number | null = null;
+    let dragIndex: number = -1;
     
     // 1. 嘗試從 dataTransfer 獲取
     try {
@@ -158,13 +158,13 @@ export const PuzzleGame = ({ theme, difficulty }: PuzzleGameProps) => {
     }
     
     // 2. 如果 dataTransfer 失敗，使用狀態中儲存的值
-    if (dragIndex === null) {
+    if (dragIndex === -1) {
       dragIndex = draggedPiece;
       console.log(`使用狀態中的拖曳索引: ${dragIndex}`);
     }
     
     // 3. 最後一種方法：查找標記為正在拖曳的元素
-    if (dragIndex === null) {
+    if (dragIndex === -1) {
       const draggingEl = document.querySelector('[data-dragging="true"]');
       if (draggingEl) {
         const pos = draggingEl.getAttribute('data-grid-position');
@@ -176,7 +176,7 @@ export const PuzzleGame = ({ theme, difficulty }: PuzzleGameProps) => {
     }
     
     // 驗證有效性
-    if (dragIndex === null) {
+    if (dragIndex === -1) {
       console.error('找不到拖曳的拼圖索引，拖曳操作取消');
       return;
     }
@@ -215,7 +215,7 @@ export const PuzzleGame = ({ theme, difficulty }: PuzzleGameProps) => {
     // 更新拼圖狀態
     setPieces(newPieces);
     setMoves(prev => prev + 1);
-    setDraggedPiece(null);
+    setDraggedPiece(-1);
     
     // 移除所有可能的拖曳標記
     document.querySelectorAll('[data-dragging="true"]').forEach(el => {
@@ -295,6 +295,7 @@ export const PuzzleGame = ({ theme, difficulty }: PuzzleGameProps) => {
               moves={moves}
               isCompleted={isCompleted}
               onRestart={restartGame}
+              onReset={restartGame}
             />
             
             {/* 暫停/繼續按鈕 - 單一按鈕設計 */}

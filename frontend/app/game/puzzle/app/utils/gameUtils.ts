@@ -1,4 +1,4 @@
-import { PuzzlePiece } from '../types';
+import { PuzzlePiece } from '@/lib/types/puzzle';
 
 // 格式化時間為 MM:SS 格式
 export const formatTime = (seconds: number): string => {

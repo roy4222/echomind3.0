@@ -15,7 +15,8 @@
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.16",
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "eslint-config-next": "^15.3.1"
   },
   "dependencies": {
     "date-fns": "^4.1.0",
