@@ -67,17 +67,17 @@ const gameInfo: Record<string, GameInfo> = {
     longDescription:
       "經典的打地鼠遊戲，考驗您的反應速度和手眼協調能力。遊戲難度會隨著您的表現逐漸提升。",
     features: ["多種難度模式", "計分系統", "特殊道具", "排行榜"],
-    imageUrl: "/images/whack-a-mole.png",
+    imageUrl: "/images/whack-a-mole-light.png",
     darkImageUrl: "/images/whack-a-mole-dark.png",
   },
-  "memory-game": {
-    name: "記憶拼圖",
-    description: "訓練記憶力與專注力",
+  "bingo": {
+    name: "賓果",
+    description: "訓練專注力",
     longDescription:
-      "考驗記憶力的翻牌遊戲，需要記住卡片的位置並配對相同的圖案。適合所有年齡層的玩家。",
-    features: ["多種圖案主題", "難度調整", "計時模式", "配對動畫"],
-    imageUrl: "/images/memory-game.png",
-    darkImageUrl: "/images/memory-game-dark.png",
+      "經典的賓果遊戲，透過隨機抽號碼並標記數字，看誰最快連成一條線獲勝。適合親朋好友一起同樂。",
+    features: ["經典模式", "快速模式", "挑戰模式", "連線動畫"],
+    imageUrl: "/images/bingo-light.png",
+    darkImageUrl: "/images/bingo-dark.png",
   },
   "circle-circle": {
     name: "圈圈差差",

@@ -49,19 +49,19 @@ const games = [
     id: "whack-a-mole",
     name: "打地鼠",
     description: "訓練反應力",
-    imageUrl: "/images/whack-a-mole.png",
+    imageUrl: "/images/whack-a-mole-light.png",
     darkImageUrl: "/images/whack-a-mole-dark.png",
     path: "/game/whack-a-mole",
     introPath: "/game/introduction?game=whack-a-mole",
   },
   {
-    id: "memory-game",
-    name: "記憶拼圖",
-    description: "訓練記憶力與專注力",
-    imageUrl: "/images/memory-game.png",
-    darkImageUrl: "/images/memory-game-dark.png",
-    path: "/game/memory-game",
-    introPath: "/game/introduction?game=memory-game",
+    id: "bingo",
+    name: "賓果",
+    description: "訓練專注力",
+    imageUrl: "/images/bingo-light.png",
+    darkImageUrl: "/images/bingo-dark.png",
+    path: "/game/bingo",
+    introPath: "/game/introduction?game=bingo",
   },
   {
     id: "circle-circle",
@@ -72,6 +72,7 @@ const games = [
     path: "/game/circle-circle",
     introPath: "/game/introduction?game=circle-circle",
   },
+
 ];
 
 // 在樣式部分添加防止文字選擇的 CSS 類
