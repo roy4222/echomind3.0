@@ -66,16 +66,16 @@ const gameInfo: Record<string, GameInfo> = {
     description: "訓練反應力",
     longDescription:
       "經典的打地鼠遊戲，考驗您的反應速度和手眼協調能力。遊戲難度會隨著您的表現逐漸提升。",
-    features: ["多種難度模式", "計分系統", "特殊道具", "排行榜"],
+    features: ["普通地鼠加1分", "金色地鼠加5分", "炸彈地鼠扣分", "沒打中地鼠扣1分"],
     imageUrl: "/images/whack-a-mole-light.png",
     darkImageUrl: "/images/whack-a-mole-dark.png",
   },
   "bingo": {
     name: "賓果",
-    description: "訓練專注力",
+    description: "經典賓果遊戲，考驗觀察力與運氣",
     longDescription:
       "經典的賓果遊戲，透過隨機抽號碼並標記數字，看誰最快連成一條線獲勝。適合親朋好友一起同樂。",
-    features: ["經典模式", "快速模式", "挑戰模式", "連線動畫"],
+    features: ["選擇難度", "經典模式", "快速模式", "挑戰模式"],
     imageUrl: "/images/bingo-light.png",
     darkImageUrl: "/images/bingo-dark.png",
   },
