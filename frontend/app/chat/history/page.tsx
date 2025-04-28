@@ -270,7 +270,9 @@ export default function ChatHistoryPage() {
                                 whileHover={{ scale: 1.05 }}
                               >
                                 <MessageSquare className="h-3.5 w-3.5 mr-1.5 text-purple-500" />
-                                <span className="text-purple-700 dark:text-purple-300 font-medium">{chat.messages.length} 則訊息</span>
+                                <span className="text-purple-700 dark:text-purple-300 font-medium">
+                                  {chat.messageCount || (chat.messages && chat.messages.length) || 0} 則訊息
+                                </span>
                               </motion.div>
                             </div>
                           </div>

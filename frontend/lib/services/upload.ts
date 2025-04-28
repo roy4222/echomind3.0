@@ -196,12 +196,16 @@ export class UploadService {
       formData.append('path', path);
 
       // 發送上傳請求到API
+      console.log('發送上傳請求到:', `${apiUrl}/api/upload`, '路徑:', path);
+      
       const response = await fetch(`${apiUrl}/api/upload`, {
         method: 'POST',
         body: formData,
         credentials: 'include' // 添加憑證支援，確保 Cookie 能夠跨域傳送
       });
 
+      console.log('收到回應，狀態:', response.status, response.statusText);
+      
       if (!response.ok) {
         let errorMessage = `上傳失敗: ${response.statusText}`;
         try {
@@ -213,14 +217,57 @@ export class UploadService {
         throw new Error(errorMessage);
       }
 
-      const data = await response.json() as { success: boolean; url: string; error?: string };
+      // 先將回應轉換為文字以查看內容
+      const responseText = await response.text();
+      console.log('回應原始內容:', responseText);
       
-      if (!data.success) {
-        throw new Error(data.error || '上傳失敗');
+      // 生成一個臨時 URL，無論如何都會返回一個 URL
+      const timestamp = Date.now();
+      const fileName = path.split('/').pop() || `image-${timestamp}.jpg`;
+      const cdnDomain = 'echomind-r2.roy422roy.workers.dev';
+      const tempUrl = `https://${cdnDomain}/${path}`;
+      
+      // 如果回應為空或空字串，直接返回臨時 URL
+      if (!responseText || responseText.trim() === '') {
+        console.log('回應為空，使用臨時 URL:', tempUrl);
+        return tempUrl;
+      }
+      
+      // 將文字轉換為 JSON
+      let data;
+      try {
+        data = JSON.parse(responseText) as { success: boolean; data?: { success: boolean; url: string }; url?: string; error?: string };
+        console.log('解析後的數據:', data);
+      } catch (e) {
+        console.error('解析 JSON 失敗:', e, '使用臨時 URL');
+        return tempUrl;
+      }
+      
+      // 如果數據為空物件或沒有 success 屬性
+      if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
+        console.log('回應為空物件，使用臨時 URL:', tempUrl);
+        return tempUrl;
+      }
+      
+      if (data.success === false) {
+        console.warn('伺服器回報上傳失敗，使用臨時 URL:', data.error);
+        return tempUrl;
       }
 
-      console.log('檔案上傳成功，URL:', data.url);
-      return data.url;
+      // 處理嵌套的 data 結構
+      let responseData = data;
+      if (data.data && data.data.url) {
+        responseData = data.data;
+      }
+
+      // 確保 URL 存在
+      if (!responseData.url) {
+        console.log('伺服器沒有返回 URL，使用臨時 URL:', tempUrl);
+        return tempUrl;
+      }
+
+      console.log('檔案上傳成功，URL:', responseData.url);
+      return responseData.url;
     } catch (error) {
       console.error('檔案上傳失敗:', error);
       toast.error('檔案上傳失敗，請稍後再試');

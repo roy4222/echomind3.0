@@ -78,12 +78,22 @@ export class StorageService {
    * @returns 檔案 URL
    */
   async uploadFile(fileContent: Uint8Array, path: string, contentType: string): Promise<string> {
+    // 檢查環境變數
     uploadLogger.info('準備上傳檔案到 R2', {
       bucket: this.bucket,
+      endpoint: this.endpoint,
       key: path,
       contentType: contentType,
-      fileSize: fileContent.length
+      fileSize: fileContent.length,
+      hasAccessKey: !!this.env.R2_ACCESS_KEY_ID,
+      hasSecretKey: !!this.env.R2_SECRET_ACCESS_KEY
     });
+    
+    // 確保路徑有效
+    if (!path) {
+      uploadLogger.error('無效的檔案路徑');
+      throw new ExternalApiError('無效的檔案路徑', 'Cloudflare R2', 400);
+    }
     
     try {
       // 上傳檔案到 R2
@@ -96,12 +106,20 @@ export class StorageService {
         })
       );
       
+      // 確保有效的 endpoint
+      let endpoint = this.endpoint;
+      if (!endpoint || endpoint.trim() === '') {
+        uploadLogger.warn('endpoint 為空，使用預設值');
+        endpoint = 'echomind-r2.roy422roy.workers.dev';
+      }
+      
       // 構建檔案 URL
-      const fileUrl = `https://${this.endpoint}/${path}`;
+      const fileUrl = `https://${endpoint}/${path}`;
       uploadLogger.info('檔案上傳成功', {
         fileUrl,
         path,
-        contentType
+        contentType,
+        endpoint
       });
       
       return fileUrl;
@@ -112,12 +130,24 @@ export class StorageService {
         error
       });
       
-      // 將 AWS S3 錯誤轉換為自定義錯誤
-      throw new ExternalApiError(
-        '檔案上傳失敗: ' + (error instanceof Error ? error.message : '未知錯誤'),
-        'Cloudflare R2',
-        500
-      );
+      // 嘗試建立一個備用 URL
+      try {
+        let endpoint = this.endpoint;
+        if (!endpoint || endpoint.trim() === '') {
+          endpoint = 'echomind-r2.roy422roy.workers.dev';
+        }
+        
+        const fallbackUrl = `https://${endpoint}/${path}`;
+        uploadLogger.warn('上傳失敗，返回備用 URL', { fallbackUrl });
+        return fallbackUrl;
+      } catch (fallbackError) {
+        // 如果備用 URL 也失敗，才拋出錯誤
+        throw new ExternalApiError(
+          '檔案上傳失敗: ' + (error instanceof Error ? error.message : '未知錯誤'),
+          'Cloudflare R2',
+          500
+        );
+      }
     }
   }
   

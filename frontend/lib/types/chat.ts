@@ -130,14 +130,18 @@ export interface ChatHistory {
   id: string;
   /** 聊天標題 */
   title: string;
-  /** 訊息列表 */
-  messages: ChatMessage[];
   /** 使用的模型識別碼 */
   modelId: string;
   /** 最後更新時間戳 */
   lastUpdated: number;
   /** 建立時間戳 */
   createdAt: number;
+  /** 訊息列表 (可能不存在於資料庫中，而是從子集合載入) */
+  messages?: ChatMessage[];
+  /** 最後一則訊息預覽 (最多 100 字) */
+  lastMessagePreview?: string;
+  /** 訊息數量 */
+  messageCount?: number;
 }
 
 /**
