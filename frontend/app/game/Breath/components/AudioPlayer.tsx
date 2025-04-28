@@ -82,7 +82,7 @@ export default function AudioPlayer() {
       </button>
       <audio
         ref={audioRef}
-        src="/sounds/meditation.mp3"
+        src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_9e6046dccb.mp3?filename=relaxing-mountains-rivers-126532.mp3"
         onError={handleError}
         className="hidden"
       />
