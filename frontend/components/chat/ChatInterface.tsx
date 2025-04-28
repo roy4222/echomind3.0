@@ -70,10 +70,10 @@ export function ChatInterface({
         try {
           const chat = await chatHistoryService.getChat(initialChatId);
           if (chat) {
-            setMessages(chat.messages);
+            setMessages(chat.messages || []);
             setCurrentModelId(chat.modelId || 'maverick');
             setChatId(initialChatId);
-            if (chat.messages.length > 0) {
+            if (chat.messages && chat.messages.length > 0) {
               setIsChatStarted(true);
             }
           } else {
@@ -308,7 +308,14 @@ export function ChatInterface({
             try {
               // 使用訊息內容作為標題
               const title = input.length > 30 ? input.substring(0, 30) + '...' : input;
-              const newChatId = await chatHistoryService.createChat(finalMessages, title, useModelId);
+              
+              // 在儲存前移除所有訊息中的 image 屬性，只保留 imageUrl
+              const messagesForStorage = finalMessages.map(msg => {
+                const { image, ...msgWithoutImage } = msg;
+                return msgWithoutImage;
+              });
+              
+              const newChatId = await chatHistoryService.createChat(messagesForStorage, title, useModelId);
               if (newChatId) {
                 setChatId(newChatId);
                 // 更新 URL，但不刷新頁面
@@ -325,7 +332,13 @@ export function ChatInterface({
           // 使用 setTimeout 將 Firebase 操作移到下一個事件循環，不阻塞 UI
           setTimeout(async () => {
             try {
-              await chatHistoryService.updateChat(chatId, finalMessages, undefined, useModelId);
+              // 在儲存前移除所有訊息中的 image 屬性，只保留 imageUrl
+              const messagesForStorage = finalMessages.map(msg => {
+                const { image, ...msgWithoutImage } = msg;
+                return msgWithoutImage;
+              });
+              
+              await chatHistoryService.updateChat(chatId, messagesForStorage, undefined, useModelId);
             } catch (error) {
               console.error('更新聊天記錄失敗:', error);
             }
@@ -358,7 +371,16 @@ export function ChatInterface({
     if (user && chatId && message.role === 'user') {
       setTimeout(async () => {
         try {
-          await chatHistoryService.updateChat(chatId, [...messages, message], undefined, currentModelId);
+          // 在儲存前移除所有訊息中的 image 屬性，只保留 imageUrl
+          const messagesForStorage = [...messages, message].map(msg => {
+            const messageCopy = { ...msg };
+            if (messageCopy.image) {
+              delete messageCopy.image;
+            }
+            return messageCopy;
+          });
+          
+          await chatHistoryService.updateChat(chatId, messagesForStorage, undefined, currentModelId);
         } catch (error) {
           console.error('更新聊天記錄失敗:', error);
         }
@@ -373,7 +395,14 @@ export function ChatInterface({
           const title = message.content.length > 30 
             ? message.content.substring(0, 30) + '...' 
             : message.content;
-          const newChatId = await chatHistoryService.createChat([message], title, currentModelId);
+          
+          // 在儲存前移除訊息中的 image 屬性，只保留 imageUrl
+          const messageForStorage = { ...message };
+          if (messageForStorage.image) {
+            delete messageForStorage.image;
+          }
+          
+          const newChatId = await chatHistoryService.createChat([messageForStorage], title, currentModelId);
           if (newChatId) {
             setChatId(newChatId);
             // 更新 URL，但不刷新頁面
