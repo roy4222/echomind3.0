@@ -1,6 +1,5 @@
 import { Env } from '../index';
 import { corsHeaders, getCorsHeadersForRequest } from '../utils/cors';
-import { verifyAuth } from '../middlewares/auth';
 import type { ChatMessage, ChatCompletionOptions, GroqChatResponse } from './../types/chat';
 import { createSuccessResponse, createErrorResponse, handleError, ExternalApiError } from '../utils/errorHandler';
 import { createEnvironmentManager } from '../utils/environment';

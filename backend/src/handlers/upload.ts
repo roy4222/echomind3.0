@@ -1,6 +1,5 @@
 import { Env } from '../index';
 import { corsHeaders, getCorsHeadersForRequest } from '../utils/cors';
-import { verifyAuth } from '../middlewares/auth';
 import { createStorageService } from '../services/storage';
 import { createSuccessResponse, createErrorResponse, handleError, ValidationError } from '../utils/errorHandler';
 import { uploadLogger } from '../utils/logger';
