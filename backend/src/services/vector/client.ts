@@ -12,7 +12,7 @@ import {
   VectorSearchConfig,
   DEFAULT_SEARCH_CONFIG,
   VectorClientConfig
-} from './types';
+} from '../../types/vector';
 import { PineconeSearch } from './search';
 import { PineconeIndexing } from './indexing';
 import { VectorCacheService } from './cache';

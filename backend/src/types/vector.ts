@@ -1,7 +1,7 @@
 /**
  * 向量搜尋相關型別定義
  */
-import { Env } from '../../index';
+import { Env } from '../index';
 
 /**
  * 向量快取配置介面

@@ -2,7 +2,7 @@
  * 向量搜尋快取邏輯
  */
 import { MemoryCache, createCacheKey } from '../../utils/cache';
-import { FaqSearchResult, VectorCacheConfig, DEFAULT_CACHE_CONFIG } from './types';
+import { FaqSearchResult, VectorCacheConfig, DEFAULT_CACHE_CONFIG } from '../../types/vector';
 import { vectorLogger } from '../../utils/logger';
 
 /**

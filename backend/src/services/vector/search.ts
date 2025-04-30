@@ -2,7 +2,7 @@
  * 搜尋相關邏輯
  */
 import { generateEmbedding } from '../embedding';
-import { FaqSearchResult, VectorSearchConfig, DEFAULT_SEARCH_CONFIG, PineconeMatch } from './types';
+import { FaqSearchResult, VectorSearchConfig, DEFAULT_SEARCH_CONFIG, PineconeMatch } from '../../types/vector';
 import { SimilarityService } from './similarity';
 import { vectorLogger, LogLevel } from '../../utils/logger';
 import { ExternalApiError } from '../../utils/errorHandler';

@@ -2,7 +2,7 @@
  * 索引和添加資料相關邏輯
  */
 import { generateEmbedding } from '../embedding';
-import { VectorItem } from './types';
+import { VectorItem } from '../../types/vector';
 import { vectorLogger } from '../../utils/logger';
 import { ExternalApiError } from '../../utils/errorHandler';
 import { Env } from '../../index';

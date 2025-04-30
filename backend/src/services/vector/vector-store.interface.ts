@@ -1,7 +1,7 @@
 /**
  * 向量儲存抽象介面
  */
-import { FaqSearchResult, VectorItem, VectorCacheConfig, VectorSearchConfig } from './types';
+import { FaqSearchResult, VectorItem, VectorCacheConfig, VectorSearchConfig } from '../../types/vector';
 import { Env } from '../../index';
 
 /**

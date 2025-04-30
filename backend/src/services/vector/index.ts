@@ -4,7 +4,7 @@
  */
 
 // 導出型別定義
-export * from './types';
+export * from '../../types/vector';
 
 // 導出介面
 export * from './vector-store.interface';
