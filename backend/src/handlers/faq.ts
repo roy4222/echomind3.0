@@ -1,6 +1,6 @@
 import { Env } from '../index';
 import { corsHeaders, getCorsHeadersForRequest } from '../utils/cors';
-import { PineconeClient } from '../services/pinecone';
+import { createPineconeClient } from '../services/vector';
 import type { FaqSearchResult } from './../types/chat';
 import { createSuccessResponse, createErrorResponse, handleError, ValidationError } from '../utils/errorHandler';
 import { faqLogger } from '../utils/logger';
@@ -60,16 +60,10 @@ export async function handleFaq(request: Request, env: Env): Promise<Response> {
     }
     
     // 創建 Pinecone 客戶端
-    const pinecone = new PineconeClient(
-      env.PINECONE_API_KEY,
-      env.PINECONE_ENVIRONMENT,
-      env.PINECONE_INDEX || env.PINECONE_INDEX_NAME || '',
-      env,
-      env.PINECONE_API_URL
-    );
+    const pinecone = createPineconeClient(env);
     
     // 調用 Pinecone 進行 FAQ 檢索
-    const results = await pinecone.searchFaqs(query, resultLimit, threshold);
+    const results = await pinecone.searchFaqs(query, { limit: resultLimit, threshold });
     
     // 根據類別和重要性過濾結果
     let filteredResults = results;

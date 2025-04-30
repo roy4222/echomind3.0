@@ -1,4 +1,4 @@
-# 向量搜尋系統改進建議
+# 向量搜尋系統改進與重構進度
 
 ## 目前系統分析
 
@@ -9,48 +9,81 @@
 
 ### 搜尋演算法特點
 - 混合搜尋策略，結合了：
-  - 語義相似度 (向量相似度，權重 0.5)
-  - 文字匹配 (精確匹配，權重 0.4)
+  - 語義相似度 (向量相似度，權重 0.55，已從 0.5 調整)
+  - 文字匹配 (精確匹配，權重 0.35，已從 0.4 調整)
   - 問題重要性 (權重 0.1)
   - 標籤提升 (每匹配一個標籤增加 0.1 的提升)
 
-## 問題原因分析
+## 已完成的改進
 
-### 1. 資料密度不足
-- 每個類別的問題數量有限，無法覆蓋足夠的語義變體
-- 複雜問題需要更多相似表述的訓練資料才能被準確識別
+### 1. 程式碼重構與模組化 ✅
+已將原本近 1000 行的 `pinecone.ts` 檔案拆分為多個功能模組：
 
-### 2. 向量表示的局限性
-- 複雜問題可能包含多個概念，單一向量難以完整捕捉其語義
-- 長問題的向量表示可能被稀釋，關鍵概念的重要性被降低
+```
+services/
+├── vector/
+│   ├── client.ts         # 基本的 Pinecone 客戶端連接邏輯
+│   ├── search.ts         # 搜尋相關邏輯
+│   ├── indexing.ts       # 索引和添加資料相關邏輯
+│   ├── similarity.ts     # 相似度計算和分數校準邏輯
+│   ├── cache.ts          # 向量搜尋快取邏輯
+│   ├── vector-store.interface.ts # 抽象介面定義
+│   ├── types.ts          # 共用類型定義
+│   └── index.ts          # 模組導出
+```
 
-### 3. 搜尋權重配置
-- 目前語義相似度權重 (0.5) 可能對複雜問題不夠敏感
-- 標籤提升機制 (0.1) 對於未包含標準關鍵字的問題效果有限
+### 2. 介面抽象化 ✅
+已建立抽象介面，使未來可以輕鬆替換向量資料庫實現：
 
-### 4. 程式碼結構問題
-- `pinecone.ts` 檔案過於龐大（近 1000 行）
-- 違反單一責任原則，同時處理多種功能
-- 可讀性和可維護性降低
+```typescript
+// vector-store.interface.ts
+export interface VectorStore {
+  searchFaqs(query: string, config?: Partial<VectorSearchConfig>): Promise<FaqSearchResult[]>;
+  addFaq(item: VectorItem): Promise<boolean>;
+  addFaqs(items: VectorItem[]): Promise<boolean>;
+  deleteFaq(id: string): Promise<boolean>;
+  updateFaq(item: VectorItem): Promise<boolean>;
+  // 其他方法...
+}
+```
 
-## 改進建議
+### 3. 搜尋權重配置調整 ✅
+已調整搜尋權重配置，提高語義相似度的權重：
 
-### 1. 增強資料密度與多樣性
+```typescript
+// 調整後的權重配置
+const textMatchWeight = 0.35;  // 從 0.4 降低
+const semanticWeight = 0.55;   // 從 0.5 提高
+const importanceWeight = 0.1;  // 保持不變
+```
+
+### 4. 相似度計算邏輯抽取 ✅
+已將複雜的相似度計算邏輯抽取為獨立的 `SimilarityService` 類別：
+
+```typescript
+export class SimilarityService {
+  static calibrateScore(score: number): number {...}
+  static calculateQuestionSimilarity(question1: string, question2: string): number {...}
+  static calculateStringSimilarity(str1: string, str2: string): number {...}
+  static combineAnswers(primaryAnswer: string, secondaryAnswer: string): string {...}
+  static calculateDynamicThreshold(query: string, baseThreshold: number): number {...}
+}
+```
+
+## 待改進項目
+
+### 1. 資料密度與多樣性
 - **擴充問題變體**：為每個核心問題增加 3-5 個不同表述的變體
 - **添加複雜問題範例**：特別針對常見的複雜問題模式，增加範例資料
 - **標籤優化**：為複雜問題設計更全面的關鍵字標籤，包含子概念和相關術語
 
-### 2. 優化搜尋演算法
-- **調整權重配置**：
-  ```typescript
-  // 建議調整為：
-  const textMatchWeight = 0.35;  // 略微降低
-  const semanticWeight = 0.55;   // 略微提高
-  const importanceWeight = 0.1;  // 保持不變
-  ```
+### 2. 進階搜尋策略
 - **實作問題分解**：
   - 將複雜問題分解為多個子問題進行搜尋
   - 綜合子問題的搜尋結果，提高匹配廣度
+- **實作二階段搜尋**：
+  - 第一階段：使用較寬鬆的閾值獲取候選結果
+  - 第二階段：使用更精細的重排序邏輯，提升最相關結果
 
 ### 3. 向量處理優化
 - **考慮使用更先進的嵌入模型**：
@@ -58,42 +91,30 @@
 - **實作多向量表示**：
   - 對於複雜問題，生成多個向量表示不同方面，進行多向量搜尋
 
-### 4. 搜尋策略改進
-- **實作二階段搜尋**：
-  - 第一階段：使用較寬鬆的閾值獲取候選結果
-  - 第二階段：使用更精細的重排序邏輯，提升最相關結果
-- **增加語境感知**：
-  - 考慮使用者的歷史問題作為額外上下文
-  - 對連續相關問題進行語義連接
+### 4. 語境感知
+- **考慮使用者的歷史問題**：將歷史問題作為額外上下文
+- **語義連接**：對連續相關問題進行語義連接，提高相關性
 
-### 5. 程式碼重構
-- **模組化拆分**：將 `pinecone.ts` 拆分為多個功能模組
-  ```
-  services/
-  ├── vector/
-  │   ├── client.ts         # 基本的 Pinecone 客戶端連接邏輯
-  │   ├── search.ts         # 搜尋相關邏輯
-  │   ├── indexing.ts       # 索引和添加資料相關邏輯
-  │   ├── similarity.ts     # 相似度計算和分數校準邏輯
-  │   ├── cache.ts          # 向量搜尋快取邏輯
-  │   └── types.ts          # 共用類型定義
-  ```
-- **介面抽象化**：建立抽象介面，使得未來可以輕鬆替換向量資料庫
-  ```typescript
-  // vector-store.interface.ts
-  export interface VectorStore {
-    search(query: string, limit: number, threshold: number): Promise<SearchResult[]>;
-    addItem(item: VectorItem): Promise<boolean>;
-    // 其他方法...
-  }
-  ```
-- **簡化搜尋邏輯**：將複雜的相似度計算邏輯抽取為獨立的策略類別
-- **改進錯誤處理**：將錯誤處理邏輯集中到專門的錯誤處理模組
+## 後續實作優先順序
 
-## 實作優先順序
+1. **實作問題分解與二階段搜尋**（中等複雜度，效果顯著）
+2. **擴充資料庫中的問題變體與關鍵字標籤**（最直接有效）
+3. **增加語境感知功能**（提升使用者體驗）
+4. **考慮升級嵌入模型**（成本較高，但長期效益明顯）
 
-1. 首先擴充資料庫中的問題變體與關鍵字標籤（最直接有效）
-2. 調整搜尋權重配置（實作簡單，效果立竿見影）
-3. 實作問題分解與二階段搜尋（中等複雜度，效果顯著）
-4. 進行程式碼重構，提高可維護性
-5. 考慮升級嵌入模型（成本較高，但長期效益明顯）
+## 效能與品質監控
+
+為了持續改進向量搜尋系統，建議實施以下監控機制：
+
+1. **搜尋品質評估**：
+   - 建立標準測試集，定期評估搜尋結果的準確性
+   - 收集使用者反饋，識別常見的搜尋失敗案例
+
+2. **效能監控**：
+   - 追蹤搜尋延遲時間
+   - 監控快取命中率
+   - 分析向量搜尋的資源使用情況
+
+3. **A/B 測試**：
+   - 為新的搜尋演算法實施 A/B 測試
+   - 比較不同權重配置的效果

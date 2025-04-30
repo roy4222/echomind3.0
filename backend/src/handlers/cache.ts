@@ -4,7 +4,7 @@
  */
 import { Env } from '../index';
 import { globalCache } from '../utils/cache';
-import { PineconeClient } from '../services/pinecone';
+import { createPineconeClient } from '../services/vector';
 import { GroqService } from '../services/groq';
 import { createRequestHandler, createResponse } from '../utils/requestHandler';
 
@@ -33,13 +33,7 @@ export const clearAllCaches = createRequestHandler(
     }
     
     // 初始化服務以便清除其快取
-    const pinecone = new PineconeClient(
-      env.PINECONE_API_KEY,
-      env.PINECONE_ENVIRONMENT,
-      env.PINECONE_INDEX,
-      env,
-      env.PINECONE_API_URL
-    );
+    const pinecone = createPineconeClient(env);
     
     const groq = new GroqService(env);
     
@@ -85,13 +79,7 @@ export const getCacheStats = createRequestHandler(
     // 檢查是否可以獲取 Pinecone 統計資訊
     if (env.PINECONE_API_KEY && env.PINECONE_ENVIRONMENT && env.PINECONE_INDEX) {
       // 初始化服務以獲取快取統計資訊
-      const pinecone = new PineconeClient(
-        env.PINECONE_API_KEY,
-        env.PINECONE_ENVIRONMENT,
-        env.PINECONE_INDEX,
-        env,
-        env.PINECONE_API_URL
-      );
+      const pinecone = createPineconeClient(env);
       
       // 獲取 Pinecone 快取統計資訊
       stats.pineconeCache = pinecone.getCacheStats();

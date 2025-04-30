@@ -7,7 +7,7 @@ import { createEnvironmentManager } from '../utils/environment';
 import { ExternalApiError } from '../utils/errorHandler';
 import type { ChatMessage, ChatCompletionOptions, GroqChatResponse, FaqSearchResult } from '../types/chat';
 import { MODEL_MAPPING, getModelConfig, modelSupportsImages } from '../config/models';
-import { PineconeClient } from './pinecone';
+import { createPineconeClient } from './vector';
 import { chatLogger } from '../utils/logger';
 import { withRetry, withFallback, serviceDegradation } from '../utils/retry';
 import { MemoryCache, createCacheKey } from '../utils/cache';
@@ -460,16 +460,10 @@ export class GroqService {
       faqs = await withFallback<FaqSearchResult[]>(
         async () => {
           // 主要策略：使用 Pinecone 搜索
-          const pineconeClient = new PineconeClient(
-            this.env.PINECONE_API_KEY,
-            this.env.PINECONE_ENVIRONMENT,
-            this.env.PINECONE_INDEX || this.env.PINECONE_INDEX_NAME || '',
-            this.env,
-            this.env.PINECONE_API_URL
-          );
+          const pineconeClient = createPineconeClient(this.env);
           
           // 搜索相關 FAQ
-          return await pineconeClient.searchFaqs(query, limit, threshold);
+          return await pineconeClient.searchFaqs(query, { limit, threshold });
         },
         async () => {
           // 降級策略：返回空數組
