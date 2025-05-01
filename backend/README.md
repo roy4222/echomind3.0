@@ -14,14 +14,6 @@ Cloudflare Workers 作為主要 API 層，負責處理客戶端請求、路由�
   - `src/services/pinecone.ts` - 封裝與 Pinecone 的互動邏輯 (包括調用嵌入服務)
   - `src/services/embedding.ts` - 通過 Cohere API 處理文本嵌入
 
-### 2. 輔助服務: Python API (FastAPI) (**計劃移除**)
-
-位於 `llama_index/` 目錄的 Python API 服務（**計劃移除**），其主要功能（資料處理和上傳 `process_qa_data.py`）將被遷移至 **TypeScript 腳本 (`backend/scripts/`)**。
-
-- **入口點**: `api_server.py` - FastAPI 伺服器
-- **核心功能**:
-  - `query_qa.py` - (備註：此模組存在，但目前未被 `/api/vector-search` 調用)
-  - `process_qa_data.py` - 資料處理和上傳至 Pinecone (**將由 TypeScript 腳本替代**)
 
 ## 技術整合
 
