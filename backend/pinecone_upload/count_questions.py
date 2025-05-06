@@ -29,7 +29,7 @@ def count_questions(obj):
     return count
 
 # 開啟 JSON 檔案並讀取內容
-with open("backend/llama_index/example.json", "r", encoding="utf-8") as f:
+with open("example.json", "r", encoding="utf-8") as f:
     data = json.load(f)
 
 # 計算總問題數並輸出結果
