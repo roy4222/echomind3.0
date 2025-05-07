@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { RiThumbUpLine, RiSendPlaneFill, RiChat3Line } from 'react-icons/ri';
 
 interface Message {
   id: string;
@@ -76,6 +77,11 @@ export default function AnonymousBoard() {
         msg.id === id ? { ...msg, likes: msg.likes + 1 } : msg
       )
     );
+    toast('感謝您的讚賞！', {
+      icon: '👍',
+      position: 'bottom-right',
+      duration: 2000,
+    });
   };
 
   // 格式化時間
@@ -90,79 +96,127 @@ export default function AnonymousBoard() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-8 text-center">匿名留言板</h1>
-      
-      {/* 留言表單 */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <textarea
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none"
-              rows={4}
-              placeholder="在此輸入您的匿名留言..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              maxLength={500}
-            />
-            <div className="text-right text-gray-500 text-sm mt-2">
-              {newMessage.length}/500
-            </div>
-          </div>
-          <button
-            type="submit"
-            disabled={isLoading || !newMessage.trim()}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-indigo-950 py-12">
+      <div className="container mx-auto px-4 max-w-3xl">
+        <div className="text-center mb-10">
+          <motion.h1 
+            className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
           >
-            {isLoading ? '發佈中...' : '發佈留言'}
-          </button>
-        </form>
-      </div>
-      
-      {/* 留言列表 */}
-      <div className="space-y-4">
-        {messages.length === 0 ? (
-          <div className="text-center py-10 text-gray-500">
-            目前還沒有留言，成為第一個留言的人吧！
-          </div>
-        ) : (
-          messages.map((message) => (
-            <motion.div
-              key={message.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6"
+            匿名留言板
+          </motion.h1>
+          <p className="text-gray-600 dark:text-gray-300 mt-3">自由分享您的想法和意見</p>
+        </div>
+        
+        {/* 留言表單 */}
+        <motion.div 
+          className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-10 border border-gray-100 dark:border-gray-700"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <div className="flex items-center mb-3">
+                <RiChat3Line className="text-blue-500 mr-2" size={20} />
+                <h2 className="text-lg font-semibold text-gray-800 dark:text-white">發表新留言</h2>
+              </div>
+              <textarea
+                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none transition"
+                rows={4}
+                placeholder="在此輸入您的匿名留言..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                maxLength={500}
+              />
+              <div className="text-right text-gray-500 text-sm mt-2">
+                {newMessage.length}/500
+              </div>
+            </div>
+            <motion.button
+              type="submit"
+              disabled={isLoading || !newMessage.trim()}
+              className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-medium py-3 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              <p className="text-gray-800 dark:text-gray-200 mb-3 whitespace-pre-wrap break-words">
-                {message.content}
-              </p>
-              <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
-                <span>{formatTime(message.createdAt)}</span>
-                <button 
-                  onClick={() => handleLike(message.id)}
-                  className="flex items-center gap-1 hover:text-blue-500 transition"
-                >
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    width="16" 
-                    height="16" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    className="lucide lucide-thumbs-up"
-                  >
-                    <path d="M7 10v12" />
-                    <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z" />
-                  </svg>
-                  <span>{message.likes}</span>
-                </button>
+              {isLoading ? '發佈中...' : (
+                <>
+                  <RiSendPlaneFill size={18} />
+                  發佈留言
+                </>
+              )}
+            </motion.button>
+          </form>
+        </motion.div>
+        
+        {/* 留言列表 */}
+        <h2 className="text-xl font-semibold mb-5 text-gray-800 dark:text-white flex items-center">
+          <RiChat3Line className="text-blue-500 mr-2" size={20} />
+          最新留言
+        </h2>
+        
+        <AnimatePresence>
+          {messages.length === 0 ? (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-center py-16 text-gray-500 bg-white dark:bg-gray-800 rounded-xl shadow-md"
+            >
+              <div className="flex flex-col items-center">
+                <RiChat3Line size={48} className="text-gray-300 mb-3" />
+                <p>目前還沒有留言，成為第一個留言的人吧！</p>
               </div>
             </motion.div>
-          ))
-        )}
+          ) : (
+            <div className="space-y-5">
+              {messages.map((message, index) => (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                  className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                >
+                  <p className="text-gray-800 dark:text-gray-200 mb-4 whitespace-pre-wrap break-words text-lg">
+                    {message.content}
+                  </p>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-500 dark:text-gray-400 flex items-center">
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        className="h-4 w-4 mr-1"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" 
+                        />
+                      </svg>
+                      {formatTime(message.createdAt)}
+                    </span>
+                    <motion.button 
+                      onClick={() => handleLike(message.id)}
+                      className="flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors px-3 py-1 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <RiThumbUpLine size={18} />
+                      <span className="font-medium">{message.likes}</span>
+                    </motion.button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
