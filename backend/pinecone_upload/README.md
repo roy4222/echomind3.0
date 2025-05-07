@@ -1,3 +1,6 @@
+# EchoMind 向量資料庫處理系統
+
+這個系統專為處理問答資料並上傳至 Pinecone 向量資料庫，支援輔仁大學資管系 EchoMind 專案的 RAG （檢索增強生成）功能。
 
 ## 使用說明
 
@@ -6,34 +9,20 @@
 此腳本將 JSON 格式的問答資料處理並上傳到 Pinecone：
 
 ```bash
-python process_qa_data.py --file qa_data_sample.json
+python process_qa_data.py --file 檔案路徑.json
 ```
-
-若要重置現有索引：
-
-```bash
-python process_qa_data.py --file qa_data_sample.json --reset
-```
-
-### 查詢問答資料
-
-查詢已上傳到 Pinecone 的問答資料：
-
-```bash
-python query_qa.py "你的問題"
-```
-
-附加參數：
-
-- `--top-k`：返回的結果數量，預設為 5
-- `--category`：按類別過濾，例如 `--category "程式設計相關"`
-- `--min-importance`：按最低重要程度過濾，例如 `--min-importance 4`
 
 例如：
-
 ```bash
-python query_qa.py "Python 在資管系有什麼應用" --top-k 3 --category "程式設計相關"
+python process_qa_data.py --file example.json
 ```
+
+### 查詢問答資料 (使用TypeScript實現)
+
+Python腳本負責資料處理與索引，而查詢功能已在系統的TypeScript部分實現：
+- `backend/src/services/vector/search.ts` - 向量搜索功能
+- `backend/src/services/vector/client.ts` - Pinecone客戶端
+- `backend/src/services/groq.ts` - RAG整合功能
 
 ## 資料結構
 
@@ -41,25 +30,31 @@ python query_qa.py "Python 在資管系有什麼應用" --top-k 3 --category "�
 
 ```json
 {
-  "問答整理": {
-    "類別1": {
-      "分類說明": "類別1說明",
-      "問答列表": [
+  "常見問題": [
+    {
+      "類別": "系上英文門檻",
+      "問題": [
         {
-          "問題": "問題1",
+          "問題": "輔大資管系的英文畢業門檻是什麼？",
           "重要程度": 5,
-          "關鍵字": ["關鍵字1", "關鍵字2"],
-          "相關資源": ["資源1", "資源2"],
-          "解答": "答案1"
-        },
-        // 更多問答...
+          "關鍵字": ["英文門檻", "畢業要求", "多益成績", "英文能力"],
+          "相關資源": ["系所網站", "課程規定說明"],
+          "解答": "輔大資管系學生須通過全校性的「中英文能力檢定」，並且達到多益（TOEIC）成績785分以上，或其他相當的英文檢定成績，才能畢業。此要求是確保畢業生具備足夠的英語能力以應對職場需求。"
+        }
       ]
     },
-    // 更多類別...
-  },
-  "metadata": {
-    // 資料相關的元數據
-  }
+    {
+      "分類": "成績查詢",
+      "問題列表": [
+        {
+          "問題": "如何在LDAP系統查詢學期成績？",
+          "解答": "學生需使用輔大單一帳號（LDAP）登入學生資訊入口網。具體步驟如下：1. 訪問學生資訊入口網。2. 輸入LDAP帳號（通常為學號）及密碼。3. 在「課程與學習」選項中，點選「學生選課資訊網」。4. 選擇「成績查詢」，即可查看當前學期成績。若帳號未啟用，可至LDAP啟動網站完成啟用。確保使用安全的網路環境以保護個人資訊。",
+          "重要程度": 5,
+          "相關資源": ["輔大學生資訊平台", "教務處數位服務公告"]
+        }
+      ]
+    }
+  ]
 }
 ```
 
@@ -68,6 +63,150 @@ python query_qa.py "Python 在資管系有什麼應用" --top-k 3 --category "�
 - 使用 Cohere 的 `embed-multilingual-v3.0` 模型處理繁體中文
 - 透過 Pinecone 提供高效向量搜索能力
 - 利用 LlamaIndex 處理文檔和提供查詢功能 
+
+## 系統功能概述
+
+### 1. Python部分 (本工具)
+
+#### 資料切分優化 ✅
+
+- **更精確的問答對切分**：實現能夠識別並拆分複合答案的功能
+  ```python
+  # 範例：拆分數字列表
+  numbered_points = re.split(r'(\d+\.\s)', answer)
+  ```
+
+- **文本預處理**：加入預處理函數清理輸入文本
+  ```python
+  def preprocess_text(text):
+      # 移除多餘空白
+      text = re.sub(r'\s+', ' ', text).strip()
+      # 移除特殊字符（保留基本標點符號）
+      text = re.sub(r'[^\w\s\.\,\?\!\;\:\(\)\[\]\{\}\-\']', ' ', text)
+      return text
+  ```
+
+- **複合答案識別**：自動判斷是否需要拆分答案
+  ```python
+  def is_complex_answer(answer):
+      # 檢查是否有數字列表、分點符號
+      has_numbered_list = bool(re.search(r'\d+\.\s', answer))
+      has_bullet_points = '•' in answer or '．' in answer or '-' in answer
+      # 檢查句子數量和答案長度
+      too_many_sentences = len(split_sentences(answer)) > 5
+      too_long = len(answer) > 300
+      return has_numbered_list or has_bullet_points or too_many_sentences or too_long
+  ```
+
+- **多種拆分策略**：支援按以下方式拆分：
+  1. 數字列表拆分（例如：`1. 第一點 2. 第二點`）
+  2. 分隔符拆分（例如：使用 `•`, `．`, `-` 等符號）
+  3. 段落拆分（長文本按句子組合成段落）
+
+#### Cohere API 正確使用 ✅
+
+- **參數設置正確**：設置必要的參數
+  ```python
+  response = co.embed(
+      texts=texts,
+      model="embed-multilingual-v3.0",  # 使用多語言模型
+      input_type="search_document",     # 指定輸入類型
+      embedding_types=["float"]         # 指定嵌入類型
+  )
+  ```
+
+- **響應處理**：正確獲取嵌入向量
+  ```python
+  embeddings = response.embeddings.float  # 正確獲取嵌入向量
+  ```
+
+### 2. TypeScript部分 (已實現的功能)
+
+#### 向量表示改進 ✅
+
+- **查詢預處理**：在 `search.ts` 中實現
+  ```typescript
+  preprocessQuery(query: string): string {
+    // 停用詞過濾
+    const stopwords = ['的', '了', '和', '與', '在', '是', '我', '有', '這', '那', '怎麼', '如何', '請問', '可以', '嗎'];
+    // 移除標點符號及停用詞
+    let processedQuery = query.replace(/[.,。，、！？!?;；:：()（）{}「」""]/g, ' ');
+    let words = processedQuery.split(/\s+/).filter(word => !stopwords.includes(word));
+    // ...
+  }
+  ```
+
+- **分層檢索策略**：在 `search.ts` 中實現類別匹配和結果整合
+  ```typescript
+  // 根據類別匹配增強結果相關性
+  if (currentFaq.category && otherFaq.category && 
+      currentFaq.category === otherFaq.category) {
+    categoryMatch = true;
+  }
+  ```
+
+#### 查詢處理增強 ✅
+
+- **相似度閾值過濾**：在 `search.ts` 中實現
+  ```typescript
+  // 評估整合的閾值 - 問題相似度至少要達到這個相似度才考慮整合
+  const INTEGRATION_THRESHOLD = 0.65;
+  
+  // 如果相似度超過閾值或分類相匹配，進行整合
+  if (similarity > INTEGRATION_THRESHOLD || categoryMatch) {
+    // 結合答案，移除重復內容
+    const integratedAnswer = SimilarityService.combineAnswers(integratedFaq.answer, otherFaq.answer);
+    // ...
+  }
+  ```
+
+- **元數據搜索**：在 `client.ts` 的 `searchFaqs` 中支援按類別過濾
+  ```typescript
+  // 合併搜尋配置
+  const searchConfig: VectorSearchConfig = {
+    ...DEFAULT_SEARCH_CONFIG,
+    ...config
+  };
+  
+  // 支援閾值過濾和類別過濾
+  ```
+
+#### RAG混合檢索與整合 ✅
+
+- **RAG增強聊天**：在 `groq.ts` 中實現
+  ```typescript
+  async enhancedChat(options: ChatCompletionOptions, limit: number = 3, threshold: number = 0.3): Promise<GroqChatResponse> {
+    // 獲取相關FAQ結果
+    const pineconeClient = createPineconeClient(this.env);
+    faqs = await pineconeClient.searchFaqs(query, { limit, threshold });
+    
+    // 如果找到相關FAQ，創建增強的系統提示詞
+    if (faqs.length > 0) {
+      const enhancedSystemPrompt = createEnhancedSystemPrompt(faqs);
+      // ...
+    }
+  }
+  ```
+
+- **答案一致性管理**：通過系統提示詞增強
+  ```typescript
+  function createEnhancedSystemPrompt(faqs: FaqSearchResult[]): ChatMessage {
+    // 將相關FAQ整合到系統提示詞中
+    let enhancedContent = `${BASE_SYSTEM_PROMPT.content}\n\n### 參考知識\n請根據以下資料回答問題...`;
+    
+    // 添加每個相關FAQ
+    faqs.forEach((faq, index) => {
+      enhancedContent += `#### 參考資料 ${index + 1}：${faq.category || '一般資訊'}\n`;
+      enhancedContent += `問：${faq.question}\n答：${faq.answer}\n\n`;
+    });
+    // ...
+  }
+  ```
+
+#### 使用者界面與交互 ✅
+
+- 在 `frontend/components/chat` 中實現完整的聊天界面
+- 包含消息列表、輸入框、使用者反饋等功能
 
 ## 常見問題與解決方案
 
@@ -84,25 +223,6 @@ python query_qa.py "Python 在資管系有什麼應用" --top-k 3 --category "�
    - Cohere API v2 的響應格式與 v1 不同
    - 嵌入向量存儲在 `response.embeddings.float` 中，而不是直接在 `response.embeddings` 中
    - 錯誤示例：嘗試使用 `embeddings[0]` 而不是 `embeddings.float[0]`
-
-### 正確的 Cohere API 使用方式
-
-```python
-# 正確的 Cohere API 使用方式
-from cohere import ClientV2
-
-co = ClientV2(api_key=cohere_api_key)
-response = co.embed(
-    texts=texts,
-    model="embed-multilingual-v3.0",
-    input_type="search_document",  # 必須提供
-    embedding_types=["float"]      # 必須提供
-)
-embeddings = response.embeddings.float  # 正確獲取嵌入向量
-
-# 檢查嵌入維度
-print(f"嵌入維度: {len(embeddings[0])}")  # 應為 1024
-```
 
 ### Pinecone 索引更新延遲
 
@@ -122,174 +242,3 @@ index = pc.Index(index_name)
 stats = index.describe_index_stats()
 print(f'索引統計資訊：\n總向量數：{stats.total_vector_count}\n命名空間：{stats.namespaces}')
 ```
-
-## RAG系統資料處理問題與改進建議
-
-在實際運行RAG系統時，發現一些資料處理的問題可能影響系統的回答質量。以下是識別的主要問題和相應的改進建議：
-
-### 現有問題
-
-1. **資料切分不乾淨**：
-   - 許多問題沒有被正確分類和切分，導致混合在一起
-   - 同一概念的問題可能散布在不同類別中
-   - 問答對缺乏一致的結構和格式
-
-2. **向量表示不夠精確**：
-   - 目前的嵌入方式可能無法充分捕捉問題的語義差異
-   - 缺少問題變體和同義詞擴展，導致檢索不夠靈活
-
-3. **處理複合問題能力不足**：
-   - 當用戶提出複合問題時，系統難以找到最相關的答案
-   - 缺乏將複合問題拆分為子問題的機制
-
-### 改進建議
-
-#### 1. 資料切分優化
-
-1. **更精確的問答對切分**:
-   ```python
-   # 修改extract_qa函數，增加處理特定嵌套結構的能力
-   def extract_qa(obj, main_category=None, category=None, sub_category=None):
-       # 添加對子類別的處理...
-   ```
-
-2. **引入更清晰的類別標籤**:
-   ```python
-   "metadata": {
-     "question": qa["問題"],
-     "answer": qa["解答"],
-     "main_category": main_category,
-     "category": curr_category,
-     "sub_category": qa.get("子類別", None),  # 新增子類別
-     "question_type": qa.get("問題類型", "一般問題"),  # 新增問題類型標籤
-   }
-   ```
-
-3. **處理問題重複**:
-   ```python
-   # 在process_qa_data函數末尾添加去重邏輯
-   deduplicated_qa_pairs = []
-   question_set = set()
-   for qa in qa_pairs:
-     question = qa["metadata"]["question"].strip().lower()
-     if question not in question_set:
-       question_set.add(question)
-       deduplicated_qa_pairs.append(qa)
-   return deduplicated_qa_pairs
-   ```
-
-#### 2. 向量表示改進
-
-1. **增強語義分塊方式**:
-   ```python
-   # 採用更結構化的文本表示格式
-   qa["text"] = f"類別：{qa['metadata']['main_category']} - {qa['metadata']['category']}\n問題：{qa['metadata']['question']}\n答案：{qa['metadata']['answer']}"
-   ```
-
-2. **添加問題變體**:
-   ```python
-   # 為每個問題生成不同表達方式的變體
-   def generate_variants(question):
-     # 簡單範例，實際應用中可使用更複雜的NLP技術
-     variants = [
-       question,
-       f"請問{question}",
-       question.replace("？", ""),
-       # 其他變體...
-     ]
-     return variants
-     
-   # 在處理每個問題時添加變體
-   variants = generate_variants(qa["metadata"]["question"])
-   for variant in variants:
-     variant_qa = qa.copy()
-     variant_qa["id"] = str(uuid.uuid4())
-     variant_qa["metadata"]["is_variant"] = True
-     variant_qa["metadata"]["original_question"] = qa["metadata"]["question"]
-     variant_qa["metadata"]["question"] = variant
-     qa_pairs.append(variant_qa)
-   ```
-
-#### 3. 向量索引優化
-
-1. **實施多級索引**:
-   ```python
-   # 針對不同類型的問題建立不同的命名空間
-   namespace = f"{qa['metadata']['main_category']}_{qa['metadata']['category']}"
-   pinecone_index.upsert(vectors=vectors_to_upsert, namespace=namespace)
-   ```
-
-2. **調整嵌入參數**:
-   ```python
-   # 針對不同類型的內容使用不同的嵌入參數
-   input_type = "search_document"
-   if "課程內容" in qa["metadata"]["category"]:
-     input_type = "classification"  # 或其他適合課程內容的類型
-   
-   response = co.embed(
-     texts=texts,
-     model="embed-multilingual-v3.0",
-     input_type=input_type,
-     embedding_types=["float"]
-   )
-   ```
-
-#### 4. 資料結構統一化
-
-1. **標準化JSON結構**:
-   ```json
-   {
-     "qa_pairs": [
-       {
-         "question": "輔大資管系的英文畢業門檻是什麼？",
-         "answer": "...",
-         "category": "系上英文門檻",
-         "sub_category": "基本資訊",
-         "keywords": ["英文門檻", "畢業要求"],
-         "importance": 5
-       }
-     ]
-   }
-   ```
-
-2. **資料預處理腳本**:
-   ```python
-   # 新增 preprocess_json.py 腳本，統一不同格式
-   def standardize_json_format(input_file, output_file):
-       with open(input_file, 'r', encoding='utf-8') as f:
-           data = json.load(f)
-       
-       standardized_data = {"qa_pairs": []}
-       # 轉換邏輯
-       
-       with open(output_file, 'w', encoding='utf-8') as f:
-           json.dump(standardized_data, f, ensure_ascii=False, indent=2)
-   ```
-
-#### 5. 檢索策略改進
-
-1. **混合檢索方法**:
-   ```python
-   # 實現關鍵詞與向量混合檢索
-   def search(query, top_k=5):
-       # 先嘗試精確關鍵詞匹配
-       keyword_results = keyword_search(query)
-       # 再進行向量檢索
-       vector_results = vector_search(query)
-       # 合併並排序結果
-       return merge_and_rank(keyword_results, vector_results)
-   ```
-
-2. **問題細分處理**:
-   ```python
-   # 將複合問題拆分為子問題
-   def process_compound_question(query):
-       # 使用NLP技術拆分複合問題
-       sub_questions = split_question(query)
-       # 分別檢索
-       sub_results = [search(q) for q in sub_questions]
-       # 整合結果
-       return integrate_results(sub_results)
-   ```
-
-透過實施這些改進，RAG系統將能夠更準確地理解和回應用戶查詢，特別是在處理複雜和多部分問題時提供更精確的結果。
