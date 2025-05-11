@@ -4,63 +4,85 @@ import { JSX, useState } from "react";
 import CustomButton from "./components/button";
 import OuterCard from "./components/OuteCard";
 
-
 export default function Home() {
   const [selected, setSelected] = useState<string>("EchoMind");
 
   const descriptions: Record<string, JSX.Element> = {
     EchoMind: (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <OuterCard
-          title="一"
-          description={`EchoMind 是個聊天機器人，可以與你進行聊天。\n請點選上方按鈕切換。`}
-          imageUrl="https://via.placeholder.com/300"
+          title="歡迎使用 EchoMind"
+          description={`EchoMind 是一個智能聊天機器人，可以與你進行自然對話。\n我們致力於提供最好的聊天體驗。`}
+          imageUrl="/help_images/login.jpg"
         />
         <OuterCard
-          title="二"
-          description={`這是第一個選項的說明。\n請點選上方按鈕切換。`}
+          title="開始使用"
+          description={`1. 點擊登入按鈕進入系統\n2. 選擇你想要的功能\n3. 開始與 EchoMind 對話`}
         />
       </div>
     ),
     聊天歷史: (
-      <OuterCard
-        title="選項二"
-        description={`這是第二個選項的說明。\n這是一段額外說明。`}
-      />
+      <div className="space-y-6">
+        <OuterCard
+          title="聊天歷史功能"
+          description={`• 查看過去的對話記錄\n• 搜尋特定主題的對話\n• 匯出聊天記錄`}
+        />
+        <OuterCard
+          title="使用技巧"
+          description={`• 使用關鍵字搜尋\n• 按日期篩選\n• 標記重要對話`}
+        />
+      </div>
     ),
     匿名留言板: (
-      <OuterCard
-        title="選項三"
-        description={`這是第二個選項的說明。\n這是一段額外說明。`}
-      />
+      <div className="space-y-6">
+        <OuterCard
+          title="匿名留言板"
+          description={`• 自由發表意見\n• 保護個人隱私\n• 與他人互動交流`}
+        />
+        <OuterCard
+          title="使用規則"
+          description={`• 尊重他人\n• 遵守社群規範\n• 保持友善交流`}
+        />
+      </div>
     ),
     小遊戲: (
-      <OuterCard
-        title="選項四"
-        description={`這是第三個選項的說明。\n感謝使用！`}
-      />
+      <div className="space-y-6">
+        <OuterCard
+          title="趣味小遊戲"
+          description={`• 益智問答\n• 文字遊戲\n• 互動挑戰`}
+        />
+        <OuterCard
+          title="遊戲規則"
+          description={`• 完成任務獲得獎勵\n• 與好友競賽\n• 解鎖特殊成就`}
+        />
+      </div>
     ),
   };
 
   return (
-    <div className="h-screen w-full dark:bg-gray-900">
-      <div className="pb-6 pt-6 bg-gradient-to-r from-zinc-500 to-violet-500 bg-clip-text text-5xl font-extrabold text-transparent flex justify-evenly">
-        使用說明
-      </div>
-      <div className="flex justify-evenly">
-        {Object.keys(descriptions).map((option) => (
-          <CustomButton
-            key={option}
-            text={option}
-            onClick={() => setSelected(option)}
-            isActive={selected === option}
-          />
-        ))}
-      </div>
-      <br />
-      <div className="grid w-full grid-flow-dense grid-cols-30 grid-rows-30 gap-2 bg-gray-950/5 p-2 dark:bg-white/10">
-        <div className="col-span-30 row-span-10">{descriptions[selected]}</div>
+    <div className="min-h-screen w-full bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-center mb-8 text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          使用說明
+        </h1>
+        
+        <div className="flex flex-wrap justify-center gap-4 mb-8">
+          {Object.keys(descriptions).map((option) => (
+            <CustomButton
+              key={option}
+              text={option}
+              onClick={() => setSelected(option)}
+              isActive={selected === option}
+            />
+          ))}
+        </div>
+
+        <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+          <div className="animate-fade-in">
+            {descriptions[selected]}
+          </div>
+        </div>
       </div>
     </div>
-  );  
+  );
 }

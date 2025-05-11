@@ -6,15 +6,15 @@ type OuterCardProps = {
 
 export default function OutercardCard({ title, description, imageUrl }: OuterCardProps) {
   return (
-    <div className="p-4 border rounded-lg shadow-md bg-gray-800">
+    <div className="p-4 rounded-lg shadow-md">
       <div>
-        <h2 className="font-semibold text-xl text-white">{title}</h2>
+        <h2 className="font-semibold text-2xl text-black dark:text-white ">{title}</h2>
         {imageUrl && (
         <div className="mb-4">
           <img src={imageUrl} alt={title} className="w-full h-auto rounded-lg" />
         </div>
       )}
-        <p className="text-gray-300">{description}</p>
+        <p className="text-black dark:text-white">{description}</p>
       </div>
     </div>
   );
