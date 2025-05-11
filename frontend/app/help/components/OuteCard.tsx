@@ -11,7 +11,7 @@ export default function OutercardCard({ title, description, imageUrl }: OuterCar
         <h2 className="font-semibold text-2xl text-black dark:text-white ">{title}</h2>
         {imageUrl && (
         <div className="mb-4">
-          <img src={imageUrl} alt={title} className="w-full h-auto rounded-lg" />
+          <img src={imageUrl} alt={title} className="w-full h-auto rounded-xl" />
         </div>
       )}
         <p className="text-black dark:text-white">{description}</p>

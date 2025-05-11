@@ -18,6 +18,17 @@ export default function Home() {
         <OuterCard
           title="開始使用"
           description={`1. 點擊登入按鈕進入系統\n2. 選擇你想要的功能\n3. 開始與 EchoMind 對話`}
+          imageUrl="/help_images/style.jpg"
+        />
+        <OuterCard
+          title="開始使用"
+          description={`1. 點擊登入按鈕進入系統\n2. 選擇你想要的功能\n3. 開始與 EchoMind 對話`}
+          imageUrl="/help_images/ask.jpg"
+        />
+        <OuterCard
+          title="開始使用"
+          description={`1. 點擊登入按鈕進入系統\n2. 選擇你想要的功能\n3. 開始與 EchoMind 對話`}
+          imageUrl="/help_images/function.jpg"
         />
       </div>
     ),
@@ -26,10 +37,12 @@ export default function Home() {
         <OuterCard
           title="聊天歷史功能"
           description={`• 查看過去的對話記錄\n• 搜尋特定主題的對話\n• 匯出聊天記錄`}
+          imageUrl="/help_images/login.jpg"
         />
         <OuterCard
           title="使用技巧"
           description={`• 使用關鍵字搜尋\n• 按日期篩選\n• 標記重要對話`}
+          imageUrl="/help_images/login.jpg"
         />
       </div>
     ),
