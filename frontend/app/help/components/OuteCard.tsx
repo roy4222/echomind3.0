@@ -8,7 +8,7 @@ export default function OutercardCard({ title, description, imageUrl }: OuterCar
   return (
     <div className="p-4 rounded-lg shadow-md">
       <div>
-        <h2 className="font-semibold text-2xl text-black dark:text-white ">{title}</h2>
+        <h2 className="mb-2 font-semibold text-2xl text-black dark:text-white ">{title}</h2>
         {imageUrl && (
         <div className="mb-4">
           <img src={imageUrl} alt={title} className="w-full h-auto rounded-xl" />

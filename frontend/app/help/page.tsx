@@ -11,22 +11,22 @@ export default function Home() {
     EchoMind: (
       <div className="space-y-6">
         <OuterCard
-          title="歡迎使用 EchoMind"
-          description={`EchoMind 是一個智能聊天機器人，可以與你進行自然對話。\n我們致力於提供最好的聊天體驗。`}
-          imageUrl="/help_images/login.jpg"
+          title="1.登入"
+          description={`在畫面的右上角可以看到登入鍵。\n歡迎進行登入讓找到過去的對話，達到最好的使用體驗。`}
+          imageUrl="/help_GIF/login.gif"
         />
         <OuterCard
-          title="開始使用"
-          description={`1. 點擊登入按鈕進入系統\n2. 選擇你想要的功能\n3. 開始與 EchoMind 對話`}
-          imageUrl="/help_images/style.jpg"
+          title="主題切換"
+          description={`可以根據你的使用習慣切換深色模式的主題與淺色模式的主題。`}
+          imageUrl="/help_GIF/style.gif"
         />
         <OuterCard
-          title="開始使用"
-          description={`1. 點擊登入按鈕進入系統\n2. 選擇你想要的功能\n3. 開始與 EchoMind 對話`}
-          imageUrl="/help_images/ask.jpg"
+          title="如何問問題"
+          description={`可以在此發問想要的問題。\n並在下方分別有附圖片與使用我們專屬資料庫回答的按鈕。`}
+          imageUrl="/help_GIF/ask.gif"
         />
         <OuterCard
-          title="開始使用"
+          title="特色功能區"
           description={`1. 點擊登入按鈕進入系統\n2. 選擇你想要的功能\n3. 開始與 EchoMind 對話`}
           imageUrl="/help_images/function.jpg"
         />
@@ -37,12 +37,12 @@ export default function Home() {
         <OuterCard
           title="聊天歷史功能"
           description={`• 查看過去的對話記錄\n• 搜尋特定主題的對話\n• 匯出聊天記錄`}
-          imageUrl="/help_images/login.jpg"
+          imageUrl=""
         />
         <OuterCard
           title="使用技巧"
           description={`• 使用關鍵字搜尋\n• 按日期篩選\n• 標記重要對話`}
-          imageUrl="/help_images/login.jpg"
+          imageUrl=""
         />
       </div>
     ),
@@ -51,10 +51,12 @@ export default function Home() {
         <OuterCard
           title="匿名留言板"
           description={`• 自由發表意見\n• 保護個人隱私\n• 與他人互動交流`}
+          imageUrl=""
         />
         <OuterCard
           title="使用規則"
           description={`• 尊重他人\n• 遵守社群規範\n• 保持友善交流`}
+          imageUrl=""
         />
       </div>
     ),
@@ -63,10 +65,12 @@ export default function Home() {
         <OuterCard
           title="趣味小遊戲"
           description={`• 益智問答\n• 文字遊戲\n• 互動挑戰`}
+          imageUrl="/help_GIF/opengame.gif"
         />
         <OuterCard
           title="遊戲規則"
           description={`• 完成任務獲得獎勵\n• 與好友競賽\n• 解鎖特殊成就`}
+          imageUrl=""
         />
       </div>
     ),
