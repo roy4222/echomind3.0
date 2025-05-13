@@ -27,7 +27,7 @@ export default function Home() {
         />
         <OuterCard
           title="特色功能區"
-          description={`1. 點擊登入按鈕進入系統\n2. 選擇你想要的功能\n3. 開始與 EchoMind 對話`}
+          description={`1.echomind--課程問題小幫手\n2. 聊天歷史--方便尋找過去問題\n3. 小遊戲--帶你放鬆尋找歡樂`}
           imageUrl="/help_images/function.jpg"
         />
       </div>
@@ -63,8 +63,8 @@ export default function Home() {
     小遊戲: (
       <div className="space-y-6">
         <OuterCard
-          title="趣味小遊戲"
-          description={`• 益智問答\n• 文字遊戲\n• 互動挑戰`}
+          title="如何進到遊戲區"
+          description={`1. 點選左上角選單按鈕\n2. 點擊第四個小遊戲\n3. 選擇想玩的遊戲`}
           imageUrl="/help_GIF/opengame.gif"
         />
         <OuterCard
