@@ -1,3 +1,4 @@
+// 已經不用了，全部都在Board裡面了
 /**
  * Square 組件 - 渲染單個棋盤格子
  * @param {Object} props - 組件屬性

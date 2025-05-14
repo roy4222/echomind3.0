@@ -102,12 +102,15 @@ export const isBoardFull = (board) => {
  */
 const analyzePattern = (line) => {
   const blackCount = line.filter(cell => cell === 'black').length;
+  //過濾黑色棋子
   const whiteCount = line.filter(cell => cell === 'white').length;
+  //過濾白色棋子
   const emptyCount = line.filter(cell => cell === null).length;
+  //過濾空格棋子
   
   // 檢查是否連續（沒有被對方棋子分隔）
   let isConsecutiveBlack = false;
-  let isConsecutiveWhite = false;
+  let isConsecutiveWhite = false; 
   
   if (blackCount > 0 && whiteCount === 0) {
     isConsecutiveBlack = true;
