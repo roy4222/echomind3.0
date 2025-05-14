@@ -18,19 +18,19 @@ export const initializeBoard = (size = 15) => {
 export const checkWinner = (board, row, col, player) => {
   const size = board.length;
   const directions = [
-    [0, 1],   // 水平方向
-    [1, 0],   // 垂直方向
-    [1, 1],   // 右下對角線
-    [1, -1]   // 左下對角線
+    [0, 1],   // 水平方向 →
+    [1, 0],   // 垂直方向 ↓
+    [1, 1],   // 右下對角線 ↘
+    [1, -1]   // 左下對角線 ↙
   ];
 
   for (const [dx, dy] of directions) {
-    let count = 1;  // 從當前位置開始計數，所以初始為1
+    let count = 1;  // 當前位置
 
-    // 正向檢查
+    // 正向檢查 →
     for (let i = 1; i < 5; i++) {
-      const newRow = row + i * dx;
-      const newCol = col + i * dy;
+      const newRow = row + (i * dx);
+      const newCol = col + (i * dy);
       
       if (
         newRow >= 0 && newRow < size &&
@@ -43,10 +43,10 @@ export const checkWinner = (board, row, col, player) => {
       }
     }
 
-    // 反向檢查
+    // 反向檢查 ←
     for (let i = 1; i < 5; i++) {
-      const newRow = row - i * dx;
-      const newCol = col - i * dy;
+      const newRow = row - (i * dx);
+      const newCol = col - (i * dy);
       
       if (
         newRow >= 0 && newRow < size &&
@@ -180,7 +180,7 @@ const evaluateLine = (line, aiPlayer, humanPlayer) => {
   const isConsecutiveAI = aiPlayer === 'black' ? isConsecutiveBlack : isConsecutiveWhite;
   const isConsecutiveHuman = humanPlayer === 'black' ? isConsecutiveBlack : isConsecutiveWhite;
   
-  // 如果同時有AI棋子和人類棋子，則此行無價值
+  // 如果同時有AI棋子和人類棋子，則此行無價值=>不會得分
   if (aiCount > 0 && humanCount > 0) {
     return 0;
   }
