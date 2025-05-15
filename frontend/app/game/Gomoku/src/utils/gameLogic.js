@@ -18,19 +18,19 @@ export const initializeBoard = (size = 15) => {
 export const checkWinner = (board, row, col, player) => {
   const size = board.length;
   const directions = [
-    [0, 1],   // 水平方向
-    [1, 0],   // 垂直方向
-    [1, 1],   // 右下對角線
-    [1, -1]   // 左下對角線
+    [0, 1],   // 水平方向 →
+    [1, 0],   // 垂直方向 ↓
+    [1, 1],   // 右下對角線 ↘
+    [1, -1]   // 左下對角線 ↙
   ];
 
   for (const [dx, dy] of directions) {
-    let count = 1;  // 從當前位置開始計數，所以初始為1
+    let count = 1;  // 當前位置
 
-    // 正向檢查
+    // 正向檢查 →
     for (let i = 1; i < 5; i++) {
-      const newRow = row + i * dx;
-      const newCol = col + i * dy;
+      const newRow = row + (i * dx);
+      const newCol = col + (i * dy);
       
       if (
         newRow >= 0 && newRow < size &&
@@ -43,10 +43,10 @@ export const checkWinner = (board, row, col, player) => {
       }
     }
 
-    // 反向檢查
+    // 反向檢查 ←
     for (let i = 1; i < 5; i++) {
-      const newRow = row - i * dx;
-      const newCol = col - i * dy;
+      const newRow = row - (i * dx);
+      const newCol = col - (i * dy);
       
       if (
         newRow >= 0 && newRow < size &&
@@ -102,22 +102,34 @@ export const isBoardFull = (board) => {
  */
 const analyzePattern = (line) => {
   const blackCount = line.filter(cell => cell === 'black').length;
+  //過濾黑色棋子
   const whiteCount = line.filter(cell => cell === 'white').length;
+  //過濾白色棋子
   const emptyCount = line.filter(cell => cell === null).length;
+  //過濾空格棋子
   
   // 檢查是否連續（沒有被對方棋子分隔）
   let isConsecutiveBlack = false;
-  let isConsecutiveWhite = false;
+  let isConsecutiveWhite = false; 
   
   if (blackCount > 0 && whiteCount === 0) {
-    isConsecutiveBlack = true;
+    isConsecutiveBlack = false;  // 預設為 false
     for (let i = 0; i < line.length; i++) {
       if (line[i] === 'black') {
-        let j = i;
-        while (j < line.length && (line[j] === 'black' || line[j] === null)) {
+        let consecutiveCount = 1;  // 計算連續區域內的黑子數
+        let emptySpaces = 0;      // 計算空格數
+        let j = i + 1;
+        
+        while (j < line.length && emptySpaces <= 1) {  // 最多允許一個空格
+          if (line[j] === 'black') {
+            consecutiveCount++;
+          } else if (line[j] === null) {
+            emptySpaces++;
+          }
           j++;
         }
-        if (j - i >= blackCount) {
+        
+        if (consecutiveCount === blackCount && emptySpaces <= 1) {
           isConsecutiveBlack = true;
           break;
         }
@@ -168,34 +180,25 @@ const evaluateLine = (line, aiPlayer, humanPlayer) => {
   const isConsecutiveAI = aiPlayer === 'black' ? isConsecutiveBlack : isConsecutiveWhite;
   const isConsecutiveHuman = humanPlayer === 'black' ? isConsecutiveBlack : isConsecutiveWhite;
   
-  // 如果同時有AI棋子和人類棋子，則此行無價值
+  // 如果同時有AI棋子和人類棋子，則此行無價值=>不會得分
   if (aiCount > 0 && humanCount > 0) {
     return 0;
   }
   
   // AI棋子評分
   if (aiCount > 0 && isConsecutiveAI) {
-    // 五子連珠
     if (aiCount === 5) return 100000;
-    // 活四（兩端都是空格）
     if (aiCount === 4 && emptyCount === 1) return 20000;
-    // 活三
-    if (aiCount === 3 && emptyCount === 2) return 4000;
-    // 活二或死四
+    if (aiCount === 3 && emptyCount === 2) return 8000; // 提高活三的評分
     if ((aiCount === 2 && emptyCount === 3) || (aiCount === 4 && emptyCount === 0)) return 800;
-    // 活一或死三
     if ((aiCount === 1 && emptyCount === 4) || (aiCount === 3 && emptyCount === 1)) return 150;
   }
   
-  // 人類棋子評分（防守）- 值更高以優先防守
+  // 人類棋子評分（防守）
   if (humanCount > 0 && isConsecutiveHuman) {
-    // 阻止五子連珠
-    if (humanCount === 4 && emptyCount === 1) return 50000; // 提高防守權重
-    // 阻止活三或雙活三
-    if (humanCount === 3 && emptyCount === 2) return 10000; // 顯著提高防守活三的權重
-    // 阻止活二
+    if (humanCount === 4 && emptyCount === 1) return 50000;
+    if (humanCount === 3 && emptyCount === 2) return 15000; // 提高活三的防守權重
     if (humanCount === 2 && emptyCount === 3) return 1000;
-    // 阻止活一
     if (humanCount === 1 && emptyCount === 4) return 200;
   }
   
@@ -347,6 +350,61 @@ const evaluateBoard = (board, aiPlayer, humanPlayer) => {
 };
 
 /**
+ * 尋找雙活三（Double Live Three）的位置
+ * @param {Array} board - 當前棋盤狀態
+ * @param {string} player - 玩家棋子類型
+ * @returns {Array} - 需要堵住的位置陣列 [[row, col], ...]
+ */
+const findDoubleLiveThree = (board, player) => {
+  const size = board.length;
+  const threatPositions = new Set(); // 使用 Set 避免重複位置
+  
+  // 檢查所有位置
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      // 檢查四個方向
+      const directions = [
+        [0, 1], [1, 0], [1, 1], [1, -1]
+      ];
+      
+      for (const [dx, dy] of directions) {
+        // 獲取當前位置的五子連線
+        const line = [];
+        const positions = []; // 記錄每個位置的座標
+        
+        for (let i = -2; i <= 2; i++) {
+          const r = row + i * dx;
+          const c = col + i * dy;
+          if (r >= 0 && r < size && c >= 0 && c < size) {
+            line.push(board[r][c]);
+            positions.push([r, c]);
+          } else {
+            line.push('OUT');
+            positions.push(null);
+          }
+        }
+        
+        // 檢查是否為活三：空-黑-黑-黑-空
+        if (
+          line[0] === null &&
+          line[1] === player &&
+          line[2] === player &&
+          line[3] === player &&
+          line[4] === null
+        ) {
+          // 將兩端的空位加入威脅位置
+          if (positions[0]) threatPositions.add(JSON.stringify(positions[0])); // 左邊空位
+          if (positions[4]) threatPositions.add(JSON.stringify(positions[4])); // 右邊空位
+        }
+      }
+    }
+  }
+  
+  // 將 Set 轉回陣列並解析座標
+  return Array.from(threatPositions).map(pos => JSON.parse(pos));
+};
+
+/**
  * 電腦AI下棋
  * @param {Array} board - 當前棋盤狀態，二維陣列
  * @param {string} aiPlayer - AI的棋子類型 ('black' 或 'white')
@@ -399,6 +457,15 @@ export const computerMove = (board, aiPlayer, difficulty) => {
       }
       threatPositions.push([row, col]);
     }
+  }
+  
+  // 雙活三防守邏輯
+  const doubleLiveThreeBlocks = findDoubleLiveThree(board, humanPlayer);
+  if (doubleLiveThreeBlocks.length > 0) {
+    // 優先堵住雙活三的延伸點
+    // 若有多個，隨機選一個
+    const idx = Math.floor(Math.random() * doubleLiveThreeBlocks.length);
+    return doubleLiveThreeBlocks[idx];
   }
   
   // 如果簡單難度沒有阻止玩家獲勝，但有威脅存在
@@ -560,4 +627,4 @@ const countAdjacentPieces = (board, row, col) => {
   }
   
   return count;
-}; 
+};

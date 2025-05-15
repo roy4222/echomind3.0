@@ -21,18 +21,22 @@ const GameStatus = ({ status, isBlackNext }) => (
     <div className="text-xl font-medium text-gray-800 dark:text-gray-200">
       {status}
     </div>
-    
-    {/* 顯示當前玩家的棋子 */}
+
+    {/* 只在遊戲進行中（非結束狀態）才顯示當前玩家指示器 */}
     {!status.includes('贏家') && !status.includes('平局') && (
-      <div 
-        className={`w-6 h-6 rounded-full ${
-          isBlackNext 
-            ? 'bg-gray-800' 
-            : 'bg-white border border-gray-300 dark:border-gray-500'
-        }`}
+      /* 圓形指示器容器 */ 
+      < div 
+        className={`
+          w-6           // 寬度: 1.5rem (24px)
+          h-6           // 高度: 1.5rem (24px)
+          rounded-full  // 完全圓形
+          ${isBlackNext
+        ? 'bg-gray-800'   // 黑方回合：深灰背景
+        : 'bg-white border border-gray-300 dark:border-gray-500'  // 白方回合：白底+邊框
+      }
+        `}
       />
     )}
   </div>
 );
-
-export default GameStatus; 
+export default GameStatus;

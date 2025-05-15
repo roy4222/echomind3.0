@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+/* 添加15列網格佈局 */
+.grid-cols-15 {
+  grid-template-columns: repeat(15, minmax(0, 1fr));
+}
+
+/* 適配小屏幕設備 */
+@media (max-width: 640px) {
+  .w-\[280px\] {
+    width: min(90vw, 280px);
+  }
+  
+  /* 較小的棋盤格子 */
+  .w-8, .h-8 {
+    width: min(6vw, 2rem);
+    height: min(6vw, 2rem);
+  }
+  
+  /* 較小的棋子 */
+  .w-7, .h-7 {
+    width: min(5vw, 1.75rem);
+    height: min(5vw, 1.75rem);
+  }
+}
+
+/* 自定義遊戲元素樣式 */
+.game-container {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 棋盤背景樣式 */
+.bg-wood {
+  background-color: #f9fafb; /* gray-50 */
+  background-image: 
+    linear-gradient(30deg, rgba(31, 41, 55, 0.05) 12%, transparent 12.5%, transparent 87%, rgba(31, 41, 55, 0.05) 87.5%, rgba(31, 41, 55, 0.05)),
+    linear-gradient(150deg, rgba(31, 41, 55, 0.05) 12%, transparent 12.5%, transparent 87%, rgba(31, 41, 55, 0.05) 87.5%, rgba(31, 41, 55, 0.05)),
+    linear-gradient(30deg, rgba(31, 41, 55, 0.05) 12%, transparent 12.5%, transparent 87%, rgba(31, 41, 55, 0.05) 87.5%, rgba(31, 41, 55, 0.05)),
+    linear-gradient(150deg, rgba(31, 41, 55, 0.05) 12%, transparent 12.5%, transparent 87%, rgba(31, 41, 55, 0.05) 87.5%, rgba(31, 41, 55, 0.05));
+  background-size: 20px 35px;
+}
+

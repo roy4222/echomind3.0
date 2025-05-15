@@ -1,4 +1,4 @@
-import { GameStatusPanelProps } from '@/lib/types/puzzle';
+import { GameStatusPanelProps } from '../types';
 import { formatTime } from '../utils/gameUtils';
 
 export const GameStatusPanel = ({

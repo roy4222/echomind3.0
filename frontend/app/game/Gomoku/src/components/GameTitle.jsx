@@ -12,9 +12,14 @@
  * <GameTitle />
  */
 const GameTitle = () => (
-  <h1 className="text-3xl font-bold mb-6 text-gray-800">
-    五子棋遊戲
+  <h1 className="
+    text-3xl       // 文字大小：1.875rem (30px)
+    font-bold      // 文字粗細：700 (粗體)
+    mb-6          // margin-bottom: 1.5rem (24px)
+    text-gray-800  // 文字顏色：深灰色 (#1F2937)
+  ">
+    五子棋
   </h1>
 );
 
-export default GameTitle; 
+export default GameTitle;

@@ -22,7 +22,7 @@ interface GameInfo {
 const gameInfo: Record<string, GameInfo> = {
   typing: {
     name: "打字遊戲",
-    description: "快打旋風",
+    description: "歐趴打字打到歐趴",
     longDescription:
       "透過有趣的打字遊戲提升您的打字速度和準確度。可以根據自己的程度選擇難度，讓您在享受遊戲的同時不斷進步。",
     features: [
@@ -36,16 +36,25 @@ const gameInfo: Record<string, GameInfo> = {
   },
   puzzle: {
     name: "拼圖",
-    description: "訓練記憶力與專注力",
+    description: "歐趴拼圖拼到歐趴",
     longDescription:
       "經典的拼圖遊戲，透過組合碎片來完成完整的圖像。遊戲提供多種難度和主題，適合所有年齡層的玩家。",
     features: ["多種圖片主題", "可調整難度", "計時挑戰", "進度保存"],
     imageUrl: "/images/puzzle.png",
     darkImageUrl: "/images/puzzle-dark.png",
   },
-  Breath: {
+  SnakeGame: {
+    name: "貪吃蛇",
+    description: "歐趴貪吃蛇吃到歐趴",
+    longDescription:
+      "經典貪吃蛇遊戲，放鬆身心，享受遊戲的樂趣。",
+    features: ["多種模式", "可調整難度", "計時挑戰", "進度保存"],
+    imageUrl: "/images/SnakeGame.png",
+    darkImageUrl: "/images/SnakeGame-dark.png",
+  },
+  breathe: {
     name: "呼吸遊戲",
-    description: "訓練放鬆與專注力",
+    description: "歐趴呼吸吸到歐趴",
     longDescription:
       "透過引導式的呼吸練習，幫助您放鬆心情、減輕壓力。配合視覺和聲音效果，讓呼吸練習更加輕鬆有趣。",
     features: ["多種呼吸模式", "自定義節奏", "放鬆音樂"],
@@ -63,39 +72,21 @@ const gameInfo: Record<string, GameInfo> = {
   },
   "whack-a-mole": {
     name: "打地鼠",
-    description: "訓練反應力",
+    description: "歐趴打地鼠打到歐趴",
     longDescription:
       "經典的打地鼠遊戲，考驗您的反應速度和手眼協調能力。遊戲難度會隨著您的表現逐漸提升。",
     features: ["多種難度模式", "計分系統", "特殊道具", "排行榜"],
     imageUrl: "/images/whack-a-mole-light.png",
     darkImageUrl: "/images/whack-a-mole-dark.png",
   },
-  SnakeGame: {
-    name: "貪吃蛇",
-    description: "歐趴貪吃蛇吃到歐趴",
-    longDescription:
-      "經典貪吃蛇遊戲，放鬆身心，享受遊戲的樂趣。",
-    features: ["多種模式", "可調整難度", "計時挑戰", "進度保存"],
-    imageUrl: "/images/SnakeGame.png",
-    darkImageUrl: "/images/SnakeGame-dark.png",
-  },
-  Gomoku: {
+  "Gomoku": {
     name: "五子棋",
-    description: "訓練邏輯",
+    description: "歐趴五子棋下到歐趴",
     longDescription:
-      "經典的五子棋遊戲，加入了新的玩法和特殊規則。可以和電腦對戰一起玩。",
+      "經典的五子棋遊戲，加入了新的玩法和特殊規則。可以和電腦對戰或和朋友一起玩。",
     features: ["AI對戰", "特殊規則", "戰績統計"],
     imageUrl: "/images/Gomoku.png",
     darkImageUrl: "/images/Gomoku-dark.png",
-  },
-  bingo: {
-    name: "賓果",
-    description: "訓練專注力",
-    longDescription:
-      "經典的賓果遊戲，透過隨機抽號碼並標記數字，看誰最快連成一條線獲勝。",
-    features: ["經典模式", "快速模式", "挑戰模式", "連線動畫"],
-    imageUrl: "/images/bingo-light.png",
-    darkImageUrl: "/images/bingo-dark.png",
   },
 };
 

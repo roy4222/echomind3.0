@@ -12,7 +12,7 @@ const games = [
   {
     id: "typing",
     name: "打字遊戲",
-    description: "快打旋風",
+    description: "歐趴打字打到歐趴",
     imageUrl: "/images/typing.png",
     darkImageUrl: "/images/typing-dark.png",
     introPath: "/game/introduction?game=typing",
@@ -26,12 +26,22 @@ const games = [
     introPath: "/game/introduction?game=puzzle",
   },
   {
+    id: "SnakeGame",
+    name: "貪吃蛇",
+    description: "歐趴貪吃蛇吃到歐趴",
+    imageUrl: "/images/SnakeGame.png",
+    darkImageUrl: "/images/SnakeGame-dark.png",
+    path: "/game/Snake",
+    introPath: "/game/introduction?game=SnakeGame",
+  },
+  {
     id: "breathe",
     name: "呼吸遊戲",
-    description: "訓練放鬆與專注力",
-    imageUrl: "/images/Breath-light.png",
-    darkImageUrl: "/images/Breath-dark.png",
-    introPath: "/game/introduction?game=Breath",
+    description: "歐趴呼吸吸到歐趴",
+    imageUrl: "/images/breathe.png",
+    darkImageUrl: "/images/breathe-dark.png",
+    path: "/game/breathe",
+    introPath: "/game/introduction?game=breathe",
   },
   {
     id: "muyu",
@@ -44,18 +54,10 @@ const games = [
   {
     id: "whack-a-mole",
     name: "打地鼠",
-    description: "訓練反應力",
-    imageUrl: "/images/whack-a-mole-light.png",
+    description: "歐趴打地鼠打到歐趴",
+    imageUrl: "/images/whack-a-mole.png",
     darkImageUrl: "/images/whack-a-mole-dark.png",
     introPath: "/game/introduction?game=whack-a-mole",
-  },
-  {
-    id: "SnakeGame",
-    name: "貪吃蛇",
-    description: "歐趴貪吃蛇吃到歐趴",
-    imageUrl: "/images/SnakeGame.png",
-    darkImageUrl: "/images/SnakeGame-dark.png",
-    introPath: "/game/introduction?game=SnakeGame",
   },
   {
     id: "Gomoku",
@@ -63,15 +65,8 @@ const games = [
     description: "歐趴五子棋下到歐趴",
     imageUrl: "/images/Gomoku.png",
     darkImageUrl: "/images/Gomoku-dark.png",
+    path: "/game/circle-circle",
     introPath: "/game/introduction?game=Gomoku",
-  },
-  {
-    id: "bingo",
-    name: "賓果",
-    description: "訓練專注力",
-    imageUrl: "/images/bingo-light.png",
-    darkImageUrl: "/images/bingo-dark.png",
-    introPath: "/game/introduction?game=bingo",
   },
 ];
 

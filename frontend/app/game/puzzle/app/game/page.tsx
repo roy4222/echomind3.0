@@ -2,15 +2,13 @@
 
 import { useSearchParams, useRouter } from 'next/navigation';
 import { PuzzleGame } from '../components/PuzzleGame';
-import { puzzleThemes } from '../constants/puzzleThemes';
 import Link from 'next/link';
 
 export default function GamePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
-  const themeId = searchParams.get('theme') || '1';
-  const themeObj = puzzleThemes.find(t => t.id === themeId) || puzzleThemes[0];
+  const theme = searchParams.get('theme') || '1';
   const difficulty = parseInt(searchParams.get('difficulty') || '4', 10);
 
   return (
@@ -37,7 +35,7 @@ export default function GamePage() {
         </div>
         
         <div className="bg-white/90 dark:bg-gray-700/90 backdrop-blur-sm rounded-2xl shadow-lg p-4 md:p-6">
-          <PuzzleGame theme={themeObj} difficulty={difficulty} />
+          <PuzzleGame theme={theme} difficulty={difficulty} />
         </div>
       </div>
     </div>
