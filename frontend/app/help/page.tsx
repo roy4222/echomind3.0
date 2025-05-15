@@ -3,6 +3,7 @@
 import { JSX, useState } from "react";
 import CustomButton from "./components/button";
 import OuterCard from "./components/OuteCard";
+import Accordion from "./components/Accordion";
 
 export default function Home() {
   const [selected, setSelected] = useState<string>("EchoMind");
@@ -46,20 +47,6 @@ export default function Home() {
         />
       </div>
     ),
-    匿名留言板: (
-      <div className="space-y-6">
-        <OuterCard
-          title="匿名留言板"
-          description={`• 自由發表意見\n• 保護個人隱私\n• 與他人互動交流`}
-          imageUrl=""
-        />
-        <OuterCard
-          title="使用規則"
-          description={`• 尊重他人\n• 遵守社群規範\n• 保持友善交流`}
-          imageUrl=""
-        />
-      </div>
-    ),
     小遊戲: (
       <div className="space-y-6">
         <OuterCard
@@ -74,6 +61,22 @@ export default function Home() {
         />
       </div>
     ),
+    常見問題: (
+      <div className="space-y-6">
+        <Accordion
+          title="如何重置密碼？"
+          content="點擊登入頁面的「忘記密碼」連結，按照指示操作即可重置密碼。"
+        />
+        <Accordion
+          title="留言板會是匿名的嗎？"
+          content="是的，留言板會是匿名的，不會顯示你的名字。"
+        />
+        <Accordion
+          title="如何匯出聊天記錄？"
+          content="在聊天歷史頁面中，選擇要匯出的對話，點擊「匯出」按鈕即可。"
+        />
+      </div>
+    ),
   };
 
   return (
@@ -82,7 +85,7 @@ export default function Home() {
         <h1 className="text-center mb-8 text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
           使用說明
         </h1>
-        
+
         <div className="flex flex-wrap justify-center gap-4 mb-8">
           {Object.keys(descriptions).map((option) => (
             <CustomButton
@@ -95,9 +98,7 @@ export default function Home() {
         </div>
 
         <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-          <div className="animate-fade-in">
-            {descriptions[selected]}
-          </div>
+          <div className="animate-fade-in">{descriptions[selected]}</div>
         </div>
       </div>
     </div>
