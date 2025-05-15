@@ -14,7 +14,7 @@ export default function OutercardCard({ title, description, imageUrl }: OuterCar
           <img src={imageUrl} alt={title} className="w-full h-auto rounded-xl" />
         </div>
       )}
-        <p className="text-black dark:text-white">{description}</p>
+        <p className="text-black dark:text-white text-lg">{description}</p>
       </div>
     </div>
   );

@@ -47,6 +47,20 @@ export default function Home() {
         />
       </div>
     ),
+    匿名留言板: (
+      <div className="space-y-6">
+        <OuterCard
+          title="如何使用匿名留言板?"
+          description={`1. 點選左上角選單按鈕\n2. 點擊匿名留言板\n3. 輸入想說的話或問題\n4. 按下發布留言即可`}
+          imageUrl="/help_GIF/opengame.gif"
+        />
+        <OuterCard
+          title="遊戲規則"
+          description={`• 完成任務獲得獎勵\n• 與好友競賽\n• 解鎖特殊成就`}
+          imageUrl=""
+        />
+      </div>
+    ),
     小遊戲: (
       <div className="space-y-6">
         <OuterCard
