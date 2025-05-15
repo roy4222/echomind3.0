@@ -26,11 +26,6 @@ export default function Home() {
           description={`可以在此發問想要的問題。\n並在下方分別有附圖片與使用我們專屬資料庫回答的按鈕。`}
           imageUrl="/help_GIF/ask.gif"
         />
-        <OuterCard
-          title="特色功能區"
-          description={`1.echomind--課程問題小幫手\n2. 聊天歷史--方便尋找過去問題\n3. 小遊戲--帶你放鬆尋找歡樂`}
-          imageUrl="/help_images/function.jpg"
-        />
       </div>
     ),
     聊天歷史: (
@@ -38,12 +33,12 @@ export default function Home() {
         <OuterCard
           title="聊天歷史功能"
           description={`• 查看過去的對話記錄\n• 搜尋特定主題的對話\n• 匯出聊天記錄`}
-          imageUrl=""
+          imageUrl="/help_GIF/history.gif"
         />
         <OuterCard
           title="使用技巧"
           description={`• 使用關鍵字搜尋\n• 按日期篩選\n• 標記重要對話`}
-          imageUrl=""
+          imageUrl="/help_GIF/new_talk.gif"
         />
       </div>
     ),
@@ -52,12 +47,7 @@ export default function Home() {
         <OuterCard
           title="如何使用匿名留言板?"
           description={`1. 點選左上角選單按鈕\n2. 點擊匿名留言板\n3. 輸入想說的話或問題\n4. 按下發布留言即可`}
-          imageUrl="/help_GIF/opengame.gif"
-        />
-        <OuterCard
-          title="遊戲規則"
-          description={`• 完成任務獲得獎勵\n• 與好友競賽\n• 解鎖特殊成就`}
-          imageUrl=""
+          imageUrl="/help_GIF/comment.gif"
         />
       </div>
     ),
@@ -67,11 +57,6 @@ export default function Home() {
           title="如何進到遊戲區"
           description={`1. 點選左上角選單按鈕\n2. 點擊第四個小遊戲\n3. 選擇想玩的遊戲`}
           imageUrl="/help_GIF/opengame.gif"
-        />
-        <OuterCard
-          title="遊戲規則"
-          description={`• 完成任務獲得獎勵\n• 與好友競賽\n• 解鎖特殊成就`}
-          imageUrl=""
         />
       </div>
     ),
@@ -86,8 +71,8 @@ export default function Home() {
           content="是的，留言板會是匿名的，不會顯示你的名字。"
         />
         <Accordion
-          title="如何匯出聊天記錄？"
-          content="在聊天歷史頁面中，選擇要匯出的對話，點擊「匯出」按鈕即可。"
+          title=""
+          content=""
         />
       </div>
     ),
