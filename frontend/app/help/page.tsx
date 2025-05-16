@@ -26,24 +26,19 @@ export default function Home() {
           description={`可以在此發問想要的問題。\n並在下方分別有附圖片與使用我們專屬資料庫回答的按鈕。`}
           imageUrl="/help_GIF/ask.gif"
         />
-        <OuterCard
-          title="特色功能區"
-          description={`1.echomind--課程問題小幫手\n2. 聊天歷史--方便尋找過去問題\n3. 小遊戲--帶你放鬆尋找歡樂`}
-          imageUrl="/help_images/function.jpg"
-        />
       </div>
     ),
     聊天歷史: (
       <div className="space-y-6">
         <OuterCard
-          title="聊天歷史功能"
-          description={`• 查看過去的對話記錄\n• 搜尋特定主題的對話\n• 匯出聊天記錄`}
-          imageUrl=""
+          title="聊天歷史"
+          description={`• 查看過去的對話記錄\n• 搜尋特定主題的對話\n`}
+          imageUrl="/help_GIF/history.gif"
         />
         <OuterCard
-          title="使用技巧"
+          title="新對話"
           description={`• 使用關鍵字搜尋\n• 按日期篩選\n• 標記重要對話`}
-          imageUrl=""
+          imageUrl="/help_GIF/new_talk.gif"
         />
       </div>
     ),
