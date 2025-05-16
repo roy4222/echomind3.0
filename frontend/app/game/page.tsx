@@ -68,6 +68,15 @@ const games = [
     path: "/game/circle-circle",
     introPath: "/game/introduction?game=Gomoku",
   },
+  {
+    id: "bingo",
+    name: "賓果",
+    description: "歐趴賓果玩到歐趴",
+    imageUrl: "/images/bingo-light.png",
+    darkImageUrl: "/images/bingo-dark.png",
+    path: "/game/bingo",
+    introPath: "/game/introduction?game=bingo",
+  },
 ];
 
 // 在樣式部分添加防止文字選擇的 CSS 類

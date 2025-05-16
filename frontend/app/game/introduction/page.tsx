@@ -88,6 +88,15 @@ const gameInfo: Record<string, GameInfo> = {
     imageUrl: "/images/Gomoku.png",
     darkImageUrl: "/images/Gomoku-dark.png",
   },
+  "bingo": {
+    name: "賓果",
+    description: "歐趴賓果玩到歐趴",
+    longDescription:
+      "經典的賓果遊戲，考驗您的記憶力和邏輯思考能力。遊戲難度會隨著您的表現逐漸提升。",
+    features: ["多種難度模式", "計分系統", "特殊道具", "排行榜"],
+    imageUrl: "/images/bingo-light.png",
+    darkImageUrl: "/images/bingo-dark.png",
+  },
 };
 
 export default function GameIntroduction() {
