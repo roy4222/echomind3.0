@@ -37,7 +37,7 @@ export default function Home() {
         />
         <OuterCard
           title="新對話"
-          description={`• 使用關鍵字搜尋\n• 按日期篩選\n• 標記重要對話`}
+          description={`• 開始新的對話`}
           imageUrl="/help_GIF/new_talk.gif"
         />
       </div>
@@ -62,11 +62,6 @@ export default function Home() {
           title="如何進到遊戲區"
           description={`1. 點選左上角選單按鈕\n2. 點擊第四個小遊戲\n3. 選擇想玩的遊戲`}
           imageUrl="/help_GIF/opengame.gif"
-        />
-        <OuterCard
-          title="遊戲規則"
-          description={`• 完成任務獲得獎勵\n• 與好友競賽\n• 解鎖特殊成就`}
-          imageUrl=""
         />
       </div>
     ),
