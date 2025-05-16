@@ -55,7 +55,7 @@ const games = [
     id: "whack-a-mole",
     name: "打地鼠",
     description: "歐趴打地鼠打到歐趴",
-    imageUrl: "/images/whack-a-mole.png",
+    imageUrl: "/images/whack-a-mole-light.png",
     darkImageUrl: "/images/whack-a-mole-dark.png",
     introPath: "/game/introduction?game=whack-a-mole",
   },
