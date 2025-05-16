@@ -444,7 +444,7 @@ export const computerMove = (board, aiPlayer, difficulty) => {
   for (const [row, col] of emptySquares) {
     const boardCopy = JSON.parse(JSON.stringify(board));
     //因為是不同的物件引用，所以要用JSON.stringify()轉換成字串再轉回物件
-    
+
     boardCopy[row][col] = aiPlayer;
     if (checkWinner(boardCopy, row, col, aiPlayer)) {
       return [row, col];
@@ -472,6 +472,8 @@ export const computerMove = (board, aiPlayer, difficulty) => {
     // 優先堵住雙活三的延伸點
     // 若有多個，隨機選一個
     const idx = Math.floor(Math.random() * doubleLiveThreeBlocks.length);
+    //Math.floor()-->向下取整數
+    //Math.random()-->生成 0（包含）到 1（不包含）之間的隨機數
     return doubleLiveThreeBlocks[idx];
   }
 
@@ -480,6 +482,7 @@ export const computerMove = (board, aiPlayer, difficulty) => {
     // 50%機率隨機選擇一個非威脅位置
     const nonThreatPositions = emptySquares.filter(([r, c]) =>
       !threatPositions.some(([tr, tc]) => r === tr && c === tc)
+    //若符合條件回傳true，否則回傳false
     );
     if (nonThreatPositions.length > 0) {
       const randomIndex = Math.floor(Math.random() * nonThreatPositions.length);
@@ -501,6 +504,7 @@ export const computerMove = (board, aiPlayer, difficulty) => {
   if (potentialThreats.length > 0 && difficulty !== 'easy') {
     potentialThreats.sort((a, b) => b.value - a.value);
     const highestThreat = potentialThreats[0];
+    //找出含最高威脅分數的座標
 
     // 困難模式總是應對最高威脅，中等模式有85%機率應對
     if (difficulty === 'hard' || (difficulty === 'medium' && Math.random() < 0.85)) {
@@ -516,6 +520,8 @@ export const computerMove = (board, aiPlayer, difficulty) => {
 
   // 計算每個空格的得分，根據難度選擇最佳移動
   let bestScore = -Infinity;
+  //正無限大 Infinity  最大可能值
+  // 負無限大 -Infinity 最小可能值
   let bestMoves = [];
 
   // 對於困難模式，只考慮靠近已有棋子的位置，提高效率
@@ -545,10 +551,10 @@ export const computerMove = (board, aiPlayer, difficulty) => {
       // 優先選擇中心區域的位置
       const centerRow = Math.floor(size / 2);
       const centerCol = Math.floor(size / 2);
-      const distanceToCenter = Math.sqrt(
+      const distanceToCenter = Math.sqrt( //開根號，用畢氏定理算距離
         Math.pow(row - centerRow, 2) + Math.pow(col - centerCol, 2)
       );
-      moveScore -= distanceToCenter * 5; // 提高中心位置的重要性
+      moveScore -= distanceToCenter * 5; // 提高中心位置的重要性 // 距離越遠，扣分越多
 
       // 額外防守檢查 - 檢查這一步是否可以同時防守多個威脅
       let blockedThreats = 0;
