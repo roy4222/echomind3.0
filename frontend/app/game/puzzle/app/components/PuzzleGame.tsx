@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { PuzzleGameProps, PuzzlePiece } from '../types';
+import { PuzzleGameProps, PuzzlePiece } from '../../../../../lib/types/game';
 import { puzzleThemes } from '../constants/puzzleThemes';
 import { GameStatusPanel } from './GameStatusPanel';
 import { initializePuzzlePieces, checkGameCompletion } from '../utils/gameUtils';

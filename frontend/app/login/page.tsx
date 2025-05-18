@@ -8,7 +8,7 @@ import Link from 'next/link';
 export default function LoginPage() {
   const router = useRouter();
   const { loginWithEmail, loginWithGoogle } = useAuthActions();
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -19,10 +19,23 @@ export default function LoginPage() {
 
   // 處理表單輸入變化
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    //e --> typeScript 中的 React 事件類型定義
+    /*
+    使用時機：
+    當使用者在 input 欄位中：
+      輸入文字
+      勾選 checkbox
+      選擇 radio button
+    需要取得的資訊：
+      e.target.name: 欄位名稱
+      e.target.value: 輸入值
+      e.target.type: 輸入類型
+      e.target.checked: 勾選狀態
+    */
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      ...prev, // 保留其他欄位的值
+      [name]: type === 'checkbox' ? checked : value // 動態更新欄位值
     }));
   };
 
@@ -39,9 +52,14 @@ export default function LoginPage() {
         password: formData.password,
         rememberMe: formData.rememberMe
       });
-      
+
       if (result) {
         router.push('/');
+        /**
+         兩者雖然都叫 push，但：
+          陣列的 push：將元素加入陣列末端
+          router.push：將新頁面"推入"導航堆疊中
+         */
       }
     } catch (err) {
       console.error('登入錯誤:', err);
@@ -50,6 +68,30 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  /**
+   * try {
+    // 可能會發生錯誤的代碼
+    const result = await loginWithEmail(....);
+      } catch (err) {
+        // 錯誤處理邏輯
+        setError('登入失敗訊息');
+      } finally {
+        // 無論成功或失敗都會執行的代碼
+        setIsLoading(false);
+      }
+--------------------------------------------------------
+      try：放置可能出錯的程式碼
+        API 呼叫
+        資料處理
+      catch：處理錯誤
+        紀錄錯誤
+        顯示錯誤訊息
+      finally：清理工作
+        重設狀態
+        關閉資源
+        一定會執行
+   */
 
   // 處理 Google 登入
   const handleGoogleLogin = async () => {

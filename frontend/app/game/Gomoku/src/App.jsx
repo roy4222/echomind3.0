@@ -87,12 +87,14 @@ function App() {
 
     // 計算電腦的落子位置
     const [aiRow, aiCol] = computerMove(board, 'white', difficulty);
-      
+    
+
+    //在 findBestMove 函數中返回 表示 if (沒有可用的移動位置) {return [-1, -1];}
     if (aiRow !== -1 && aiCol !== -1) {
       // 創建新棋盤並設置電腦棋子
       const newBoard = board.map(row => [...row]);
       newBoard[aiRow][aiCol] = 'white';
-      
+                                            
       // 更新狀態
       setBoard(newBoard);
       setLastMove([aiRow, aiCol]);

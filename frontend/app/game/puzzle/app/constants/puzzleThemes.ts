@@ -1,4 +1,4 @@
-import { PuzzleTheme } from '../types';
+import { PuzzleTheme } from '../../../../../lib/types/game';
 
 export const puzzleThemes: PuzzleTheme[] = [
   {
