@@ -31,13 +31,13 @@ export default function Home() {
     聊天歷史: (
       <div className="space-y-6">
         <OuterCard
-          title="聊天歷史功能"
-          description={`• 查看過去的對話記錄\n• 搜尋特定主題的對話\n• 匯出聊天記錄`}
+          title="聊天歷史"
+          description={`• 查看過去的對話記錄\n• 搜尋特定主題的對話\n`}
           imageUrl="/help_GIF/history.gif"
         />
         <OuterCard
-          title="使用技巧"
-          description={`• 使用關鍵字搜尋\n• 按日期篩選\n• 標記重要對話`}
+          title="新對話"
+          description={`• 開始新的對話`}
           imageUrl="/help_GIF/new_talk.gif"
         />
       </div>
