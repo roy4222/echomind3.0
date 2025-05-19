@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { PuzzleGameProps, PuzzlePiece } from '../../../../../lib/types/game';
 import { puzzleThemes } from '../constants/puzzleThemes';
 import { GameStatusPanel } from './GameStatusPanel';
-import { initializePuzzlePieces, checkGameCompletion } from '../utils/gameUtils';
+import { initializePuzzlePieces, checkGameCompletion} from '../utils/gameUtils';
 import Image from "next/image";
 
 export const PuzzleGame = ({ theme, difficulty }: PuzzleGameProps) => {
@@ -14,10 +14,12 @@ export const PuzzleGame = ({ theme, difficulty }: PuzzleGameProps) => {
   const [draggedPiece, setDraggedPiece] = useState<number | null>(null);
   const [isPaused, setIsPaused] = useState(false);
 
+  //.find() --> 返回陣列中符合測試函數條件的第一個元素
   const themeData = puzzleThemes.find(t => t.id === theme);
 
   // 初始化遊戲
   const initializeGame = () => {
+    //return空值結束程式
     if (!themeData) return;
     const shuffledPieces = initializePuzzlePieces(difficulty);
     setPieces(shuffledPieces);
@@ -29,12 +31,20 @@ export const PuzzleGame = ({ theme, difficulty }: PuzzleGameProps) => {
   };
 
   // 遊戲初始化
+  /**
+   * useEffect 主要用於：
+      監聽狀態變化
+      執行副作用
+      清理動作
+   */
   useEffect(() => {
     initializeGame();
   }, [themeData, difficulty]);
 
   // 計時器
   useEffect(() => {
+    //變數型別可以是 NodeJS.Timeout 或 null
+    //這裡的 null 是為了在清除計時器時使用
     let timerInterval: NodeJS.Timeout | null = null;
 
     if (gameStarted && !isCompleted && !isPaused) {
@@ -77,6 +87,28 @@ export const PuzzleGame = ({ theme, difficulty }: PuzzleGameProps) => {
     // 儲存資料以便在 drop 時恢復
     try {
       // 只設置一種資料類型，避免重複設置
+      /**
+        e.dataTransfer: 拖曳事件的資料傳輸物件
+        setData(): 設定拖曳資料的方法
+        'text/plain': 資料類型（MIME type）
+        index.toString(): 將索引值轉為字串
+      ----------------------------------------
+      MIME Type (Multipurpose Internet Mail Extensions) 說明
+      // 文字類型
+      'text/plain'        // 純文字
+      'text/html'         // HTML
+      'text/css'          // CSS
+
+      // 圖片類型
+      'image/jpeg'        // JPEG 圖片
+      'image/png'         // PNG 圖片
+      'image/gif'         // GIF 圖片
+
+      // 應用程式類型
+      'application/json'   // JSON 格式
+      'application/pdf'    // PDF 檔案
+       */
+      
       e.dataTransfer.setData('text/plain', index.toString());
     } catch (err) {
       console.error('設定拖曳資料失敗，使用狀態備份:', err);
