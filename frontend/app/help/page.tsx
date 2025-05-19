@@ -32,12 +32,12 @@ export default function Home() {
       <div className="space-y-6">
         <OuterCard
           title="聊天歷史"
-          description={`• 查看過去的對話記錄\n• 搜尋特定主題的對話\n`}
+          description={`• 查看過去的對話記錄\n• 選擇想看的對話\n`}
           imageUrl="/help_GIF/history.gif"
         />
         <OuterCard
           title="新對話"
-          description={`• 開始新的對話`}
+          description={`• 點擊右上角開啟新對話\n• 可以開始問問題`}
           imageUrl="/help_GIF/new_talk.gif"
         />
       </div>
@@ -71,8 +71,8 @@ export default function Home() {
           content="是的，留言板會是匿名的，不會顯示你的名字。"
         />
         <Accordion
-          title=""
-          content=""
+          title="為甚麼登入後看不到聊天歷史？"
+          content="請重新登入或是關閉瀏覽器重新開啟。"
         />
       </div>
     ),
