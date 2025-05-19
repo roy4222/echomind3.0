@@ -54,7 +54,7 @@ export default function Home() {
     小遊戲: (
       <div className="space-y-6">
         <OuterCard
-          title="如何進到遊戲區"
+          title="如何進到遊戲區?"
           description={`1. 點選左上角選單按鈕\n2. 點擊第四個小遊戲\n3. 選擇想玩的遊戲`}
           imageUrl="/help_GIF/opengame.gif"
         />
