@@ -6,7 +6,7 @@ import OuterCard from "./components/OuteCard";
 import Accordion from "./components/Accordion";
 
 export default function Home() {
-  const [selected, setSelected] = useState<string>("EchoMind");
+  const [selected, setSelected] = useState<string>("EchoMind"); /* 選擇要顯示的選項 */
 
   const descriptions: Record<string, JSX.Element> = {
     EchoMind: (
@@ -14,17 +14,17 @@ export default function Home() {
         <OuterCard
           title="登入"
           description={`在畫面的右上角可以看到登入鍵。\n歡迎進行登入讓找到過去的對話，達到最好的使用體驗。`}
-          imageUrl="/help_GIF/login.gif"
+          imageUrl="/help_jpg/login.jpg"
         />
         <OuterCard
           title="主題切換"
           description={`可以根據你的使用習慣切換深色模式的主題與淺色模式的主題。`}
-          imageUrl="/help_GIF/style.gif"
+          imageUrl="/help_jpg/style.jpg"
         />
         <OuterCard
           title="如何問問題"
           description={`可以在此發問想要的問題。\n並在下方分別有附圖片與使用我們專屬資料庫回答的按鈕。`}
-          imageUrl="/help_GIF/ask.gif"
+          imageUrl="/help_jpg/ask.jpg"
         />
       </div>
     ),
@@ -33,12 +33,12 @@ export default function Home() {
         <OuterCard
           title="聊天歷史"
           description={`• 查看過去的對話記錄\n• 選擇想看的對話\n`}
-          imageUrl="/help_GIF/history.gif"
+          imageUrl="/help_jpg/history.jpg"
         />
         <OuterCard
           title="新對話"
           description={`• 點擊右上角開啟新對話\n• 可以開始問問題`}
-          imageUrl="/help_GIF/new_talk.gif"
+          imageUrl="/help_jpg/new_talk.jpg"
         />
       </div>
     ),
@@ -47,7 +47,7 @@ export default function Home() {
         <OuterCard
           title="如何使用匿名留言板?"
           description={`1. 點選左上角選單按鈕\n2. 點擊匿名留言板\n3. 輸入想說的話或問題\n4. 按下發布留言即可`}
-          imageUrl="/help_GIF/comment.gif"
+          imageUrl="/help_jpg/comment.jpg"
         />
       </div>
     ),
@@ -56,7 +56,7 @@ export default function Home() {
         <OuterCard
           title="如何進到遊戲區?"
           description={`1. 點選左上角選單按鈕\n2. 點擊第四個小遊戲\n3. 選擇想玩的遊戲`}
-          imageUrl="/help_GIF/opengame.gif"
+          imageUrl="/help_jpg/game.jpg"
         />
       </div>
     ),

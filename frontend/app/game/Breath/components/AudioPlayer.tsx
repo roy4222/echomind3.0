@@ -3,21 +3,21 @@ import { useState, useEffect, useRef } from 'react';
 import type { SyntheticEvent } from 'react';
 
 export default function AudioPlayer() {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null); /* 音樂播放器 */
+  const [isPlaying, setIsPlaying] = useState(false); /* 是否播放 */
+  const [error, setError] = useState<string | null>(null); /* 錯誤 */
 
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = 0.3;
-      audioRef.current.loop = true;
+      audioRef.current.volume = 0.3; /* 音量 */
+      audioRef.current.loop = true; /* 循環 */
     }
   }, []);
 
-  const togglePlay = () => {
+  const togglePlay = () => { /* 播放 */
     if (audioRef.current) {
       if (isPlaying) {
-        audioRef.current.pause();
+        audioRef.current.pause(); /* 暫停 */
       } else {
         const playPromise = audioRef.current.play();
         if (playPromise !== undefined) {
@@ -27,7 +27,7 @@ export default function AudioPlayer() {
           });
         }
       }
-      setIsPlaying(!isPlaying);
+      setIsPlaying(!isPlaying); /* 設置是否播放 */
     }
   };
 
@@ -44,11 +44,11 @@ export default function AudioPlayer() {
         onClick={togglePlay}
         className="backdrop-blur-sm p-3 rounded-full hover:bg-white/60 transition-all duration-200 border border-white/50 dark:bg-gray-800 bg-stone-300"
       >
-        {isPlaying ? (
+        {isPlaying ? ( /* 如果正在播放 */
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 5.25v13.5m-7.5-13.5v13.5" /> /* 播放圖示 */
           </svg>
-        ) : (
+        ) : ( /* 如果沒有播放 */
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653z" />
           </svg>
