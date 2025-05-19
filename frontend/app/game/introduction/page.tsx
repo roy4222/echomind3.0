@@ -1,13 +1,14 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
-import { useState, useEffect } from "react";
 
+// ===== 類型定義 =====
 // 定義遊戲資訊類型
 interface GameInfo {
   name: string;
@@ -18,7 +19,7 @@ interface GameInfo {
   darkImageUrl: string;
 }
 
-// 遊戲資訊
+// ===== 遊戲資訊數據 =====
 const gameInfo: Record<string, GameInfo> = {
   typing: {
     name: "打字遊戲",
@@ -73,8 +74,7 @@ const gameInfo: Record<string, GameInfo> = {
   SnakeGame: {
     name: "貪吃蛇",
     description: "歐趴貪吃蛇吃到歐趴",
-    longDescription:
-      "經典貪吃蛇遊戲，放鬆身心，享受遊戲的樂趣。",
+    longDescription: "經典貪吃蛇遊戲，放鬆身心，享受遊戲的樂趣。",
     features: ["多種模式", "可調整難度", "計時挑戰", "進度保存"],
     imageUrl: "/images/SnakeGame.png",
     darkImageUrl: "/images/SnakeGame-dark.png",
@@ -100,48 +100,40 @@ const gameInfo: Record<string, GameInfo> = {
 };
 
 export default function GameIntroduction() {
+  // ===== 狀態和參數 =====
   const searchParams = useSearchParams();
   const gameId = searchParams.get("game");
   const game = gameId ? gameInfo[gameId] : null;
+
+  // 主題相關
   const { theme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
+  // ===== Hooks =====
   // 確保僅在客戶端渲染後才獲取主題資訊
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // ===== 工具函數 =====
   // 根據當前主題選擇圖片
   const getImageUrl = (game: GameInfo) => {
     if (!mounted) return game.imageUrl;
-
     const isDarkMode = theme === "dark" || resolvedTheme === "dark";
     return isDarkMode && game.darkImageUrl ? game.darkImageUrl : game.imageUrl;
   };
 
-  // 若找不到遊戲資訊，顯示錯誤頁面
-  if (!game) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
-            找不到遊戲資訊
-          </h1>
-          <Link
-            href="/game"
-            className="inline-flex items-center text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
-          >
-            <ArrowLeft className="mr-2" size={20} />
-            返回遊戲列表
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  // ===== 動畫屬性 =====
+  const fadeInUp = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.5 },
+  };
 
+  // ===== 頁面渲染 =====
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-4">
-      <div className="container mx-auto px-40">
+      <div className="container mx-auto px-4 md:px-40">
         {/* 返回按鈕 */}
         <Link
           href="/game"
@@ -151,84 +143,81 @@ export default function GameIntroduction() {
           返回遊戲列表
         </Link>
 
-        {/* 遊戲卡片 - 添加max-w-4xl使卡片變小並居中 */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl overflow-hidden max-w-6xl mx-auto">
-          {/* 遊戲封面圖片 */}
-          <div className="relative h-60 md:h-52">
-            {mounted && (
-              <Image
-                src={getImageUrl(game)}
-                alt={game.name}
-                fill
-                className="object-contain"
-              />
-            )}
-          </div>
+        {/* 遊戲卡片 */}
+        {game && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl overflow-hidden max-w-6xl mx-auto">
+            {/* 遊戲封面圖片 */}
+            <div className="relative h-60 md:h-52">
+              {mounted && (
+                <Image
+                  src={getImageUrl(game)}
+                  alt={game.name}
+                  fill
+                  className="object-contain"
+                />
+              )}
+            </div>
 
-          {/* 遊戲詳細信息 */}
-          <div className="p-6">
-            {/* 遊戲標題 - 使用動畫效果 */}
-            <motion.h1
-              className="text-3xl font-bold text-gray-800 dark:text-white mb-3"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              {game.name}
-            </motion.h1>
-
-            {/* 遊戲描述 - 使用動畫效果 */}
-            <motion.p
-              className="text-lg text-gray-600 dark:text-gray-300 mb-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              {game.longDescription}
-            </motion.p>
-
-            {/* 遊戲特色區塊 - 使用動畫效果 */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-3">
-                遊戲特色
-              </h2>
-              {/* 特色列表 - 網格排列 */}
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {game.features.map((feature: string, index: number) => (
-                  <motion.li
-                    key={index}
-                    className="flex items-center bg-gray-50 dark:bg-gray-700 rounded-xl p-3"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
-                  >
-                    <div className="h-2 w-2 bg-indigo-500 rounded-full mr-3" />
-                    {feature}
-                  </motion.li>
-                ))}
-              </ul>
-            </motion.div>
-
-            {/* 開始遊戲按鈕 - 使用動畫效果 */}
-            <motion.div
-              className="mt-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.6 }}
-            >
-              <Link
-                href={`/game/${gameId}`}
-                className="inline-flex items-center justify-center px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors duration-200"
+            {/* 遊戲詳細信息 */}
+            <div className="p-6">
+              {/* 遊戲標題 */}
+              <motion.h1
+                className="text-3xl font-bold text-gray-800 dark:text-white mb-3"
+                {...fadeInUp}
               >
-                開始遊戲
-              </Link>
-            </motion.div>
+                {game.name}
+              </motion.h1>
+
+              {/* 遊戲描述 */}
+              <motion.p
+                className="text-lg text-gray-600 dark:text-gray-300 mb-6"
+                {...fadeInUp}
+                transition={{ duration: 0.5, delay: 0.1 }}
+              >
+                {game.longDescription}
+              </motion.p>
+
+              {/* 遊戲特色區塊 */}
+              <motion.div
+                {...fadeInUp}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-3">
+                  遊戲特色
+                </h2>
+                {/* 特色列表 */}
+                <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {game.features.map((feature: string, index: number) => (
+                    <motion.li
+                      key={index}
+                      className="flex items-center bg-gray-50 dark:bg-gray-700 rounded-xl p-3"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
+                    >
+                      <div className="h-2 w-2 bg-indigo-500 rounded-full mr-3" />
+                      {feature}
+                    </motion.li>
+                  ))}
+                </ul>
+              </motion.div>
+
+              {/* 開始遊戲按鈕 */}
+              <motion.div
+                className="mt-6"
+                {...fadeInUp}
+                transition={{ duration: 0.5, delay: 0.6 }}
+              >
+                <Link
+                  href={`/game/${gameId}`}
+                  className="inline-flex items-center justify-center px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors duration-200"
+                >
+                  開始遊戲
+                </Link>
+              </motion.div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
