@@ -12,7 +12,7 @@ export default function Home() {
     EchoMind: (
       <div className="space-y-6">
         <OuterCard
-          title="1.登入"
+          title="登入"
           description={`在畫面的右上角可以看到登入鍵。\n歡迎進行登入讓找到過去的對話，達到最好的使用體驗。`}
           imageUrl="/help_GIF/login.gif"
         />
