@@ -106,7 +106,7 @@ const bottomItems: SidebarItem[] = [
   {
     icon: HelpCircle,
     label: '幫助',
-    href: '/#help',
+    href: '/help',
   },
   {
     icon: Settings,
