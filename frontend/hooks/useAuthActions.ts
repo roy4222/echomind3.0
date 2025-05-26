@@ -15,6 +15,10 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { toast } from 'sonner';
+//sonner
+//  用於顯示 toast 通知訊息
+//  提供美觀且易用的通知界面
+//  React 專用的通知套件
 import { User as FirebaseUser } from 'firebase/auth';
 
 // 註冊資料介面

@@ -1,8 +1,8 @@
-import { GameStatusPanelProps } from '../types';
+import { GameStatusPanelProps } from '../../../../../lib/types/game';
 import { formatTime } from '../utils/gameUtils';
 
 export const GameStatusPanel = ({
-  time,
+  time, 
   moves,
   isCompleted,
   onRestart

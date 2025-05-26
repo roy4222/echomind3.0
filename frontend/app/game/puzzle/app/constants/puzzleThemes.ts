@@ -1,5 +1,6 @@
-import { PuzzleTheme } from '../types';
+import { PuzzleTheme } from '../../../../../lib/types/game';
 
+//puzzleThemes是一個PuzzleTheme[]型別的陣列，PuzzleTheme[]型別定義在lib/types/game.ts中
 export const puzzleThemes: PuzzleTheme[] = [
   {
     id: "1",
